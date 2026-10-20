@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: vue-ts
+appId: com.jreyesf.ladexiada
+productName: La Dexíada
 directories:
   buildResources: build
   output: release
@@ -14,7 +14,7 @@ asarUnpack:
   - resources/**
 # afterSign: build/notarize.js
 win:
-  executableName: vue-ts
+  executableName: la-dexiada
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

@@ -1,67 +1,43 @@
-# Plantilla para juegos en Phaser
+# La Dexíada
 
-## Instalación
+Prototipo de combate por turnos entre Dexios e Iobrontes en el Templo del Trueno. El escenario y los personajes se inspiran en `DESIGN.md` y en las referencias artísticas incluidas en el proyecto.
 
-El repositorio está publicado como plantilla, de forma que se puede crear un nuevo proyecto propio en GitHub simplemente pulsando el botón `Use this template` (arriba a la derecha). Después, solo hay que clonar el repositorio propio y trabajar sobre él.
+## Requisitos y ejecución
 
-## Publicar
+Se necesita Node.js. Instala dependencias una vez y arranca el juego en el navegador:
 
-Para publicar, hay que asegurarse de que en `Settings` 🡒 `Pages` tiene en `Source` la opción `GitHub Actions`.
-
-Además es útil que en la sección de `About`, en las opciones (rueda dentada), en `Website` se active `Use your GitHub Pages website`.
-
-## Clonar
-
-También se puede clonar el repositorio:
-
-```
-git clone https://github.com/cleongh/plantillaphaser
-```
-
-Podemos modificar el archivo `package.json` para configurar nuestro proyecto (nombre, autor...)
-
-Para iniciar el proyecto (sólo 1 vez) instalamos las dependencias automáticamente (`vite`, `phaser`):
-
-```
+```sh
 npm install
-```
-
-## Electron y navegador
-
-La plantilla funciona con Electron (para ver una ventana de escritorio) y en navegador. Ambas opciones permiten depuración.
-
-## Uso
-
-Cada vez que queramos usarlo, tenemos que arrancar el servidor de desarrollo que monitorizará los cambios, procesará el contenido y cambiará la página. Usa [Vite](https://es.vitejs.dev/).
-
-Para arrancar el servidor de desarrollo:
-
-```
 npm start
 ```
 
-Con esto, solo tenemos que programar y guardar los archivos, Vite se encargará del resto.
+Para abrir la versión de escritorio con Electron, ejecuta `npm run electron`. La aplicación y el juego están escritos en TypeScript.
 
-## Distribución
+## Controles
 
-El repositorio tiene una acción de GitHub (*GitHub Action*) que genera una versión de *release* y la publica en GitHub Pages. De este modo, cada vez que se hace `push`, se construye y publica en la página pública.
+**Ataques durante el turno de Dexios**
 
-Se publica el contenido de la rama *main*.
+- `1` o botón: Triple Lightning — 3 golpes de 5, sin coste.
+- `2` o botón: Electric Arc — 30 de daño, cuesta 10 de maná.
+- `3` o botón: Chaotic Lightning — 70 de daño, cuesta 50 de Caos e inflige 20 a Dexios.
 
-Si no se está usando GitHub, o se quiere publicar a mano, podemos crear una *build* de *release*. Vite optimizará los archivos y, con la configuración que hay en `package.json`, generará en la carpeta `docs/` una versión "pública" de nuestro proyecto.
+**Defensas durante el ataque de Iobrontes**
+
+- `W`: defensa alta.
+- `A`: defensa izquierda.
+- `D`: defensa derecha.
+- `S`: salto defensivo.
+
+La dirección correcta pulsada dentro de los primeros 0,6 segundos hace una parada perfecta: evita el daño y contraataca por 5. Entre 0,6 y 1 segundo hace un bloqueo imperfecto: recibe 5 de daño. Una respuesta errónea o tardía recibe 20. El ataque mantiene su aviso y proyectil visibles durante toda la secuencia.
+
+Pulsa `R` después de una victoria o derrota para empezar de nuevo.
+
+## Comprobaciones y publicación
 
 ```sh
+npm run typecheck
 npm run build
+npm run build:electron
 ```
 
-<!-- ### En GitHub -->
-
-<!-- Está todo configurado para que se active "GitHub Pages", y se use, en la rama principal (se suele llamar `main`), la carpeta `docs/`. Simplemente hay que activarlo en "Settings" → "Pages" → "Build and deployment". -->
-
-## VSCode
-
-En la carpeta `.vscode/` hay una configuración para usar Visual Studio Code, tanto para construir el *release* (`npm run build`) como para ejecutar y depurar. Simplemente hay que ejecutar "Run" → "Start debugging..." (or presionar `F5`).
-
-## TypeScript
-
-TypeScript está automáticamente habilitado (gracias a Vite). Para usarlo, simplemente hay que crear archivos con extensión `.ts`.
+La compilación web se genera en `docs/` para GitHub Pages.

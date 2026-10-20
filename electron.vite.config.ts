@@ -1,8 +1,5 @@
 import { defineConfig } from 'vite';
-
-
-import electron from 'vite-plugin-electron/simple'
-
+import electron from 'vite-plugin-electron/simple';
 
 export default defineConfig({
   build: {
@@ -12,14 +9,14 @@ export default defineConfig({
       input: 'index.electron.html',
     },
   },
-  base: "./",
+  base: './',
   plugins: [
     electron({
       main: {
-        entry: 'main.js',
+        entry: 'main.ts',
       },
       preload: {
-        input: 'preload.js',
+        input: 'preload.ts',
       },
     }),
   ],

@@ -1,3 +1,30 @@
-h1 {
-  text-align: center;
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #11111c;
+}
+
+body {
+  display: grid;
+  place-items: center;
+}
+
+#juego {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  place-items: center;
+}
+
+canvas {
+  display: block;
+  max-width: 100vw;
+  max-height: 100vh;
 }
