@@ -66,6 +66,7 @@ export default class CombatScene extends Phaser.Scene {
   private responseDirection: Direction | null = null;
   private responseTime: number | null = null;
   private defenseOutcome: DefenseOutcome | null = null;
+  private attackSequence: Direction[] = [];
   private activeBolt?: Phaser.GameObjects.Graphics;
 
   constructor() {
@@ -82,6 +83,7 @@ export default class CombatScene extends Phaser.Scene {
     this.phase = 'player';
     this.result = null;
     this.turn = 1;
+    this.attackSequence = [];
     this.drawArena();
     this.createCharacters();
     this.createHud();
@@ -250,11 +252,13 @@ export default class CombatScene extends Phaser.Scene {
   private createCharacters(): void {
     this.dexios = this.add.image(570, 899, 'dexios')
       .setOrigin(0.5, 1)
-      .setDisplaySize(382, 640)
+      .setCrop(600, 40, 1150, 3790)
+      .setDisplaySize(330, 730)
       .setDepth(4);
     this.iobrontes = this.add.image(1250, 900, 'iobrontes')
       .setOrigin(0.5, 1)
-      .setDisplaySize(396, 736)
+      .setCrop(500, 40, 1350, 3910)
+      .setDisplaySize(350, 740)
       .setDepth(3);
     this.tweens.add({
       targets: this.dexios,
@@ -674,8 +678,10 @@ export default class CombatScene extends Phaser.Scene {
 
   private startEnemyTurn(): void {
     this.phase = 'windup';
-    const directions: Direction[] = ['left', 'right', 'top', 'bottom'];
-    this.attackDirection = Phaser.Utils.Array.GetRandom(directions);
+    if (this.attackSequence.length === 0) {
+      this.attackSequence = Phaser.Utils.Array.Shuffle(['left', 'right', 'top', 'bottom']);
+    }
+    this.attackDirection = this.attackSequence.pop() ?? 'left';
     this.responseDirection = null;
     this.responseTime = null;
     this.defenseOutcome = null;
