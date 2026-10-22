@@ -1,446 +1,872 @@
-# LA DEXÍADA — GAME DESIGN DOCUMENT
-
-**Version:** 0.1 — Combat Prototype  
-**Document Status:** Initial Implementation Specification  
-**Target Platform:** PC  
-**Genre:** Turn-Based RPG with Real-Time Directional Defense  
-**Visual Perspective:** 2D character-based combat  
-**Prototype Scope:** One playable character, one boss, one arena, and one complete combat encounter.
-
----
-
-# 1. GAME OVERVIEW
-
-## 1.1. Game Description
-
-*La Dexíada* is a fantasy RPG inspired by Greek mythology, set in Xantharchía, a world where gods, divine heirs, and mortals coexist within a society shaped by magic.
-
-The combat system combines turn-based strategic attacks with real-time directional defense. Players choose attacks during their turn but must react to incoming enemy attacks by identifying their direction and pressing the corresponding defensive key.
-
-The player controls Dexios, a fighter who specializes in close combat and lightning, in a battle against Iobrontes, God of Thunder and the twelfth heir of Zeus.
-
-The prototype aims to demonstrate the core combat loop, directional attack recognition, defensive timing, character animations, resource management, and the game's visual identity.
-
-## 1.2. Prototype Objectives
-
+LA DEXÍADA — GAME DESIGN DOCUMENT
+Version: 0.3 — Three-Character Combat Prototype
+Document Status: Implementation Specification
+Target Platform: PC (Phaser, browser)
+Genre: Turn-Based RPG with Real-Time Directional Defense
+Visual Perspective: 2D character-based combat with foreground/background depth
+Prototype Scope: Three playable characters, one boss, one arena, and one complete combat encounter.
+Note to the implementer: This document is intended to be self-contained. Implement the mechanics and values described here without relying on previous versions. Numerical values, timings, character positions, camera settings, and animation references must be stored in configuration files whenever possible.
+________________________________________
+1. GAME OVERVIEW
+1.1. Game Description
+La Dexíada is a fantasy RPG inspired by Greek mythology, set in Xantharchía, a world where gods, divine heirs, and mortals coexist within a society shaped by magic.
+The combat system combines turn-based strategic decisions with real-time directional defense. During their turns, players select attacks or abilities for their characters. During enemy turns, they must identify the direction of incoming attacks and press the corresponding defensive key at the correct moment.
+The player controls a party of three characters:
+•	Dexios: A lightning-based fighter who uses electricity and Chaos energy.
+•	Furai: A tiger-themed fighter specializing in physical attacks, armor breaking, and defensive counterattacks.
+•	Sahira: A jackal-themed fighter and healer with strong defensive capabilities.
+The party faces Iobrontes, God of Thunder and the Twelfth Heir of Zeus, inside his temple.
+The prototype focuses entirely on one combat encounter, demonstrating the game's core mechanics, character abilities, directional defense system, party management, and visual identity.
+1.2. Prototype Objectives
 The prototype must:
-
-- Implement a complete battle that ends in victory or defeat.
-- Allow the player to select and perform three unique attacks with Dexios.
-- Implement four directional attacks for Iobrontes.
-- Include directional defense with two successful outcomes: imperfect block and perfect parry.
-- Display health, mana, and Chaos energy resources.
-- Implement basic idle, attack, defense, damage, victory, and defeat animations.
-- Establish the 2D art direction and user interface for future development.
-
-## 1.3. Out of Scope
-
-This prototype will not include exploration, interactive dialogue, inventory, character progression, additional playable characters, multiple arenas, equipment selection, or a complete save system.
-
-The focus is exclusively on delivering one functional and visually representative combat encounter.
-
-# 2. SETTING AND ART DIRECTION
-
-## 2.1. Arena: Temple of Iobrontes
-
+1.	Implement a complete three-character party versus one boss encounter.
+2.	Use a fixed turn order without a speed-stat system.
+3.	Allow each playable character to execute their unique abilities.
+4.	Implement Iobrontes's three-hit directional lightning chain.
+5.	Allow the targeted character to defend using WASD.
+6.	Implement different defensive mechanics for Dexios, Furai, and Sahira.
+7.	Include party health and resource management.
+8.	Implement healing, armor breaking, Chaos generation, and counterattacks.
+9.	Display all required character sprites and effects.
+10.	Use a slight camera zoom to emphasize the character targeted by Iobrontes.
+11.	Include background battle music.
+12.	Establish a functional system that can later be expanded with more characters and encounters.
+1.3. Out of Scope
+This prototype will not include exploration, interactive dialogue, inventory, character progression, equipment selection, additional bosses, multiple arenas, or a complete save system.
+Character speed statistics will also be excluded. Turn order will remain fixed throughout the encounter.
+________________________________________
+2. SETTING AND ART DIRECTION
+2.1. Arena: Temple of Iobrontes
 The battle takes place inside a Greek temple dedicated to Iobrontes.
-
-The arena must convey the solemnity of a sacred place and the presence of a deity associated with lightning and storms.
-
-The environment will include:
-
-- Classical Greek-inspired architecture, including columns and stone structures.
-- A statue of Iobrontes placed in the background.
-- Banners and flags displaying the god's personal symbol.
-- Decorative reliefs and architectural ornaments inspired by lightning and thunderstorms.
-- An opening in the background revealing a gray, stormy sky filled with dark clouds.
-- Cool ambient lighting, with possible purple lightning flashes illuminating parts of the temple.
-
-The environment will remain mostly static during combat. Optional environmental animations may include distant lightning, subtle changes in illumination, and gently moving banners.
-
-## 2.2. Visual Style
-
-The game will use hand-drawn 2D illustrations and animations, following the visual style of the reference images that will be attached at the end of this document.
-
-The art style does not need to resemble pixel art. The pixel dimensions specified below refer to the resolution of the graphical assets, not to their visual style.
-
-Characters must have readable silhouettes, clearly distinguishable magical effects, and animations that allow the player to recognize attacks and defensive actions.
-
-### Recommended Resolution
-
-The target display resolution is **1920 × 1080 pixels, with a 16:9 aspect ratio**.
-
-Recommended starting dimensions for graphical assets:
-
-| Asset | Recommended Dimensions |
-|---|---|
-| Temple background | 1920 × 1080 px |
-| Dexios character canvas | Approximately 512 × 1024 px |
-| Iobrontes character canvas | Approximately 768 × 1024 px |
-| Lightning effects | 256 × 256 to 512 × 512 px, depending on the effect |
-| Attack icons | 128 × 128 px |
-| Major UI elements | Approximately 128–512 px wide, depending on function |
-
-Character frames should be exported as transparent PNG files when using frame-by-frame animation. The proposed dimensions are guidelines; the original proportions of each character and effect must be preserved.
-
-Character assets should be produced at a resolution that allows them to appear approximately 600–750 pixels tall on screen without noticeable loss of quality.
-
-## 2.3. Screen Composition
-
-Dexios will appear in the foreground, with his back facing the camera and his body oriented toward Iobrontes. He will preferably occupy the left side of the screen.
-
-Iobrontes will stand opposite Dexios, facing him from a slightly greater distance. His posture must be upright, solemn, and imposing to emphasize his status as a divine boss.
-
-The relative character sizes should make Iobrontes feel powerful without obstructing the readability of his attacks.
-
-The user interface must be positioned so that it does not obscure essential character animations or directional attack indicators.
-
-# 3. CHARACTERS
-
-## 3.1. Dexios — Playable Character
-
-Dexios is the only playable character in the prototype.
-
-### Starting Statistics
-
-| Attribute | Starting Value | Maximum Value |
-|---|---:|---:|
-| Health | 100 | 100 |
-| Mana | 100 | 100 |
-| Chaos Energy | 0 | 100 |
-
-Dexios will begin combat in a stable fighting stance.
-
-His left foot will be positioned forward and his right foot behind. His left arm will be extended forward defensively, while his right arm will remain farther back, ready to strike.
-
-The pose must communicate readiness for combat and allow smooth transitions into offensive and defensive animations.
-
-### Required Animations
-
-1. **Idle:** Subtle breathing, slight shoulder movement, and small weight shifts while maintaining the fighting stance.
-2. **Triple Lightning:** Three consecutive close-combat strikes accompanied by yellow lightning.
-3. **Electric Arc:** Dexios gathers a white electrical charge between both hands and releases an electric arc toward Iobrontes.
-4. **Chaotic Lightning:** Dexios concentrates Chaos energy and performs a punch surrounded by red lightning.
-5. **High Defense:** A defensive movement against an incoming attack from above.
-6. **Left Defense:** A defensive movement against an incoming attack from the left.
-7. **Right Defense:** A defensive movement against an incoming attack from the right.
-8. **Defensive Jump:** A jump intended to evade an attack coming from below.
-9. **Perfect Parry:** A faster, more forceful defensive response accompanied by a distinctive visual effect indicating that the attack has been avoided and countered.
-10. **Hit Reaction:** A brief reaction when Dexios takes damage.
-11. **Victory:** A short animation indicating that Dexios has defeated the boss.
-12. **Defeat:** An animation showing Dexios falling or becoming unable to continue fighting.
-
-Defense and parry animations may share animation frames where appropriate, provided that the visual feedback clearly distinguishes an imperfect block from a perfect parry.
-
-## 3.2. Iobrontes — Boss Character
-
-Iobrontes is the boss of the encounter and cannot be controlled by the player.
-
-His posture will be upright, solemn, and confident. He must communicate divine authority and superiority, even when taking damage.
-
-### Starting Statistics
-
-| Attribute | Starting Value | Maximum Value |
-|---|---:|---:|
-| Health | 200 | 200 |
-
-### Required Animations
-
-1. **Idle:** Minimal breathing or body movement while maintaining a majestic posture.
-2. **Left-Side Attack:** Preparation and release of a purple lightning attack originating from the left.
-3. **Right-Side Attack:** Preparation and release of a purple lightning attack originating from the right.
-4. **Top Attack:** A purple lightning strike descending from above.
-5. **Bottom Attack:** A purple lightning strike emerging from below.
-6. **Hit Reaction:** A brief reaction when struck by Dexios.
-7. **Defeat:** An animation indicating that Iobrontes has lost the battle.
-
-All four attacks must share a consistent visual identity while remaining clearly distinguishable through their direction, trajectory, and warning cues.
-
-# 4. COMBAT SYSTEM
-
-## 4.1. Turn Structure
-
-Combat follows an alternating turn-based system.
-
-The initial sequence is:
-
-1. Dexios begins his turn.
-2. The player selects and executes an attack.
-3. The attack resolves and character statistics are updated.
-4. If Iobrontes is still alive, his turn begins.
-5. Iobrontes selects and executes one of his directional attacks.
-6. The player must respond using the appropriate defensive input.
-7. Damage and defensive effects are resolved.
-8. The game checks whether either combatant has reached zero health.
-9. If both characters remain alive, a new turn begins with Dexios.
-
-This sequence continues until either Dexios or Iobrontes reaches zero health.
-
-The game must prevent a new attack from being executed while a previous action is still being resolved.
-
-## 4.2. Dexios's Attacks
-
-Dexios has three selectable attacks displayed in the lower section of the user interface.
-
-### Attack 1: Triple Lightning
-
-**Type:** Close-combat attack  
-**Mana Cost:** 0  
-**Total Damage:** 15  
-**Number of Hits:** 3  
-**Damage per Hit:** 5
-
-Dexios performs three consecutive strikes accompanied by yellow lightning.
-
-Each hit must trigger its own visual effect and update Iobrontes's health. The attack has no mana cost.
-
-If Iobrontes is defeated during the sequence, the remaining hits must not cause additional damage or generate combat errors.
-
-### Attack 2: Electric Arc
-
-**Type:** Ranged magical attack  
-**Mana Cost:** 10  
-**Damage:** 30
-
-Dexios raises both hands and gathers a white electrical charge between them. After the charging animation, he releases the electric arc toward Iobrontes.
-
-The attack must include a preparation animation, a release animation, and a visual impact effect on the boss.
-
-### Attack 3: Chaotic Lightning
-
-**Type:** High-damage special attack  
-**Chaos Energy Cost:** 50  
-**Damage to Iobrontes:** 70  
-**Damage to Dexios:** 20
-
-Dexios concentrates Chaos energy in his arm and delivers a punch surrounded by red lightning.
-
-The attack must look visually distinct from his regular electrical attacks.
-
-The required Chaos energy is consumed when the attack is executed. Both the damage to Iobrontes and the self-inflicted damage to Dexios must then be applied.
-
-For the initial implementation, self-inflicted damage will not generate additional Chaos energy. This prevents the ability's cost from being partially refunded by its own drawback.
-
-## 4.3. Mana Management
-
-Dexios begins combat with 100 Mana.
-
-Mana is consumed when an applicable attack is executed. If Dexios does not have enough Mana, that attack cannot be performed.
-
-Triple Lightning does not consume Mana.
-
-For this prototype, Mana does not regenerate automatically because no recovery mechanic has been defined.
-
-## 4.4. Chaos Energy Management
-
-Chaos energy begins at 0 and has a maximum value of 100.
-
-Dexios gains 10 Chaos energy whenever he takes damage from an enemy attack.
-
+The environment must convey the solemnity of a sacred place and the presence of a deity associated with lightning and storms.
+The provided background image must be used as the main arena reference and scene asset.
+The temple's visual identity includes:
+•	Classical Greek-inspired architecture.
+•	Stone columns and monumental structures.
+•	A statue representing Iobrontes.
+•	Banners displaying his divine symbol.
+•	Decorations and architectural elements inspired by lightning.
+•	An opening revealing a stormy, gray sky.
+•	Cold ambient lighting with possible purple lightning flashes.
+The environment should remain mostly static, although subtle environmental effects may be added.
+2.2. Visual Style
+The game uses hand-drawn 2D character artwork following the visual references provided in the assets directory.
+The intended style is not pixel art.
+Characters should retain the appearance, proportions, clothing, and recognizable design details of their supplied reference images.
+Technical Resolution
+Target Resolution: 1920 × 1080 pixels
+Aspect Ratio: 16:9
+Recommended starting asset dimensions:
+Asset	Recommended Dimensions
+Arena background	1920 × 1080 px
+Playable character canvases	Approximately 512 × 1024 px
+Iobrontes canvas	Approximately 768 × 1024 px
+Lightning effects	256–512 px, depending on the effect
+Attack icons	128 × 128 px
+Character images must support transparency.
+Assets should be scaled at runtime while preserving their original proportions.
+2.3. Screen Composition
+The arena must communicate depth through character placement, scaling, and floor perspective.
+The three playable characters stand closer to the camera, facing Iobrontes.
+Iobrontes stands farther away, facing the party and the camera.
+Party Formation
+Furai — Left
+•	Positioned on the left side of the party.
+•	Slightly farther away from the camera.
+•	His feet should be higher on the screen than Dexios's.
+•	Facing Iobrontes.
+Dexios — Center
+•	Positioned in the center of the party formation.
+•	Standing slightly closer to the camera than Furai.
+•	Seen primarily from behind, facing Iobrontes.
+•	Retains his combat stance with his left arm and left leg forward.
+Sahira — Right
+•	Positioned on the right side of the formation.
+•	Slightly closer to the camera than Dexios.
+•	Her feet should appear lower on the screen than the other party members' feet.
+•	Facing Iobrontes.
+Iobrontes — Background
+•	Positioned approximately in the center of the arena.
+•	Standing farther away than all three party members.
+•	Facing the playable characters.
+•	His upright posture must communicate divine authority.
+Formation Diagram
+                  TEMPLE BACKGROUND
+
+                      IOBRONTES
+
+
+       FURAI
+                     DEXIOS
+                                  SAHIRA
+
+
+                        CAMERA
+This diagram indicates approximate spatial relationships, not exact pixel coordinates.
+All positions and scales must be stored as editable configuration values.
+Scene Layering
+From back to front:
+1.	Temple background and sky.
+2.	Iobrontes.
+3.	Background magical effects.
+4.	Furai.
+5.	Dexios.
+6.	Sahira.
+7.	Foreground magical effects.
+8.	Combat HUD and directional indicators.
+The final draw order may be adjusted dynamically for attack effects, but the party formation must maintain a consistent sense of depth.
+2.4. Camera Behavior
+The camera normally displays the complete battlefield, including all three playable characters and Iobrontes.
+When Iobrontes selects a target:
+1.	The game identifies the chosen character.
+2.	The camera smoothly moves and zooms slightly toward that character.
+3.	The targeted character becomes visually emphasized.
+4.	Iobrontes begins his attack sequence.
+5.	The player performs the defensive inputs.
+6.	After the three attacks resolve, the camera returns smoothly to its normal position.
+The camera must make the selected target obvious without hiding the boss or obstructing directional indicators.
+Suggested initial camera values:
+•	Zoom multiplier: approximately 1.08.
+•	Camera transition duration: 0.2–0.3 seconds.
+•	Return transition: approximately 0.3 seconds.
+These values are adjustable and must not be hard-coded.
+________________________________________
+3. ASSET AND ANIMATION SYSTEM
+3.1. Asset Availability
+All provided character frames will be included in the project's asset directory.
+The implementation must load the supplied graphical resources using their specified asset names.
+The asset loading system must allow images to be replaced without modifying the combat logic.
+The names written in this document identify the required animation poses or frames.
+3.2. Animation Requirements
+A state-based visual system must manage the displayed frame or animation for each character.
+Possible states include:
+•	Idle
+•	Attacking
+•	Defending
+•	Taking damage
+•	Healing
+•	Special ability
+•	Counterattacking
+•	Defeated
+When a character begins an action, the appropriate frame must replace their idle frame.
+Once the action ends, the character returns to the idle frame unless they have been defeated.
+If a supplied asset is a static frame rather than a complete sprite sheet, simple movements and effects may be produced through Phaser, such as:
+•	Small positional movements.
+•	Slight scaling.
+•	Recoil.
+•	Character flashes.
+•	Projectile movements.
+•	Lightning effects.
+•	Camera movement.
+These effects must not change the appearance or design of the provided character artwork.
+3.3. Missing Asset Policy
+If a required frame is unavailable, the game must use a clearly identified temporary placeholder.
+The implementation must not substitute an unrelated character image or incorrectly oriented sprite.
+Missing assets must not prevent the combat logic from functioning.
+________________________________________
+4. COMBAT SYSTEM
+4.1. General Structure
+Combat is turn-based.
+The player controls three characters while Iobrontes acts as the enemy boss.
+Each character has unique attacks and defensive behavior.
+The combat continues until the boss is defeated or all three party members are incapacitated.
+4.2. Fixed Turn Order
+The prototype will not calculate turn order using character speed.
+Instead, the following sequence is fixed:
+Turn Position	Acting Character
+1	Furai
+2	Iobrontes
+3	Dexios
+4	Iobrontes
+5	Sahira
+6	Iobrontes
+After turn position 6, the sequence restarts at position 1.
+Furai
+  ↓
+Iobrontes
+  ↓
+Dexios
+  ↓
+Iobrontes
+  ↓
+Sahira
+  ↓
+Iobrontes
+  ↓
+Repeat
+Iobrontes therefore acts three times during every complete six-position cycle.
+Incapacitated Characters
+When a playable character reaches zero health:
+•	They become incapacitated.
+•	They cannot execute attacks or abilities.
+•	Their turn is automatically skipped.
+•	The combat continues with the remaining characters.
+•	Their HUD must indicate that they are incapacitated.
+For the initial implementation, only the incapacitated party member's turn is skipped. Iobrontes's positions in the fixed turn sequence remain unchanged.
+This means Iobrontes may receive consecutive turns if a skipped party-member turn falls between two boss turns.
+The battle only ends in defeat when all three playable characters have zero health.
+4.3. Target Selection
+During each Iobrontes turn, he selects exactly one target.
+The target must be one of the currently active party members.
+Target selection will be random among characters with health above zero.
+Iobrontes cannot select an incapacitated character.
+Once selected, the same character remains the target of all three lightning attacks in that chain.
+The boss cannot change targets in the middle of the sequence.
+If the targeted character is incapacitated before the chain finishes, the remaining lightning attacks are canceled without selecting a replacement target.
+4.4. Targeting Feedback
+The game must clearly communicate which character Iobrontes is attacking.
+Before his attack sequence begins:
+•	The selected character is visually highlighted.
+•	The camera moves slightly toward the selected character.
+•	The character's name or HUD receives a targeting indicator.
+•	The other party members remain visible but are not eligible to perform defensive actions.
+During the enemy attack sequence, WASD controls only the targeted character.
+Inputs must not activate defensive animations for other party members.
+After the chain finishes, the camera returns to the default view and the targeting indicator disappears.
+________________________________________
+5. PLAYABLE CHARACTER — DEXIOS
+5.1. Starting Statistics
+Attribute	Initial Value	Maximum
+Health	100	100
+Mana	100	100
+Chaos Energy	0	100
+Initial Frame: dexios_base
+Dexios specializes in electrical attacks and Chaos energy.
+5.2. Ability 1 — Triple Lightning
+Damage: 5 × 3 = 15
+Mana Cost: 0
+Type: Three-hit physical/electrical attack
+Frame: dexios_ataque
+Dexios performs three consecutive strikes against Iobrontes.
+Each strike:
+•	Deals 5 damage.
+•	Produces a yellow lightning effect.
+•	Updates the boss's health.
+The attack consumes no Mana.
+Each individual impact must be visible.
+5.3. Ability 2 — Electric Arc
+Damage: 30
+Mana Cost: 20
+Type: Electrical attack
+Frame: dexios_blanco
+Dexios unleashes a large white lightning attack toward Iobrontes.
+The attack deals 30 damage in one hit.
+When selected, 20 Mana is consumed.
+The attack must include a visible white lightning effect.
+5.4. Ability 3 — Chaotic Lightning
+Damage: 50
+Chaos Energy Cost: 50
+Type: Chaos-based electrical attack
+Frame: dexios_rojo
+Dexios unleashes a large red lightning attack.
+The attack deals 70 damage to Iobrontes and consumes 50 Chaos energy and inflicts 10 self-damage.
+The attack must use visually distinctive red lightning effects.
+5.5. Chaos Energy
+Dexios gains 20 Chaos energy whenever he takes damage from an enemy attack.
+Examples:
+•	An unblocked lightning hit deals 10 damage and grants 20 Chaos energy.
+•	An imperfect block deals 5 damage and grants 20 Chaos energy.
+•	A perfect parry deals 0 damage and grants no Chaos energy.
 Chaos energy cannot exceed 100.
+Each damaging hit is processed separately. Therefore, taking damage from three lightning bolts in a single chain may generate up to 60 Chaos energy.
+5.6. Defensive Frames
+Defensive Direction	Frame
+Right	dexios_derecha
+Left	dexios_izquierda
+Up	dexios_arriba
+Down	dexios_abajo
+Damaged Frame: dexios_herido
+5.7. Defensive Results
+Result	Damage Received	Counterattack
+Perfect parry	0	5
+Imperfect block	5	0
+Failed defense	10	0
+Dexios can perform a perfect parry against each individual lightning bolt.
+Every successful perfect parry triggers a 5-damage counterattack against Iobrontes.
+If Dexios perfectly parries all three lightning attacks in a chain, he deals 15 counterattack damage in total.
+There is no additional three-hit parry bonus for Dexios.
+________________________________________
+6. PLAYABLE CHARACTER — FURAI
+6.1. Starting Statistics
+Attribute	Initial Value	Maximum
+Health	80	80
+Mana	150	150
+Initial Frame: furai_base
+Furai specializes in physical attacks and techniques associated with the tiger.
+6.2. Ability 1 — Tiger Spear
+Damage: 15
+Mana Cost: 0
+Type: Single physical strike
+Frame: furai_ataque
+Furai performs a single physical attack against Iobrontes.
+The attack deals 15 damage and produces a visible impact effect.
+It does not consume Mana.
+6.3. Ability 2 — Tiger Fang
+Damage: 15 × 2 = 30
+Mana Cost: 20
+Type: Two-hit physical attack
+Frame: furai_tigre
+Furai attacks Iobrontes twice in succession.
+Each hit deals 15 damage, for a total of 30.
+Each hit must have its own impact effect.
+The ability consumes 20 Mana when executed.
+6.4. Ability 3 — Armor Break
+Damage: 0
+Mana Cost: 20
+Type: Debuff
+Frame: furai_romper
+Furai applies an armor-breaking mark to Iobrontes.
+The ability does not deal direct damage.
+Instead, it causes the next qualifying offensive attack against Iobrontes to deal double damage.
+Visual Effect
+A purple tiger-shaped mark appears above Iobrontes.
+The mark remains visible until its effect has been consumed.
+Armor Break Rules
+1.	Furai activates Armor Break.
+2.	Iobrontes receives the purple tiger mark.
+3.	The next player-selected damaging attack against Iobrontes deals double damage.
+4.	The mark disappears after the empowered attack resolves.
+For multi-hit attacks, the damage of only the first hit within that one ability is doubled.
+Examples:
+•	Triple Lightning: 15 → 20 total damage.
+•	Tiger Fang: 30 → 45 total damage.
+•	Electric Arc: 30 → 60 damage.
+•	Chaotic Lightning: 50 → 100 damage.
+For this prototype, automatic defensive counterattacks do not consume the mark. The effect waits for the next damaging attack chosen from a playable character's ability menu.
+Armor Break cannot stack with itself. Reapplying it while active refreshes the same effect instead of multiplying damage again.
+6.5. Defensive Frames
+Defensive Direction	Frame
+Right	furai_derecha
+Left	furai_izquierda
+Up	furai_arriba
+Down	furai_abajo
+Damaged Frame: furai_herido
+6.6. Defensive Results
+Result	Damage Received	Counterattack
+Perfect parry on one bolt	0	0
+Imperfect block	5	0
+Failed defense	10	0
+Three consecutive perfect parries	0 across the chain	20
+Furai's counterattack mechanic is different from Dexios's.
+A successful perfect parry prevents all damage from the individual bolt, but does not immediately damage Iobrontes.
+Furai only performs his counterattack if he perfectly parries all three lightning bolts in the same enemy chain.
+When this happens:
+1.	All three attacks deal zero damage to Furai.
+2.	The message "Parry perfecto" appears.
+3.	The frame furai_ataque is activated.
+4.	Furai counterattacks Iobrontes.
+5.	Iobrontes receives 20 damage.
+If even one attack in the chain is an imperfect block or failed defense, the special counterattack does not occur.
+Perfectly blocked individual attacks still deal zero damage.
+________________________________________
+7. PLAYABLE CHARACTER — SAHIRA
+7.1. Starting Statistics
+Attribute	Initial Value	Maximum
+Health	125	125
+Mana	80	80
+Initial Frame: sahira_base
+Sahira specializes in physical attacks, healing, and defensive techniques.
+7.2. Ability 1 — Jackal Strike
+Damage: 15
+Mana Cost: 0
+Type: Single physical strike
+Frame: sahira_ataque
+Sahira performs a physical attack against Iobrontes.
+The attack deals 15 damage and produces a visible impact effect.
+It does not consume Mana.
+7.3. Ability 2 — Hippopotamus Healing
+Healing: Full restoration of the selected ally's Health
+Mana Cost: 40
+Type: Healing ability
+Frame: sahira_cura
+Sahira performs a healing ability that completely restores one selected party member's health.
+When this ability is selected, a targeting menu appears.
+The player can choose:
+•	Dexios
+•	Furai
+•	Sahira
+The healing effect restores the selected character to their maximum Health value.
+The ability consumes 40 Mana when successfully executed.
+Healing Target Selection
+1.	The player selects Hippopotamus Healing.
+2.	The game displays the three party members.
+3.	The player selects the character to heal.
+4.	Sahira's healing frame activates.
+5.	A healing effect appears over the selected character.
+6.	The character's Health is restored to maximum.
+For the initial implementation, healing applies to conscious party members only and does not revive incapacitated allies. Incapacitated characters remain visible in the selection interface but are disabled as healing targets.
+This rule can be changed later if revival abilities are introduced.
+7.4. Defensive Frames
+Defensive Direction	Frame
+Right	sahira_derecha
+Left	sahira_izquierda
+Up	sahira_arriba
+Down	sahira_abajo
+Damaged Frame: sahira_herido
+7.5. Defensive Results
+Sahira has stronger blocking capabilities than the other characters.
+Result	Damage Received	Counterattack
+Perfect parry on one bolt	0	0
+Imperfect block	0	0
+Failed defense	10	0
+Unlike Dexios and Furai, Sahira takes no damage from an imperfect block.
+Her defense only fails to protect her when the player presses the wrong directional input or misses the defensive window entirely.
+________________________________________
+8. BOSS — IOBRONTES
+8.1. Starting Statistics
+Attribute	Initial Value	Maximum
+Health	1000	1000
+Initial Sprite: iobrontes_base
+Iobrontes is the only enemy in the prototype.
+He has one offensive ability, but the ability produces three separate directional attacks.
+8.2. Ability — Lightning Chain
+Ability Name: Lightning Chain
+Number of Attacks: 3
+Damage per Unblocked Attack: 10
+Target Count: 1
+Damage Type: Lightning
+Lightning Color: Purple
+Iobrontes selects one active party member and unleashes three consecutive lightning attacks against them.
+Each bolt independently chooses a direction at random from:
+•	Up
+•	Down
+•	Left
+•	Right
+The same direction may appear more than once during a chain.
+Directional Frames
+Attack Direction	Frame
+Right	iobrontes_derecha
+Left	iobrontes_izquierda
+Up	iobrontes_arriba
+Down	iobrontes_abajo
+Damaged Frame: iobrontes_herido
+Attack Sequence
+1.	Iobrontes selects an active party member.
+2.	The camera focuses slightly on that target.
+3.	The first lightning direction is selected.
+4.	Iobrontes displays the corresponding directional frame.
+5.	The first lightning attack travels toward the target.
+6.	The player attempts to defend.
+7.	The attack is resolved.
+8.	Iobrontes displays the frame corresponding to the second attack.
+9.	The second lightning attack travels toward the same target.
+10.	The player attempts to defend again.
+11.	The second attack is resolved.
+12.	Iobrontes displays the frame corresponding to the third attack.
+13.	The third lightning attack travels toward the same target.
+14.	The player attempts the final defense.
+15.	The third attack is resolved.
+16.	Any eligible three-perfect-parry counterattack is activated.
+17.	The camera returns to its normal position.
+18.	The next turn begins.
+Each attack must have a distinct visual animation and its own defensive timing window.
+Iobrontes must not launch all three lightning bolts simultaneously.
+Damage Rules
+Each lightning bolt deals 10 damage if the target fails to defend.
+A successful imperfect block reduces the damage according to the targeted character's defensive rules.
+A perfect parry prevents all damage and may trigger a counterattack.
+The maximum unblocked damage of one complete Lightning Chain is 30.
+________________________________________
+9. DIRECTIONAL DEFENSE AND PARRY SYSTEM
+9.1. Core Mechanic
+During an enemy attack, the targeted playable character must identify the incoming lightning direction and perform the corresponding defensive action.
+The system uses four directions.
+Key	Defensive Action
+W	Defend Up
+A	Defend Left
+S	Defend Down / Jump
+D	Defend Right
+These controls apply exclusively to the character currently targeted by Iobrontes.
+Other characters cannot defend on behalf of the target.
+Each lightning bolt has an independent defensive input opportunity.
+9.2. Attack Timing
+Each lightning bolt follows three phases.
+Phase 1 — Wind-up
+Duration: 1.0 second
+Iobrontes prepares the attack and indicates its direction.
+The appropriate directional frame becomes visible.
+A warning marker appears on the side corresponding to the attack.
+Defensive inputs during this phase are ignored without penalty.
+Phase 2 — Projectile Travel
+Duration: 1.0 second
+The lightning projectile travels toward the targeted character.
+A timing ring appears around the target and contracts toward them.
+The ring reaches its final size at the moment of visual impact.
+Phase 3 — Defensive Resolution
+All timing is measured relative to the moment of impact, called T.
+The defensive window opens 0.5 seconds before impact and closes 0.1 seconds after impact.
+Timing	Correct Input Result	Indicator
+Before T − 0.5 s	Ignored	Neutral
+T − 0.5 s to T − 0.1 s	Imperfect block	Yellow
+T − 0.1 s to T + 0.1 s	Perfect parry	White, glowing
+After T + 0.1 s	No valid defense	Inactive
+Only the first directional input made during the active window is accepted.
+An incorrect directional input results in a failed defense.
+Inputs made before the defensive window opens do not automatically trigger a defense later.
+9.3. Impact and Damage Synchronization
+The visual impact and the final damage calculation must be handled separately.
+The lightning visually reaches the target at time T.
+However, the defensive window remains active until T + 0.1 seconds.
+Therefore:
+1.	At time T, the lightning reaches the character visually.
+2.	The game records the apparent impact but does not finalize damage.
+3.	The player may still perform a perfect parry until T + 0.1 seconds.
+4.	When the defensive window closes, the game determines the result.
+5.	The correct damage, block, or counterattack result is applied.
+6.	The corresponding feedback is displayed.
+This avoids unfair situations where the player performs a technically valid parry shortly after the visible impact but has already taken damage.
+The impact animation may be briefly held or visually extended until the result is finalized.
+No damage may be applied twice.
+Each lightning bolt must resolve exactly once.
+9.4. Defense Result Matrix
+Character	Failed Defense	Imperfect Block	Perfect Parry
+Dexios	10 damage	5 damage	0 damage, 5 counterdamage
+Furai	10 damage	5 damage	0 damage
+Sahira	10 damage	0 damage	0 damage
+Additional chain effects:
+•	Dexios deals 5 damage for every individual perfect parry.
+•	Furai deals 20 damage only if all three parries in the chain are perfect.
+9.5. Perfect-Parry Tracking
+For Furai, the game must track whether every attack in the current Lightning Chain was perfectly parried.
+A simple chain tracking structure can contain:
+•	Target character.
+•	Current lightning index.
+•	Number of perfect parries.
+•	Whether any imperfect block occurred.
+•	Whether any failed defense occurred.
+At the end of the third attack:
+•	If Furai has three perfect parries, trigger their special counterattack.
+•	Otherwise, do not trigger the special counterattack.
+The tracking data must be reset when the next Lightning Chain begins.
+Dexios does not require a three-hit counterattack condition because his perfect parries resolve individually. Sahira does not require a three-hit counterattack condition.
+9.6. Defensive Feedback
+Each defensive result must produce immediate visual feedback.
+Perfect Parry
+•	Bright electrical effect.
+•	Strong impact feedback.
+•	Text: PERFECT.
+•	Counterattack when applicable.
+Imperfect Block
+•	Defensive impact effect.
+•	Text: BLOCK.
+•	Character-specific damage calculation.
+Failed Defense
+•	Visible lightning impact.
+•	Damaged frame.
+•	Text: FAIL.
+•	Full 10 damage applied.
+For Furai's successful triple-perfect chain, display the additional message:
+"Tiger Parry"
+This message appears once, after the third successful perfect parry.
+________________________________________
+10. USER INTERFACE (HUD)
+10.1. Boss HUD
+Iobrontes's HUD appears near the top of the screen.
+It displays:
+Iobrontes
+God of Thunder, Twelfth Heir of Zeus
+Below the name is a purple lightning-themed Health bar.
+Health: 1000 / 1000
+The bar updates whenever Iobrontes takes damage.
+Its appearance should be inspired by purple lightning, matching his attacks and divine identity.
+10.2. Party HUD
+The player must be able to see the status of all three playable characters.
+Each character has an individual HUD panel.
+Dexios
+•	Health: Green bar — 100 / 100.
+•	Mana: Blue bar — 100 / 100.
+•	Chaos Energy: Red bar — 0 / 100.
+Furai
+•	Health: Green bar — 80 / 80.
+•	Mana: Blue bar — 150 / 150.
+Sahira
+•	Health: Green bar — 125 / 125.
+•	Mana: Blue bar — 80 / 80.
+The HUD should display the character's name, current values, and maximum values.
+The three character panels should be clearly grouped and should not cover important battlefield animations.
+Active Character Indicator
+During a party member's turn, their HUD panel must be highlighted.
+Only the current character's ability menu should be active.
+Incapacitated Character Indicator
+When a character reaches zero Health:
+•	Their HUD becomes visually disabled.
+•	Their Health bar displays zero.
+•	Their turn is skipped.
+•	Their action menu is no longer available.
+10.3. Ability Menu
+The active character's ability menu appears during their turn.
+The menu displays the available abilities and their costs.
+Dexios
+Ability	Cost
+Triple Lightning	Free
+Electric Arc	20 Mana
+Chaotic Lightning	50 Chaos Energy
+Furai
+Ability	Cost
+Tiger Spear	Free
+Tiger Fang	20 Mana
+Armor Break	20 Mana
+Sahira
+Ability	Cost
+Jackal Strike	Free
+Hippopotamus Healing	40 Mana
+Abilities that cannot be afforded must appear disabled.
+Sahira's healing ability opens an ally-selection interface before executing.
+10.4. Directional Attack Indicators
+During Iobrontes's turns, the selected character receives a visual targeting indicator.
+The following elements are required:
+Directional Warning
+An arrow or marker showing the direction of the incoming lightning.
+Timing Ring
+A ring surrounding the targeted character that contracts as the lightning approaches.
+Timing Colors
+•	Neutral before the defensive window.
+•	Yellow during the imperfect-block window.
+•	White and glowing during the perfect-parry window.
+Result Label
+A brief label indicating the defensive result.
+The indicators must be clearly readable without covering the character's silhouette.
+10.5. Armor Break Indicator
+When Furai's Armor Break is active, a purple tiger mark appears above Iobrontes.
+The mark remains visible until the next qualifying damaging ability consumes the effect.
+It must disappear immediately after the empowered attack resolves.
+________________________________________
+11. AUDIO AND MUSIC
+11.1. Background Battle Music
+The combat must include continuously playing background music.
+The intended musical style is energetic and dramatic, inspired by classic Pokémon Emerald battle themes.
+The music should use:
+•	A rhythmic drum beat as its foundation.
+•	Trumpet elements to give the music energy and impact.
+•	Light piano accompaniment in the background.
+•	A fast-paced, battle-oriented atmosphere.
+The music should feel energetic and heroic while maintaining the tone of a confrontation inside a Greek divine temple.
+The composition should be original and use the reference only as inspiration for its instrumentation, energy, and overall feeling.
+Minimum Audio Requirement
+If a complete composed track is not available, the prototype must include at least a simple looping musical arrangement consisting of:
+1.	Percussion or drums.
+2.	Trumpet accents.
+3.	Light piano accompaniment.
+The music should loop seamlessly during combat.
+11.2. Sound Effects
+The prototype should include sound effects for:
+•	Electrical attacks.
+•	Physical attacks.
+•	Magical abilities.
+•	Damage received.
+•	Imperfect blocks.
+•	Perfect parries.
+•	Furai's Armor Break.
+•	Sahira's healing.
+•	Character defeat.
+•	Boss defeat.
+Sound effects should support the combat without overpowering the background music.
+11.3. Audio Behavior
+•	Background music starts when the encounter begins, subject to browser audio playback restrictions.
+•	Music continues while the battle remains active.
+•	Music stops or transitions when the battle finishes.
+•	Sound effects play alongside the music.
+•	Audio volumes should be independently adjustable through configuration.
+•	A mute option is recommended for testing.
+________________________________________
+12. VICTORY AND DEFEAT CONDITIONS
+12.1. Victory Condition
+The player wins when:
+Iobrontes reaches 0 Health.
+The boss begins with 1000 Health.
+Once his Health reaches zero:
+1.	The current action finishes or is safely interrupted.
+2.	The combat state changes to Victory.
+3.	Combat inputs are disabled.
+4.	Iobrontes's defeat frame or placeholder is displayed.
+5.	A victory message appears.
+12.2. Defeat Condition
+The player loses when:
+Dexios, Furai, and Sahira all reach 0 Health.
+The defeat condition requires all three party members to be incapacitated.
+If only one or two characters are incapacitated, the battle continues.
+When all three reach zero Health:
+1.	The combat state changes to Defeat.
+2.	Combat inputs are disabled.
+3.	The party is shown defeated.
+4.	A defeat message appears.
+12.3. Health Limits
+Health values cannot fall below zero or rise above the character's maximum Health.
+When a character reaches zero Health, they immediately become incapacitated.
+The combat system must not allow defeated characters to perform additional actions.
+________________________________________
+13. TECHNICAL IMPLEMENTATION REQUIREMENTS
+13.1. Game Engine
+The prototype will be developed using Phaser and must be playable in a desktop browser.
+The project must support keyboard input, 2D sprites, graphical effects, audio, and camera transitions.
+13.2. Configuration System
+The following values must be editable without changing the main combat logic:
+•	Character starting statistics.
+•	Maximum Health, Mana, and Chaos energy.
+•	Attack damage.
+•	Ability costs.
+•	Chaos energy generation.
+•	Enemy attack damage.
+•	Turn order.
+•	Projectile timing.
+•	Defense timing windows.
+•	Character positions and scales.
+•	Camera zoom and transition speed.
+•	Animation references.
+•	Visual effects.
+•	Audio volume.
+13.3. Combat State Management
+The combat system should use clearly separated states.
+Recommended states:
+1.	BATTLE_START
+2.	PLAYER_TURN
+3.	PLAYER_ACTION
+4.	ENEMY_TARGET_SELECTION
+5.	ENEMY_ATTACK
+6.	DEFENSE_WINDOW
+7.	DAMAGE_RESOLUTION
+8.	TURN_END
+9.	VICTORY
+10.	DEFEAT
+The system must prevent contradictory actions, such as selecting a new attack while another attack is still executing.
+13.4. Enemy Attack Chain Logic
+Each Lightning Chain must be treated as one enemy action containing three separate attack events.
+The structure must support:
+•	One target for the full chain.
+•	Three independently randomized directions.
+•	Three separate timing windows.
+•	Three defensive results.
+•	Character-specific block and parry calculations.
+•	Chain-level perfect-parry tracking.
+•	A final counterattack when applicable.
+•	Automatic cancellation if the target becomes incapacitated.
+The next turn must not begin until the entire chain, including any counterattack and its damage, has resolved.
+13.5. Damage and Resource Processing
+Every damaging action must:
+1.	Determine the base damage.
+2.	Apply any active damage modifiers.
+3.	Calculate the final damage.
+4.	Update the target's Health.
+5.	Update any resources generated by the event.
+6.	Check for incapacitation or victory.
+7.	Trigger the appropriate visual feedback.
+Each event must resolve only once.
+13.6. Asset References
+All frame names provided in this GDD must be registered through the asset configuration system.
+The implementation should use the supplied frames directly rather than replacing them with unrelated artwork.
+Animations or effects missing from the asset directory may temporarily use labeled placeholders.
+________________________________________
+14. PROTOTYPE ACCEPTANCE CRITERIA
+The prototype will be considered complete when the following conditions are satisfied.
+General Combat
+1.	The game displays all three playable characters and Iobrontes.
+2.	The characters follow the required foreground/background formation.
+3.	The fixed turn order works correctly.
+4.	Incapacitated characters have their turns skipped.
+5.	Iobrontes only targets active characters.
+6.	The battle ends when Iobrontes reaches zero Health or all three party members are incapacitated.
+Dexios
+7.	Triple Lightning deals three hits of 5 damage and consumes no Mana.
+8.	Electric Arc deals 30 damage and consumes 20 Mana.
+9.	Chaotic Lightning deals 50 damage and consumes 50 Chaos energy.
+10.	Dexios gains 20 Chaos energy per damaging enemy hit.
+11.	His imperfect block causes 5 damage.
+12.	Every perfect parry prevents damage and deals 5 damage to Iobrontes.
+Furai
+13.	Tiger Spear deals 15 damage.
+14.	Tiger Fang deals two hits of 15 damage.
+15.	Armor Break doubles the next qualifying offensive ability's damage.
+16.	The purple tiger mark remains visible until consumed.
+17.	Furai takes 5 damage from imperfect blocks.
+18.	Three perfect parries in the same chain trigger a 20-damage counterattack.
+Sahira
+19.	Jackal Strike deals 15 damage.
+20.	Hippopotamus Healing restores a selected active ally to maximum Health.
+21.	The healing ability allows the selection of Dexios, Furai, or Sahira.
+22.	Sahira takes no damage from imperfect blocks.
+23.	Three perfect parries in the same chain trigger a 20-damage counterattack.
+Iobrontes
+24.	Iobrontes begins with 1000 Health.
+25.	Every enemy turn uses Lightning Chain.
+26.	Lightning Chain targets only one party member.
+27.	Each chain contains three sequential attacks.
+28.	Each attack chooses an independent random direction.
+29.	Every unblocked lightning bolt deals 10 damage.
+30.	The corresponding Iobrontes directional frame activates for each lightning attack.
+Defense and Camera
+31.	WASD controls only the character being targeted.
+32.	The camera slightly zooms toward the target.
+33.	The timing ring correctly displays the active defensive window.
+34.	Damage resolution occurs after the defensive window closes at T + 0.1 seconds.
+35.	Defensive results are calculated separately for every lightning bolt.
+36.	The camera returns to its normal position after the chain.
+Visuals and Audio
+37.	All supplied character frames are loaded through configurable asset references.
+38.	Missing assets use visible placeholders.
+39.	Attacks display their specified lightning colors and impact effects.
+40.	Background music plays and loops during combat.
+41.	Sound effects accompany major combat actions.
+42.	The battle remains visually readable at 1920 × 1080 resolution.
+________________________________________
+15. SUGGESTED IMPLEMENTATION ORDER
+The prototype should be developed in stages, with each stage tested before moving to the next.
+Stage 1 — Battlefield and Party Formation
+•	Load the supplied temple background.
+•	Place Iobrontes in the background.
+•	Place Furai, Dexios, and Sahira in the requested formation.
+•	Configure sprite scaling and drawing order.
+•	Implement the initial HUD.
+Stage 2 — Combat State and Turn Order
+•	Create the character statistics.
+•	Implement the fixed six-position turn sequence.
+•	Add incapacitation logic.
+•	Add victory and defeat conditions.
+Stage 3 — Playable Character Abilities
+•	Implement Dexios's attacks and Chaos energy.
+•	Implement Furai's physical attacks and Armor Break.
+•	Implement Sahira's attack and healing ability.
+•	Add resource costs and target selection.
+Stage 4 — Iobrontes's Lightning Chain
+•	Implement random target selection.
+•	Implement the three directional lightning attacks.
+•	Load the corresponding directional frames.
+•	Implement projectile movement and attack timing.
+Stage 5 — Defensive Mechanics
+•	Implement WASD controls.
+•	Implement the directional warning system.
+•	Implement the contracting timing ring.
+•	Implement imperfect blocks and perfect parries.
+•	Add each character's unique defensive calculations.
+•	Implement three-perfect-parry counterattacks.
+Stage 6 — Camera and Visual Feedback
+•	Add target highlighting.
+•	Add camera zoom and return transitions.
+•	Add hit reactions.
+•	Add damage numbers and defense result labels.
+•	Add lightning and impact effects.
+Stage 7 — Audio
+•	Add looping background battle music.
+•	Add combat sound effects.
+•	Balance audio levels.
+Stage 8 — Final Integration and Testing
+•	Verify all damage calculations.
+•	Verify resource consumption.
+•	Verify the fixed turn sequence.
+•	Test incapacitated-character behavior.
+•	Test all defensive windows.
+•	Verify that animations and camera transitions do not interrupt combat.
+•	Confirm victory and defeat behavior.
+________________________________________
+16. VISUAL REFERENCES
+The project's asset directory will contain the supplied reference frames for:
+•	Dexios
+•	Furai
+•	Sahira
+•	Iobrontes
+•	The temple background
+•	Additional combat effects, where available
+These assets establish the visual identity and character appearances of the prototype.
+The code must reference them through their registered names, allowing images to be replaced or improved without requiring changes to the core combat systems.
+________________________________________
+End of Document — Version 0.3
 
-Chaotic Lightning requires 50 Chaos energy to execute. The player must therefore manage the resource and decide when to use the special attack.
-
-As a provisional rule, an imperfect block that causes 5 damage will still grant 10 Chaos energy. A perfect parry, which prevents all damage, will not generate Chaos energy.
-
-# 5. DIRECTIONAL DEFENSE AND PARRY SYSTEM
-
-## 5.1. Core Mechanic
-
-Directional defense is the defining gameplay feature of *La Dexíada*.
-
-Unlike a conventional turn-based RPG, the player cannot resolve the enemy's turn simply by waiting for the animation to finish. They must identify the origin of the attack and respond using the correct directional input.
-
-Each of Iobrontes's attacks has a base damage value of 20 before defensive effects are applied.
-
-## 5.2. Iobrontes's Attacks
-
-Enemy attacks will not appear as selectable options in the player's interface. Their direction will be communicated through Iobrontes's animations, visual effects, and directional warning cues.
-
-| Attack | Direction | Required Response | Base Damage |
-|---|---|---|---:|
-| Left Lightning | From the left | Left Defense | 20 |
-| Right Lightning | From the right | Right Defense | 20 |
-| Top Lightning | From above | High Defense | 20 |
-| Bottom Lightning | From below | Defensive Jump | 20 |
-
-All four attacks will use purple lightning and deal the same base damage in this prototype.
-
-## 5.3. Controls
-
-The initial implementation will use keyboard controls.
-
-| Key | Action |
-|---|---|
-| W | High Defense |
-| A | Left Defense |
-| D | Right Defense |
-| S | Defensive Jump |
-
-Defensive actions will be triggered by a new key press rather than simply by holding a key down.
-
-Each enemy attack can only be resolved once.
-
-## 5.4. Enemy Attack Timing
-
-To make the attack timing consistent and implementable, each enemy attack follows this initial sequence.
-
-**Phase 1 — Wind-up: 1 second**
-
-Iobrontes prepares the attack. A visual warning indicates the direction from which the lightning will come.
-
-**Phase 2 — Projectile Travel: 2 seconds**
-
-The lightning moves toward Dexios. Its trajectory remains visible so that the player can follow the incoming attack.
-
-**Phase 3 — Resolution**
-
-The attack reaches the player, and the game applies the result of the defensive action. If the attack is successfully blocked, the defensive animation plays and the appropriate damage values are applied.
-
-The initial defensive reaction window is **1 second from the moment the directional warning appears**.
-
-- **0–0.6 seconds:** Perfect parry window.
-- **After 0.6 seconds and up to 1 second:** Imperfect block window.
-- **No valid response within 1 second:** The attack is not blocked.
-
-The game should continue to display the incoming attack after the input window closes, allowing the player to see the consequences of their response.
-
-These timings are initial design values and should be tested and adjusted during playtesting.
-
-## 5.5. Defensive Outcomes
-
-| Outcome | Damage to Dexios | Damage to Iobrontes |
-|---|---:|---:|
-| Perfect parry | 0 | 5 |
-| Imperfect block | 5 | 0 |
-| Failed or incorrect response | 20 | 0 |
-| No valid response | 20 | 0 |
-
-### Perfect Parry
-
-A perfect parry requires the player to press the correct directional key within the first 0.6 seconds of the reaction window.
-
-The attack is completely negated, and Dexios counters for 5 damage.
-
-The action must provide immediate and noticeable visual feedback, such as a sharp electrical flash, a brief impact effect, and a distinctive counterattack animation.
-
-### Imperfect Block
-
-An imperfect block occurs when the correct directional key is pressed after the perfect parry window but before the full 1-second reaction window expires.
-
-Dexios successfully defends against the attack but takes 5 damage.
-
-The visual feedback should communicate that the defense was successful but not perfectly timed.
-
-### Failed Defense
-
-If the player presses the wrong directional key or provides no valid input within the reaction window, the defense fails and Dexios takes the attack's full 20 damage.
-
-For the first implementation, the first directional input registered during the reaction window will resolve the defense attempt. The player cannot repeatedly test different directions to obtain a successful block.
-
-# 6. USER INTERFACE (HUD)
-
-## 6.1. Iobrontes's HUD
-
-Iobrontes's interface will be positioned near the top of the screen and visually associated with his position in the arena.
-
-It will display:
-
-**Iobrontes**  
-*God of Thunder, Twelfth Heir of Zeus*
-
-A health bar with a purple lightning-inspired design will appear underneath the name.
-
-- Starting health: 200.
-- Maximum health: 200.
-- The bar decreases proportionally to damage received.
-- A numerical health value will be displayed for clarity during testing.
-- The name and subtitle will use a Greek-inspired typeface while prioritizing readability.
-
-## 6.2. Dexios's HUD
-
-Dexios's interface will appear in the lower-right corner of the screen.
-
-It will display his name and three distinct resource bars.
-
-**Health**
-- Color: Green.
-- Starting and maximum value: 100.
-
-**Mana**
-- Color: Blue.
-- Starting and maximum value: 100.
-
-**Chaos Energy**
-- Color: Red.
-- Starting value: 0.
-- Maximum value: 100.
-
-Below the resource bars, the interface will display the three available attacks:
-
-- Triple Lightning.
-- Electric Arc.
-- Chaotic Lightning.
-
-Each attack option must show its name and resource cost. If Dexios does not have enough of the required resource, the attack must appear visually disabled and cannot be selected.
-
-Triple Lightning will be displayed with no Mana cost.
-
-All resource values and bars must update immediately after any relevant change in character statistics.
-
-## 6.3. Combat Indicators
-
-During Iobrontes's turn, the screen must clearly communicate that the player needs to defend.
-
-Directional indicators should appear in a visible position, preferably near the attack trajectory or Dexios, without obscuring the character or important action.
-
-The direction of each attack must also be recognizable from the lightning's animation and trajectory rather than relying on color alone.
-
-Additional visual effects may distinguish a perfect parry from an imperfect block and a failed defense.
-
-# 7. VICTORY AND DEFEAT CONDITIONS
-
-## 7.1. Victory
-
-Victory occurs when Iobrontes reaches zero health.
-
-The combat system stops, attack and defense inputs are disabled, and Iobrontes's defeat animation plays, followed by Dexios's victory animation.
-
-## 7.2. Defeat
-
-Defeat occurs when Dexios reaches zero health.
-
-The combat system stops, combat inputs are disabled, and Dexios's defeat animation plays.
-
-Health values cannot fall below zero in the user interface. Once either combatant is defeated, subsequent effects must not continue to apply damage to that defeated character.
-
-# 8. PROTOTYPE ACCEPTANCE CRITERIA
-
-The prototype will be considered functional when all of the following requirements are met:
-
-1. The battle can start and end without critical errors.
-2. Dexios can execute all three attacks with the correct damage and resource costs.
-3. Triple Lightning deals 15 total damage across three hits and consumes no Mana.
-4. Electric Arc deals 30 damage and consumes 10 Mana.
-5. Chaotic Lightning deals 70 damage to Iobrontes, costs 50 Chaos energy, and inflicts 20 damage on Dexios.
-6. Iobrontes can execute all four directional attacks.
-7. The player can perform all four defensive actions using the assigned keyboard controls.
-8. An imperfect block limits incoming damage to 5.
-9. A perfect parry prevents all incoming damage and deals 5 damage to Iobrontes.
-10. Failed defenses deal the full 20 damage.
-11. Chaos energy increases correctly when Dexios takes eligible damage and allows the use of Chaotic Lightning.
-12. Dexios's three resource bars and Iobrontes's health bar update correctly.
-13. Idle, attack, defense, and defeat animations play without incorrect overlaps.
-14. The battle remains visually readable at a resolution of 1920 × 1080 pixels.
-
-# 9. VISUAL REFERENCES
-
-Reference images of Dexios, Iobrontes, the temple, the user interface, and magical effects will be attached at the end of this document.
-
-These images establish the intended visual style, proportions, and overall presentation of the prototype.
-
-They should not automatically be treated as final animation-ready assets. Character illustrations must be adapted to the required poses, animation frames, and visual effects needed for the combat system.
-
----
-
-**End of Document — Version 0.1**

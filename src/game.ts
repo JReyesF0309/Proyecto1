@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import CombatScene from './combat-scene';
+import { GAME_CONFIG } from './game-config';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 1920,
-  height: 1080,
+  width: GAME_CONFIG.canvas.width,
+  height: GAME_CONFIG.canvas.height,
   parent: 'juego',
   backgroundColor: '#11111c',
   scale: {

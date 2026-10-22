@@ -1,89 +1,73 @@
-export type AttackId = 'triple-lightning' | 'electric-arc' | 'chaotic-lightning';
-export type Direction = 'left' | 'right' | 'top' | 'bottom';
+import { CharacterId, Direction, GAME_CONFIG } from './game-config';
+
 export type DefenseOutcome = 'perfect' | 'blocked' | 'failed';
 export type CombatResult = 'victory' | 'defeat';
+export type Resource = 'mana' | 'chaos';
 
-export interface CombatState {
-  dexiosHealth: number;
+export interface CharacterStatus {
+  health: number;
   mana: number;
   chaos: number;
+}
+
+export interface CombatState {
+  party: Record<CharacterId, CharacterStatus>;
   iobrontesHealth: number;
+  armorBreak: boolean;
 }
 
-export interface AttackDefinition {
-  id: AttackId;
-  name: string;
+export interface ResourceCost {
+  resource: Resource | null;
   cost: number;
-  resource: 'mana' | 'chaos' | null;
-  damage: number;
-  hits: number;
-  selfDamage: number;
 }
 
-export const MAX_DEXIOS_HEALTH = 100;
-export const MAX_MANA = 100;
-export const MAX_CHAOS = 100;
-export const MAX_IOBRONTES_HEALTH = 200;
-export const ENEMY_ATTACK_DAMAGE = 20;
-export const IMPERFECT_BLOCK_DAMAGE = 5;
-export const PERFECT_PARRY_DAMAGE = 5;
-export const PERFECT_PARRY_WINDOW_MS = 600;
-export const DEFENSE_WINDOW_MS = 1000;
-export const WIND_UP_MS = 1000;
-export const PROJECTILE_TRAVEL_MS = 2000;
-
-export const ATTACKS: readonly AttackDefinition[] = [
-  {
-    id: 'triple-lightning',
-    name: 'Triple Lightning',
-    cost: 0,
-    resource: null,
-    damage: 5,
-    hits: 3,
-    selfDamage: 0,
-  },
-  {
-    id: 'electric-arc',
-    name: 'Electric Arc',
-    cost: 10,
-    resource: 'mana',
-    damage: 30,
-    hits: 1,
-    selfDamage: 0,
-  },
-  {
-    id: 'chaotic-lightning',
-    name: 'Chaotic Lightning',
-    cost: 50,
-    resource: 'chaos',
-    damage: 70,
-    hits: 1,
-    selfDamage: 20,
-  },
-];
-
-export const createCombatState = (): CombatState => ({
-  dexiosHealth: MAX_DEXIOS_HEALTH,
-  mana: MAX_MANA,
-  chaos: 0,
-  iobrontesHealth: MAX_IOBRONTES_HEALTH,
-});
-
-export const canUseAttack = (state: CombatState, attack: AttackDefinition): boolean => {
-  if (attack.resource === 'mana') {
-    return state.mana >= attack.cost;
-  }
-  if (attack.resource === 'chaos') {
-    return state.chaos >= attack.cost;
-  }
-  return true;
+export const MAX_HEALTH: Record<CharacterId, number> = {
+  dexios: GAME_CONFIG.characters.dexios.health,
+  furai: GAME_CONFIG.characters.furai.health,
+  sahira: GAME_CONFIG.characters.sahira.health,
 };
 
-export const spendAttackCost = (state: CombatState, attack: AttackDefinition): void => {
-  if (attack.resource === 'mana') {
-    state.mana = Math.max(0, state.mana - attack.cost);
-  } else if (attack.resource === 'chaos') {
-    state.chaos = Math.max(0, state.chaos - attack.cost);
+export const MAX_MANA: Record<CharacterId, number> = {
+  dexios: GAME_CONFIG.characters.dexios.mana,
+  furai: GAME_CONFIG.characters.furai.mana,
+  sahira: GAME_CONFIG.characters.sahira.mana,
+};
+
+export const MAX_CHAOS = 100;
+export const MAX_IOBRONTES_HEALTH = GAME_CONFIG.characters.iobrontes.health;
+export const ENEMY_ATTACK_DAMAGE = 10;
+export const IMPERFECT_BLOCK_DAMAGE = 5;
+export const PERFECT_PARRY_DAMAGE = 5;
+export const CHAOS_PER_DAMAGE = 20;
+export const WIND_UP_MS = GAME_CONFIG.timing.windUpMs;
+export const PROJECTILE_TRAVEL_MS = GAME_CONFIG.timing.projectileTravelMs;
+export const DEFENSE_WINDOW_START_MS =
+  PROJECTILE_TRAVEL_MS - GAME_CONFIG.timing.defenseOpensBeforeImpactMs;
+export const PERFECT_PARRY_WINDOW_START_MS =
+  PROJECTILE_TRAVEL_MS - GAME_CONFIG.timing.perfectParryStartsBeforeImpactMs;
+export const DEFENSE_WINDOW_END_MS =
+  PROJECTILE_TRAVEL_MS + GAME_CONFIG.timing.defenseClosesAfterImpactMs;
+
+export const createCombatState = (): CombatState => ({
+  party: {
+    dexios: { health: MAX_HEALTH.dexios, mana: MAX_MANA.dexios, chaos: 0 },
+    furai: { health: MAX_HEALTH.furai, mana: MAX_MANA.furai, chaos: 0 },
+    sahira: { health: MAX_HEALTH.sahira, mana: MAX_MANA.sahira, chaos: 0 },
+  },
+  iobrontesHealth: MAX_IOBRONTES_HEALTH,
+  armorBreak: false,
+});
+
+export const canAfford = (status: CharacterStatus, action: ResourceCost): boolean => {
+  if (!action.resource) {
+    return true;
+  }
+  return status[action.resource] >= action.cost;
+};
+
+export const spendCost = (status: CharacterStatus, action: ResourceCost): void => {
+  if (action.resource) {
+    status[action.resource] = Math.max(0, status[action.resource] - action.cost);
   }
 };
 
@@ -93,17 +77,32 @@ export const damageIobrontes = (state: CombatState, amount: number): number => {
   return damage;
 };
 
-export const damageDexios = (
+export const damagePartyMember = (
   state: CombatState,
+  character: CharacterId,
   amount: number,
-  gainsChaos: boolean,
+  causedByEnemy = true,
 ): number => {
-  const damage = Math.min(state.dexiosHealth, Math.max(0, amount));
-  state.dexiosHealth -= damage;
-  if (gainsChaos && damage > 0) {
-    state.chaos = Math.min(MAX_CHAOS, state.chaos + 10);
+  const status = state.party[character];
+  const damage = Math.min(status.health, Math.max(0, amount));
+  status.health -= damage;
+  if (character === 'dexios' && causedByEnemy && damage > 0) {
+    status.chaos = Math.min(MAX_CHAOS, status.chaos + CHAOS_PER_DAMAGE);
   }
   return damage;
+};
+
+export const healPartyMember = (
+  state: CombatState,
+  character: CharacterId,
+): number => {
+  const status = state.party[character];
+  if (status.health <= 0) {
+    return 0;
+  }
+  const restored = MAX_HEALTH[character] - status.health;
+  status.health = MAX_HEALTH[character];
+  return restored;
 };
 
 export const resolveDefense = (
@@ -111,14 +110,36 @@ export const resolveDefense = (
   responseDirection: Direction | null,
   responseTimeMs: number | null,
 ): DefenseOutcome => {
-  if (responseDirection !== attackDirection || responseTimeMs === null) {
+  if (
+    responseDirection !== attackDirection
+    || responseTimeMs === null
+    || responseTimeMs < DEFENSE_WINDOW_START_MS
+    || responseTimeMs > DEFENSE_WINDOW_END_MS
+  ) {
     return 'failed';
   }
-  if (responseTimeMs <= PERFECT_PARRY_WINDOW_MS) {
-    return 'perfect';
+  return responseTimeMs < PERFECT_PARRY_WINDOW_START_MS ? 'blocked' : 'perfect';
+};
+
+export const damageForDefense = (
+  character: CharacterId,
+  outcome: DefenseOutcome,
+): number => {
+  if (outcome === 'perfect') {
+    return 0;
   }
-  if (responseTimeMs <= DEFENSE_WINDOW_MS) {
-    return 'blocked';
+  if (outcome === 'blocked') {
+    return character === 'sahira' ? 0 : IMPERFECT_BLOCK_DAMAGE;
   }
-  return 'failed';
+  return ENEMY_ATTACK_DAMAGE;
+};
+
+export const getBattleResult = (state: CombatState): CombatResult | null => {
+  if (state.iobrontesHealth <= 0) {
+    return 'victory';
+  }
+  if (Object.values(state.party).every((character) => character.health <= 0)) {
+    return 'defeat';
+  }
+  return null;
 };
