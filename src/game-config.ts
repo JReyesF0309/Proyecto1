@@ -75,8 +75,8 @@ export const GAME_CONFIG = {
   canvas: { width: 1920, height: 1080 },
   camera: { targetZoom: 1.08, focusMs: 260, returnMs: 300 },
   timing: {
-    windUpMs: 1000,
-    projectileTravelMs: 1000,
+    windUpMs: 125,
+    projectileTravelMs: 250,
     defenseOpensBeforeImpactMs: 500,
     perfectParryStartsBeforeImpactMs: 100,
     defenseClosesAfterImpactMs: 100,
@@ -157,18 +157,18 @@ export const GAME_CONFIG = {
   },
   abilities: {
     dexios: [
-      { id: 'triple-lightning', name: 'Triple Lightning', detail: '3 impactos · 5 de daño', frame: 'dexios_ataque', damage: 5, hits: 3, resource: null, cost: 0, selfDamage: 0, color: 0xffd65c, sound: 'lightning' },
-      { id: 'electric-arc', name: 'Electric Arc', detail: '30 de daño', frame: 'dexios_blanco', damage: 30, hits: 1, resource: 'mana', cost: 20, selfDamage: 0, color: 0xf3f6ff, sound: 'magic' },
-      { id: 'chaotic-lightning', name: 'Chaotic Lightning', detail: '70 de daño · 10 propio', frame: 'dexios_rojo', damage: 70, hits: 1, resource: 'chaos', cost: 50, selfDamage: 10, color: 0xff435b, sound: 'lightning' },
+      { id: 'triple-lightning', name: 'Triple Lightning', detail: '3 impactos · 5 de daño', frame: 'dexios_ataque', damage: 5, hits: 3, resource: null, cost: 0, selfDamage: 0, color: 0xffd65c, sound: 'dexios' },
+      { id: 'electric-arc', name: 'Electric Arc', detail: '30 de daño', frame: 'dexios_blanco', damage: 30, hits: 1, resource: 'mana', cost: 20, selfDamage: 0, color: 0xf3f6ff, sound: 'dexios' },
+      { id: 'chaotic-lightning', name: 'Chaotic Lightning', detail: '70 de daño · 10 propio', frame: 'dexios_rojo', damage: 70, hits: 1, resource: 'chaos', cost: 50, selfDamage: 10, color: 0xff435b, sound: 'dexios' },
     ],
     furai: [
-      { id: 'tiger-spear', name: 'Tiger Spear', detail: '15 de daño', frame: 'furai_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xf3bf66, sound: 'physical' },
-      { id: 'tiger-fang', name: 'Tiger Fang', detail: '2 impactos · 15 de daño', frame: 'furai_tigre', damage: 15, hits: 2, resource: 'mana', cost: 20, selfDamage: 0, color: 0xdca7ff, sound: 'physical' },
+      { id: 'tiger-spear', name: 'Tiger Spear', detail: '15 de daño', frame: 'furai_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xf3bf66, sound: 'furai' },
+      { id: 'tiger-fang', name: 'Tiger Fang', detail: '2 impactos · 15 de daño', frame: 'furai_tigre', damage: 15, hits: 2, resource: 'mana', cost: 20, selfDamage: 0, color: 0xdca7ff, sound: 'tigre' },
       { id: 'armor-break', name: 'Armor Break', detail: 'Duplica el siguiente golpe', frame: 'furai_romper', damage: 0, hits: 0, resource: 'mana', cost: 20, selfDamage: 0, color: 0xc77cff, sound: 'magic' },
     ],
     sahira: [
-      { id: 'jackal-strike', name: 'Jackal Strike', detail: '15 de daño', frame: 'sahira_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x65e5bd, sound: 'physical' },
-      { id: 'hippopotamus-healing', name: 'Hippopotamus Healing', detail: 'Restaura toda la salud', frame: 'sahira_cura', damage: 0, hits: 0, resource: 'mana', cost: 40, selfDamage: 0, color: 0x63f0c0, sound: 'heal' },
+      { id: 'jackal-strike', name: 'Jackal Strike', detail: '15 de daño', frame: 'sahira_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x65e5bd, sound: 'sahira' },
+      { id: 'hippopotamus-healing', name: 'Hippopotamus Healing', detail: 'Restaura toda la salud', frame: 'sahira_cura', damage: 0, hits: 0, resource: 'mana', cost: 40, selfDamage: 0, color: 0x63f0c0, sound: 'cura' },
     ],
   },
   audio: { master: 0.72, music: 0.3, effects: 0.58 },

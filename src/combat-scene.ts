@@ -74,6 +74,7 @@ export default class CombatScene extends Phaser.Scene {
   private activeCharacter: CharacterId | null = null;
   private healingSelection = false;
   private actorSprites!: Record<CharacterId, Phaser.GameObjects.Sprite>;
+  private breathingTweens!: Record<CharacterId, Phaser.Tweens.Tween>;
   private actorNames!: Record<CharacterId, Phaser.GameObjects.Text>;
   private missingLabels!: Record<CharacterId, Phaser.GameObjects.Text>;
   private frameGeneration: Record<CharacterId, number> = { dexios: 0, furai: 0, sahira: 0 };
@@ -294,6 +295,11 @@ export default class CombatScene extends Phaser.Scene {
       dexios: this.createPartySprite('dexios'),
       sahira: this.createPartySprite('sahira'),
     };
+    this.breathingTweens = {
+      furai: this.createBreathingTween('furai'),
+      dexios: this.createBreathingTween('dexios'),
+      sahira: this.createBreathingTween('sahira'),
+    };
     this.actorNames = {
       furai: this.createNameLabel('furai'),
       dexios: this.createNameLabel('dexios'),
@@ -333,6 +339,18 @@ export default class CombatScene extends Phaser.Scene {
     this.add.ellipse(character.x, character.feetY - 3, character.displayHeight * 0.68, 38, 0x100d1b, 0.34)
       .setDepth(character.depth - 1);
     return sprite;
+  }
+
+  private createBreathingTween(id: CharacterId): Phaser.Tweens.Tween {
+    const character = GAME_CONFIG.characters[id];
+    return this.tweens.add({
+      targets: this.actorSprites[id],
+      y: { from: character.feetY, to: character.feetY - 2 },
+      duration: 1800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private createNameLabel(id: CharacterId): Phaser.GameObjects.Text {
@@ -841,7 +859,7 @@ export default class CombatScene extends Phaser.Scene {
     this.warning.setVisible(false);
     this.timingRing.clear();
     this.targetText.setText('¡DESCARGA EN CAMINO!');
-    this.soundscape.play('lightning');
+    this.soundscape.play('iobrontes');
     const path = this.lightningPath(this.targetCharacter, this.attackDirection);
     const bolt = this.createBolt();
     this.activeBolt = bolt;
@@ -944,7 +962,7 @@ export default class CombatScene extends Phaser.Scene {
     const actualDamage = damagePartyMember(this.state, targetId, damage);
     this.timingRing.clear();
     this.warning.setVisible(false);
-    this.soundscape.play(outcome === 'perfect' ? 'magic' : 'impact');
+    this.soundscape.play(outcome === 'perfect' ? 'perfect_block' : 'impact');
 
     if (outcome === 'perfect') {
       this.perfectParries += 1;
@@ -1010,6 +1028,7 @@ export default class CombatScene extends Phaser.Scene {
       if (this.phase !== 'resolving' || this.result) {
         return;
       }
+      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.idle);
       this.lightningIndex += 1;
       if (this.state.party[targetId].health <= 0 || this.lightningIndex >= 3) {
         this.finishEnemyChain();
@@ -1030,7 +1049,7 @@ export default class CombatScene extends Phaser.Scene {
       this.turnText.setText('TIGER PARRY');
       this.showFloatingText('TIGER PARRY', GAME_CONFIG.characters.furai.x, GAME_CONFIG.characters.furai.feetY - 520, '#ffe187');
       this.setActorFrame('furai', GAME_CONFIG.characters.furai.frames.attack);
-      this.soundscape.play('physical');
+      this.soundscape.play('furai');
       this.time.delayedCall(300, () => {
         if (this.phase === 'ended' || this.result) {
           return;
@@ -1386,6 +1405,14 @@ export default class CombatScene extends Phaser.Scene {
     const sprite = this.actorSprites[id];
     const config = GAME_CONFIG.characters[id];
     const generation = ++this.frameGeneration[id];
+    if (frame === config.frames.idle && this.state.party[id].health > 0) {
+      this.breathingTweens[id].stop();
+      sprite.setY(config.feetY);
+      this.breathingTweens[id].restart();
+    } else {
+      this.breathingTweens[id].stop();
+      sprite.setY(config.feetY);
+    }
     if (this.textures.exists(frame)) {
       sprite.setTexture(frame).setAlpha(this.state.party[id].health > 0 ? 1 : 0.32);
       this.sizeSprite(sprite, frame, config.displayHeight);
@@ -1571,7 +1598,11 @@ export default class CombatScene extends Phaser.Scene {
     this.phase = 'ended';
     this.activeCharacter = null;
     this.healingSelection = false;
-    this.soundscape.stopMusic();
+    if (result === 'victory') {
+      this.soundscape.playMusic('victory');
+    } else {
+      this.soundscape.stopMusic();
+    }
     this.time.removeAllEvents();
     this.tweens.killAll();
     this.activeBolt?.destroy();

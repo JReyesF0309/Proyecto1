@@ -150,6 +150,7 @@ Possible states include:
 •	Defeated
 When a character begins an action, the appropriate frame must replace their idle frame.
 Once the action ends, the character returns to the idle frame unless they have been defeated.
+Dexios, Furai, and Sahira gently move up and down while in their base idle frame.
 If a supplied asset is a static frame rather than a complete sprite sheet, simple movements and effects may be produced through Phaser, such as:
 •	Small positional movements.
 •	Slight scaling.
@@ -427,6 +428,7 @@ Target Count: 1
 Damage Type: Lightning
 Lightning Color: Purple
 Iobrontes selects one active party member and unleashes three consecutive lightning attacks against them.
+Each attack has a 0.125-second casting (wind-up) time before its lightning bolt launches.
 Each bolt independently chooses a direction at random from:
 •	Up
 •	Down
@@ -482,13 +484,13 @@ Each lightning bolt has an independent defensive input opportunity.
 9.2. Attack Timing
 Each lightning bolt follows three phases.
 Phase 1 — Wind-up
-Duration: 1.0 second
+Duration: 0.125 seconds
 Iobrontes prepares the attack and indicates its direction.
 The appropriate directional frame becomes visible.
 A warning marker appears on the side corresponding to the attack.
 Defensive inputs during this phase are ignored without penalty.
 Phase 2 — Projectile Travel
-Duration: 1.0 second
+Duration: 0.25 seconds
 The lightning projectile travels toward the targeted character.
 A timing ring appears around the target and contracts toward them.
 The ring reaches its final size at the moment of visual impact.
@@ -633,38 +635,24 @@ It must disappear immediately after the empowered attack resolves.
 ________________________________________
 11. AUDIO AND MUSIC
 11.1. Background Battle Music
-The combat must include continuously playing background music.
-The intended musical style is energetic and dramatic, inspired by classic Pokémon Emerald battle themes.
-The music should use:
-•	A rhythmic drum beat as its foundation.
-•	Trumpet elements to give the music energy and impact.
-•	Light piano accompaniment in the background.
-•	A fast-paced, battle-oriented atmosphere.
-The music should feel energetic and heroic while maintaining the tone of a confrontation inside a Greek divine temple.
-The composition should be original and use the reference only as inspiration for its instrumentation, energy, and overall feeling.
-Minimum Audio Requirement
-If a complete composed track is not available, the prototype must include at least a simple looping musical arrangement consisting of:
-1.	Percussion or drums.
-2.	Trumpet accents.
-3.	Light piano accompaniment.
-The music should loop seamlessly during combat.
+The combat must include continuously playing background music using `assets/music/watch_the_thunder.mp3`.
+The battle track loops while the encounter is active.
+When Iobrontes reaches 0 health, the battle track transitions to `assets/music/nike.mp3`, which loops throughout the victory screen until the battle restarts.
 11.2. Sound Effects
-The prototype should include sound effects for:
-•	Electrical attacks.
-•	Physical attacks.
-•	Magical abilities.
-•	Damage received.
-•	Imperfect blocks.
-•	Perfect parries.
-•	Furai's Armor Break.
-•	Sahira's healing.
-•	Character defeat.
-•	Boss defeat.
+Use the supplied sound effects in `assets/sfx/`:
+•	`dexios.mp3` plays for Triple Lightning, Electric Arc, and Chaotic Lightning.
+•	`iobrontes.mp3` plays once for each bolt in Lightning Chain.
+•	`furai.mp3` plays for Tiger Spear.
+•	`tigre.mp3` plays for Tiger Fang.
+•	`sahira.mp3` plays for Jackal Strike.
+•	`cura.mp3` plays for Hippopotamus Healing.
+•	`perfect_block.mp3` plays for every perfect block by Dexios, Furai, or Sahira.
+Existing generic effects may be used for other combat feedback.
 Sound effects should support the combat without overpowering the background music.
 11.3. Audio Behavior
 •	Background music starts when the encounter begins, subject to browser audio playback restrictions.
 •	Music continues while the battle remains active.
-•	Music stops or transitions when the battle finishes.
+•	On victory, music transitions to the looping victory track; on defeat, music stops.
 •	Sound effects play alongside the music.
 •	Audio volumes should be independently adjustable through configuration.
 •	A mute option is recommended for testing.
@@ -869,4 +857,3 @@ These assets establish the visual identity and character appearances of the prot
 The code must reference them through their registered names, allowing images to be replaced or improved without requiring changes to the core combat systems.
 ________________________________________
 End of Document — Version 0.3
-

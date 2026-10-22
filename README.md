@@ -46,4 +46,4 @@ npm run build
 npm run build:electron
 ```
 
-La compilación web se genera en `docs/` para GitHub Pages. La música original se sintetiza en el navegador con percusión, melodía de metales y acompañamiento de piano; empieza tras la primera interacción por las restricciones de reproducción automática del navegador.
+La compilación web se genera en `docs/` para GitHub Pages. `assets/music/watch_the_thunder.mp3` se reproduce en bucle durante la pelea y, cuando Iobrontes llega a 0 de vida, cambia a `assets/music/nike.mp3`, también en bucle, hasta reiniciar el combate. El audio empieza tras la primera interacción por las restricciones de reproducción automática del navegador; `M` silencia o reactiva la música y los efectos.

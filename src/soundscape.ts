@@ -1,12 +1,17 @@
 import { GAME_CONFIG } from './game-config';
+import battleMusicUrl from '../assets/music/watch_the_thunder.mp3';
+import victoryMusicUrl from '../assets/music/nike.mp3';
+import curaSoundUrl from '../assets/sfx/cura.mp3';
+import dexiosSoundUrl from '../assets/sfx/dexios.mp3';
+import furaiSoundUrl from '../assets/sfx/furai.mp3';
+import iobrontesSoundUrl from '../assets/sfx/iobrontes.mp3';
+import perfectBlockSoundUrl from '../assets/sfx/perfect_block.mp3';
+import sahiraSoundUrl from '../assets/sfx/sahira.mp3';
+import tigerSoundUrl from '../assets/sfx/tigre.mp3';
 
-type SoundEffect = 'lightning' | 'impact' | 'physical' | 'magic' | 'heal';
-
-const TEMPO = 140;
-const STEP_SECONDS = 60 / TEMPO / 2;
-const PHRYGIAN_NOTES = [0, 1, 3, 5, 7, 8, 10, 12, 13, 15, 17] as const;
-const MELODY = [0, null, 3, 4, null, 5, 4, null, 0, null, 4, 6, 7, null, 5, null] as const;
-const LYRE = [0, null, null, 4, null, null, 6, null, 0, null, null, 5, null, null, 4, null] as const;
+type AssetSoundEffect = 'dexios' | 'iobrontes' | 'furai' | 'tigre' | 'sahira' | 'cura' | 'perfect_block';
+type SoundEffect = 'lightning' | 'impact' | 'physical' | 'magic' | 'heal' | AssetSoundEffect;
+type MusicTrack = 'battle' | 'victory';
 
 export default class Soundscape {
   private readonly context = new AudioContext();
@@ -14,12 +19,10 @@ export default class Soundscape {
   private readonly musicGain = this.context.createGain();
   private readonly effectsGain = this.context.createGain();
   private readonly noiseBuffer: AudioBuffer;
-  private scheduler?: number;
-  private nextStepTime = 0;
-  private step = 0;
-  private started = false;
+  private readonly musicTracks: Record<MusicTrack, HTMLAudioElement>;
+  private readonly soundEffects: Record<AssetSoundEffect, HTMLAudioElement>;
+  private activeTrack: MusicTrack | null = 'battle';
   private enabled = true;
-  private musicStopped = false;
 
   constructor() {
     this.master.gain.value = GAME_CONFIG.audio.master;
@@ -28,6 +31,29 @@ export default class Soundscape {
     this.musicGain.connect(this.master);
     this.effectsGain.connect(this.master);
     this.master.connect(this.context.destination);
+
+    this.musicTracks = {
+      battle: new Audio(battleMusicUrl),
+      victory: new Audio(victoryMusicUrl),
+    };
+    Object.values(this.musicTracks).forEach((track) => {
+      track.loop = true;
+      track.preload = 'auto';
+      this.context.createMediaElementSource(track).connect(this.musicGain);
+    });
+    this.soundEffects = {
+      dexios: new Audio(dexiosSoundUrl),
+      iobrontes: new Audio(iobrontesSoundUrl),
+      furai: new Audio(furaiSoundUrl),
+      tigre: new Audio(tigerSoundUrl),
+      sahira: new Audio(sahiraSoundUrl),
+      cura: new Audio(curaSoundUrl),
+      perfect_block: new Audio(perfectBlockSoundUrl),
+    };
+    Object.values(this.soundEffects).forEach((effect) => {
+      effect.preload = 'auto';
+      this.context.createMediaElementSource(effect).connect(this.effectsGain);
+    });
 
     this.noiseBuffer = this.context.createBuffer(1, this.context.sampleRate * 2, this.context.sampleRate);
     const samples = this.noiseBuffer.getChannelData(0);
@@ -41,14 +67,12 @@ export default class Soundscape {
   }
 
   start(): void {
-    if (!this.enabled || this.started) {
-      void this.context.resume();
-      return;
+    if (this.context.state !== 'running') {
+      void this.context.resume().catch((error: unknown) => {
+        console.error('No se pudo activar el audio:', error);
+      });
     }
-    this.started = true;
-    this.nextStepTime = this.context.currentTime + 0.05;
-    this.scheduler = window.setInterval(() => this.scheduleMusic(), 25);
-    void this.context.resume();
+    this.resumeMusic();
   }
 
   toggle(): void {
@@ -58,7 +82,25 @@ export default class Soundscape {
     this.master.gain.setTargetAtTime(this.enabled ? GAME_CONFIG.audio.master : 0, now, 0.04);
     if (this.enabled) {
       this.start();
+    } else if (this.activeTrack) {
+      this.musicTracks[this.activeTrack].pause();
     }
+  }
+
+  playMusic(track: MusicTrack): void {
+    if (track !== this.activeTrack) {
+      if (this.activeTrack) {
+        const previousTrack = this.musicTracks[this.activeTrack];
+        previousTrack.pause();
+        previousTrack.currentTime = 0;
+      }
+      this.musicTracks[track].currentTime = 0;
+      this.activeTrack = track;
+      const now = this.context.currentTime;
+      this.musicGain.gain.cancelScheduledValues(now);
+      this.musicGain.gain.setTargetAtTime(GAME_CONFIG.audio.music, now, 0.04);
+    }
+    this.start();
   }
 
   play(effect: SoundEffect): void {
@@ -66,7 +108,17 @@ export default class Soundscape {
     if (!this.enabled) {
       return;
     }
-    if (effect === 'lightning') {
+    if (
+      effect === 'dexios'
+      || effect === 'iobrontes'
+      || effect === 'furai'
+      || effect === 'tigre'
+      || effect === 'sahira'
+      || effect === 'cura'
+      || effect === 'perfect_block'
+    ) {
+      this.playAssetSound(effect);
+    } else if (effect === 'lightning') {
       this.playLightning();
     } else if (effect === 'impact') {
       this.playImpact();
@@ -80,10 +132,11 @@ export default class Soundscape {
   }
 
   stopMusic(): void {
-    this.musicStopped = true;
-    if (this.scheduler !== undefined) {
-      window.clearInterval(this.scheduler);
-      this.scheduler = undefined;
+    if (this.activeTrack) {
+      const track = this.musicTracks[this.activeTrack];
+      track.pause();
+      track.currentTime = 0;
+      this.activeTrack = null;
     }
     const now = this.context.currentTime;
     this.musicGain.gain.cancelScheduledValues(now);
@@ -91,118 +144,42 @@ export default class Soundscape {
   }
 
   destroy(): void {
-    if (this.scheduler !== undefined) {
-      window.clearInterval(this.scheduler);
-    }
+    Object.values(this.musicTracks).forEach((track) => track.pause());
+    Object.values(this.soundEffects).forEach((effect) => effect.pause());
     this.master.disconnect();
     void this.context.close();
   }
 
-  private scheduleMusic(): void {
-    if (!this.enabled || this.musicStopped) {
+  private playAssetSound(effect: AssetSoundEffect): void {
+    const audio = this.soundEffects[effect];
+    const play = (): void => {
+      if (!this.enabled) {
+        return;
+      }
+      audio.currentTime = 0;
+      void audio.play().catch((error: unknown) => {
+        console.error(`No se pudo reproducir el efecto ${effect}:`, error);
+      });
+    };
+    if (this.context.state === 'running') {
+      play();
       return;
     }
-    while (this.nextStepTime < this.context.currentTime + 0.12) {
-      this.scheduleStep(this.step, this.nextStepTime);
-      this.step += 1;
-      this.nextStepTime += STEP_SECONDS;
-    }
-  }
-
-  private scheduleStep(step: number, time: number): void {
-    const position = step % 16;
-    const bar = Math.floor(step / 16) % 4;
-    const tonic = 146.83;
-    const transposition = [0, 0, 3, 0][bar];
-
-    const melodyIndex = MELODY[position];
-    if (melodyIndex !== null) {
-      const note = tonic * 2 ** (PHRYGIAN_NOTES[melodyIndex + transposition] / 12) * 2;
-      this.playTrumpet(note, time, STEP_SECONDS * 0.65, 0.12);
-    }
-    const lyreIndex = LYRE[position];
-    if (lyreIndex !== null) {
-      const note = tonic * 2 ** (PHRYGIAN_NOTES[lyreIndex + transposition] / 12);
-      this.playPiano(note, time, STEP_SECONDS * 1.1);
-    }
-
-    if (position === 0 || position === 8) {
-      this.playDrum(time, false, position === 0 ? 0.19 : 0.14);
-    } else if (position === 4 || position === 12) {
-      this.playDrum(time, true, 0.065);
-    }
-    if ((position === 0 && bar === 0) || (position === 8 && bar === 2)) {
-      this.playTrumpet(tonic * 2 ** (PHRYGIAN_NOTES[bar === 0 ? 4 : 0] / 12) * 4, time, 0.16, 0.08);
-    }
-    if (position === 12 && bar === 3) {
-      this.playTrumpet(tonic * 2 ** (PHRYGIAN_NOTES[4] / 12) * 4, time, 0.16, 0.08);
-    }
-  }
-
-  private playTrumpet(frequency: number, time: number, duration: number, volume: number): void {
-    const envelope = this.context.createGain();
-    envelope.gain.setValueAtTime(0.0001, time);
-    envelope.gain.exponentialRampToValueAtTime(volume, time + 0.025);
-    envelope.gain.setValueAtTime(volume * 0.68, time + duration * 0.48);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, time + duration * 0.9);
-    const filter = this.context.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1900, time);
-    filter.Q.value = 1.1;
-    filter.connect(envelope);
-    envelope.connect(this.musicGain);
-
-    [0, 4, 7].forEach((cents, index) => {
-      const oscillator = this.context.createOscillator();
-      oscillator.type = index === 0 ? 'sawtooth' : 'square';
-      oscillator.frequency.setValueAtTime(frequency, time);
-      oscillator.detune.value = cents;
-      oscillator.connect(filter);
-      oscillator.start(time);
-      oscillator.stop(time + duration + 0.015);
+    void this.context.resume().then(play).catch((error: unknown) => {
+      console.error(`No se pudo activar el audio para el efecto ${effect}:`, error);
     });
   }
 
-  private playPiano(frequency: number, time: number, duration: number): void {
-    const envelope = this.context.createGain();
-    envelope.gain.setValueAtTime(0.0001, time);
-    envelope.gain.exponentialRampToValueAtTime(0.12, time + 0.008);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-    const tone = this.context.createBiquadFilter();
-    tone.type = 'lowpass';
-    tone.frequency.setValueAtTime(3000, time);
-    tone.frequency.exponentialRampToValueAtTime(950, time + duration);
-    tone.connect(envelope);
-    envelope.connect(this.musicGain);
-    [1, 2.01, 3.02, 4.1].forEach((harmonic, index) => {
-      const oscillator = this.context.createOscillator();
-      oscillator.type = index === 0 ? 'triangle' : 'sine';
-      oscillator.frequency.setValueAtTime(frequency * harmonic, time);
-      oscillator.connect(tone);
-      oscillator.start(time);
-      oscillator.stop(time + duration + 0.01);
-    });
-  }
-
-  private playDrum(time: number, snare: boolean, volume: number): void {
-    const source = this.context.createBufferSource();
-    source.buffer = this.noiseBuffer;
-    const filter = this.context.createBiquadFilter();
-    filter.type = snare ? 'bandpass' : 'lowpass';
-    filter.frequency.setValueAtTime(snare ? 1500 : 180, time);
-    if (!snare) {
-      filter.frequency.exponentialRampToValueAtTime(48, time + 0.19);
+  private resumeMusic(): void {
+    if (!this.enabled || !this.activeTrack) {
+      return;
     }
-    const envelope = this.context.createGain();
-    envelope.gain.setValueAtTime(volume, time);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, time + (snare ? 0.12 : 0.24));
-    source.connect(filter);
-    filter.connect(envelope);
-    envelope.connect(this.musicGain);
-    source.start(time);
-    source.stop(time + 0.26);
-    if (!snare) {
-      this.playTone(72, time, 0.18, volume * 0.7, 'sine', this.musicGain, 42);
+    const track = this.musicTracks[this.activeTrack];
+    if (track.paused) {
+      const trackName = this.activeTrack;
+      void track.play().catch((error: unknown) => {
+        console.error(`No se pudo reproducir la pista ${trackName}:`, error);
+      });
     }
   }
 
