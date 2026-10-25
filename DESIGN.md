@@ -22,8 +22,8 @@ The prototype must:
 1.	Implement a complete three-character party versus one boss encounter.
 2.	Use a fixed turn order without a speed-stat system.
 3.	Allow each playable character to execute their unique abilities.
-4.	Implement Iobrontes's three-hit directional lightning chain.
-5.	Allow the targeted character to defend using WASD.
+4.	Implement Iobrontes's three-hit directional Lightning Chain, team-targeting Watch the Thunder, and Divine Retribution.
+5.	Allow the targeted character to defend using WASD and all active characters to jump together using Space.
 6.	Implement different defensive mechanics for Dexios, Furai, and Sahira.
 7.	Include party health and resource management.
 8.	Implement healing, armor breaking, Chaos generation, and counterattacks.
@@ -207,21 +207,16 @@ For the initial implementation, only the incapacitated party member's turn is sk
 This means Iobrontes may receive consecutive turns if a skipped party-member turn falls between two boss turns.
 The battle only ends in defeat when all three playable characters have zero health.
 4.3. Target Selection
-During each Iobrontes turn, he selects exactly one target.
-The target must be one of the currently active party members.
-Target selection will be random among characters with health above zero.
-Iobrontes cannot select an incapacitated character.
-Once selected, the same character remains the target of all three lightning attacks in that chain.
-The boss cannot change targets in the middle of the sequence.
-If the targeted character is incapacitated before the chain finishes, the remaining lightning attacks are canceled without selecting a replacement target.
+During each Lightning Chain, Iobrontes selects exactly one active party member at random and keeps that target for all three lightning attacks.
+Watch the Thunder targets all active party members simultaneously and requires no single-target selection.
 4.4. Targeting Feedback
 The game must clearly communicate which character Iobrontes is attacking.
-Before his attack sequence begins:
+Before a Lightning Chain begins:
 •	The selected character is visually highlighted.
 •	The camera moves slightly toward the selected character.
 •	The character's name or HUD receives a targeting indicator.
 •	The other party members remain visible but are not eligible to perform defensive actions.
-During the enemy attack sequence, WASD controls only the targeted character.
+During Lightning Chain, WASD controls only the targeted character. During Watch the Thunder, Space triggers a simultaneous jump for the party.
 Inputs must not activate defensive animations for other party members.
 After the chain finishes, the camera returns to the default view and the targeting indicator disappears.
 ________________________________________
@@ -232,6 +227,7 @@ Health	100	100
 Mana	100	100
 Chaos Energy	0	100
 Initial Frame: dexios_base
+Downward defense frame: dexios_abajo
 Dexios specializes in electrical attacks and Chaos energy.
 5.2. Ability 1 — Triple Lightning
 Damage: 5 × 3 = 15
@@ -255,12 +251,12 @@ The attack deals 30 damage in one hit.
 When selected, 20 Mana is consumed.
 The attack must include a visible white lightning effect.
 5.4. Ability 3 — Chaotic Lightning
-Damage: 50
+Damage: 70
 Chaos Energy Cost: 50
 Type: Chaos-based electrical attack
 Frame: dexios_rojo
 Dexios unleashes a large red lightning attack.
-The attack deals 70 damage to Iobrontes and consumes 50 Chaos energy and inflicts 10 self-damage.
+The attack deals 70 damage to Iobrontes and consumes 50 Chaos energy and inflicts 20 self-damage.
 The attack must use visually distinctive red lightning effects.
 5.5. Chaos Energy
 Dexios gains 20 Chaos energy whenever he takes damage from an enemy attack.
@@ -320,7 +316,7 @@ Furai applies an armor-breaking mark to Iobrontes.
 The ability does not deal direct damage.
 Instead, it causes the next qualifying offensive attack against Iobrontes to deal double damage.
 Visual Effect
-A purple tiger-shaped mark appears above Iobrontes.
+The `assets/effects/tiger-mark.png` image appears centered on Iobrontes.
 The mark remains visible until its effect has been consumed.
 Armor Break Rules
 1.	Furai activates Armor Break.
@@ -332,7 +328,7 @@ Examples:
 •	Triple Lightning: 15 → 20 total damage.
 •	Tiger Fang: 30 → 45 total damage.
 •	Electric Arc: 30 → 60 damage.
-•	Chaotic Lightning: 50 → 100 damage.
+•	Chaotic Lightning: 70 → 140 damage.
 For this prototype, automatic defensive counterattacks do not consume the mark. The effect waits for the next damaging attack chosen from a playable character's ability menu.
 Armor Break cannot stack with itself. Reapplying it while active refreshes the same effect instead of multiplying damage again.
 6.5. Defensive Frames
@@ -397,14 +393,21 @@ Healing Target Selection
 6.	The character's Health is restored to maximum.
 For the initial implementation, healing applies to conscious party members only and does not revive incapacitated allies. Incapacitated characters remain visible in the selection interface but are disabled as healing targets.
 This rule can be changed later if revival abilities are introduced.
-7.4. Defensive Frames
+7.4. Ability 3 — Hippopotamus Shield
+Mana Cost: 0
+Type: Defensive support ability
+Frame: sahira_cura
+Sound: cura.mp3
+Sahira selects one conscious ally to protect. The `assets/effects/hippo-mark.png` image appears at the center of the target and displays the two remaining blocked attacks.
+The shield prevents all damage from the target's next two incoming attacks that are not perfectly parried, then disappears. An incoming attack consumes one shield charge unless the target performs a perfect parry. Incapacitated allies cannot be selected.
+7.5. Defensive Frames
 Defensive Direction	Frame
 Right	sahira_derecha
 Left	sahira_izquierda
 Up	sahira_arriba
 Down	sahira_abajo
 Damaged Frame: sahira_herido
-7.5. Defensive Results
+7.6. Defensive Results
 Sahira has stronger blocking capabilities than the other characters.
 Result	Damage Received	Counterattack
 Perfect parry on one bolt	0	0
@@ -416,10 +419,11 @@ ________________________________________
 8. BOSS — IOBRONTES
 8.1. Starting Statistics
 Attribute	Initial Value	Maximum
-Health	1000	1000
+Health	500	500
 Initial Sprite: iobrontes_base
-Iobrontes is the only enemy in the prototype.
-He has one offensive ability, but the ability produces three separate directional attacks.
+Iobrontes is the only enemy in the prototype. He has three actions: Lightning Chain, Watch the Thunder, and Divine Retribution.
+Before each action, the game displays its name in white at the center of the screen for one second. The action begins only after this announcement disappears.
+Iobrontes chooses Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time.
 8.2. Ability — Lightning Chain
 Ability Name: Lightning Chain
 Number of Attacks: 3
@@ -428,7 +432,8 @@ Target Count: 1
 Damage Type: Lightning
 Lightning Color: Purple
 Iobrontes selects one active party member and unleashes three consecutive lightning attacks against them.
-Each attack has a 0.125-second casting (wind-up) time before its lightning bolt launches.
+Each attack has a 0.187-second casting (wind-up) time before its lightning bolt launches.
+Lightning Chain's attack rate is reduced by 33%: its wind-up, projectile travel, result display, and interval between bolts are lengthened accordingly. Projectile travel takes 0.373 seconds.
 Each bolt independently chooses a direction at random from:
 •	Up
 •	Down
@@ -468,29 +473,50 @@ Each lightning bolt deals 10 damage if the target fails to defend.
 A successful imperfect block reduces the damage according to the targeted character's defensive rules.
 A perfect parry prevents all damage and may trigger a counterattack.
 The maximum unblocked damage of one complete Lightning Chain is 30.
+8.3. Ability — Watch the Thunder
+Frame: iobrontes_wtt
+Sound: assets/sfx/trueno.mp3
+Target Count: All active party members
+Damage per Target: 50
+Casting Time: 0.6 seconds
+Jump Window: 0.3 seconds
+Iobrontes launches one long purple lightning beam from himself across Furai, Dexios, and Sahira. After the 0.6-second casting time, a white contracting timing ring appears around each active party member while the beam spans the whole party during the 0.3-second jump window.
+Pressing Space during the jump window makes all active party members jump at the same time. Use furai_salto, dexios_salto, and sahira_salto for their respective jump frames. A successful team jump avoids the attack completely. There is no perfect or imperfect result: each character who does not jump takes 50 damage, unless an active Hippopotamus Shield blocks that hit.
+The attack is one event, not a chain. Resolve damage for all active characters together when the jump window closes.
+8.4. Ability — Divine Retribution
+Frame: iobrontes_armadura
+Sound: assets/sfx/armadura.mp3
+Target Count: Self, then the first playable character whose attack damages Iobrontes
+Retaliation Damage: 30
+Duration: 2 playable-character turns
+Divine Retribution covers Iobrontes in an electric shield. The next attack that damages him still deals its normal damage, then the shield immediately retaliates against its attacker for 30 damage and disappears.
+The shield lasts until that hit occurs or two playable-character turns have ended, whichever comes first. Count turns whether or not the character attacks Iobrontes; a skipped incapacitated-character turn also counts. If Dexios and Sahira take their turns without damaging Iobrontes, the shield has expired by Furai's next turn.
+Whenever the shield is consumed or expires, Iobrontes returns to iobrontes_base. If another action temporarily changes his frame while the shield remains active, restore iobrontes_armadura when that action's frame ends.
 ________________________________________
 9. DIRECTIONAL DEFENSE AND PARRY SYSTEM
 9.1. Core Mechanic
-During an enemy attack, the targeted playable character must identify the incoming lightning direction and perform the corresponding defensive action.
+During Lightning Chain, the targeted playable character must identify the incoming lightning direction and perform the corresponding defensive action.
 The system uses four directions.
 Key	Defensive Action
 W	Defend Up
 A	Defend Left
-S	Defend Down / Jump
+S	Defend Down (Lightning Chain)
+Space	Jump with the whole party (Watch the Thunder)
 D	Defend Right
 These controls apply exclusively to the character currently targeted by Iobrontes.
 Other characters cannot defend on behalf of the target.
 Each lightning bolt has an independent defensive input opportunity.
+Space is accepted only during Watch the Thunder's jump window.
 9.2. Attack Timing
 Each lightning bolt follows three phases.
 Phase 1 — Wind-up
-Duration: 0.125 seconds
+Duration: 0.187 seconds
 Iobrontes prepares the attack and indicates its direction.
 The appropriate directional frame becomes visible.
 A warning marker appears on the side corresponding to the attack.
 Defensive inputs during this phase are ignored without penalty.
 Phase 2 — Projectile Travel
-Duration: 0.25 seconds
+Duration: 0.373 seconds
 The lightning projectile travels toward the targeted character.
 A timing ring appears around the target and contracts toward them.
 The ring reaches its final size at the moment of visual impact.
@@ -560,6 +586,10 @@ Failed Defense
 For Furai's successful triple-perfect chain, display the additional message:
 "Tiger Parry"
 This message appears once, after the third successful perfect parry.
+9.7. Team Jump
+During Watch the Thunder, Space makes every active party member jump simultaneously. The input is available only during the 0.3-second jump window after Iobrontes's 0.6-second casting time.
+A successful jump avoids the attack for the entire party. A character who does not jump takes 50 damage, subject to Hippopotamus Shield. This attack has no perfect-parry or imperfect-block outcomes.
+Show a white ring contracting around each active character throughout the jump window. Use each character's dedicated jump frame while the team is airborne.
 ________________________________________
 10. USER INTERFACE (HUD)
 10.1. Boss HUD
@@ -568,7 +598,7 @@ It displays:
 Iobrontes
 God of Thunder, Twelfth Heir of Zeus
 Below the name is a purple lightning-themed Health bar.
-Health: 1000 / 1000
+Health: 500 / 500
 The bar updates whenever Iobrontes takes damage.
 Its appearance should be inspired by purple lightning, matching his attacks and divine identity.
 10.2. Party HUD
@@ -612,10 +642,12 @@ Sahira
 Ability	Cost
 Jackal Strike	Free
 Hippopotamus Healing	40 Mana
+Hippopotamus Shield	Free
 Abilities that cannot be afforded must appear disabled.
 Sahira's healing ability opens an ally-selection interface before executing.
+Hippopotamus Shield also opens ally selection before protecting the selected ally.
 10.4. Directional Attack Indicators
-During Iobrontes's turns, the selected character receives a visual targeting indicator.
+During Lightning Chain, the selected character receives a visual targeting indicator. During Watch the Thunder, each active party member receives a contracting white timing ring.
 The following elements are required:
 Directional Warning
 An arrow or marker showing the direction of the incoming lightning.
@@ -629,9 +661,11 @@ Result Label
 A brief label indicating the defensive result.
 The indicators must be clearly readable without covering the character's silhouette.
 10.5. Armor Break Indicator
-When Furai's Armor Break is active, a purple tiger mark appears above Iobrontes.
+When Furai's Armor Break is active, a purple tiger mark appears centered on Iobrontes.
 The mark remains visible until the next qualifying damaging ability consumes the effect.
 It must disappear immediately after the empowered attack resolves.
+10.6. Enemy Attack Announcement
+Before any Iobrontes action, display its name in white at the center of the screen for one second. Hide the message before beginning the action.
 ________________________________________
 11. AUDIO AND MUSIC
 11.1. Background Battle Music
@@ -642,10 +676,14 @@ When Iobrontes reaches 0 health, the battle track transitions to `assets/music/n
 Use the supplied sound effects in `assets/sfx/`:
 •	`dexios.mp3` plays for Triple Lightning, Electric Arc, and Chaotic Lightning.
 •	`iobrontes.mp3` plays once for each bolt in Lightning Chain.
+•	`trueno.mp3` plays for Watch the Thunder.
+•	`armadura.mp3` plays for Divine Retribution.
 •	`furai.mp3` plays for Tiger Spear.
 •	`tigre.mp3` plays for Tiger Fang.
+•	`tigre.mp3` plays for Armor Break.
 •	`sahira.mp3` plays for Jackal Strike.
 •	`cura.mp3` plays for Hippopotamus Healing.
+•	`cura.mp3` plays for Hippopotamus Shield.
 •	`perfect_block.mp3` plays for every perfect block by Dexios, Furai, or Sahira.
 Existing generic effects may be used for other combat feedback.
 Sound effects should support the combat without overpowering the background music.
@@ -661,7 +699,7 @@ ________________________________________
 12.1. Victory Condition
 The player wins when:
 Iobrontes reaches 0 Health.
-The boss begins with 1000 Health.
+The boss begins with 500 Health.
 Once his Health reaches zero:
 1.	The current action finishes or is safely interrupted.
 2.	The combat state changes to Victory.
@@ -717,9 +755,9 @@ Recommended states:
 9.	VICTORY
 10.	DEFEAT
 The system must prevent contradictory actions, such as selecting a new attack while another attack is still executing.
-13.4. Enemy Attack Chain Logic
-Each Lightning Chain must be treated as one enemy action containing three separate attack events.
-The structure must support:
+13.4. Enemy Attack Logic
+Choose Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time at the start of each Iobrontes turn. Announce the selected action in white at the center of the screen for one second, and start it only after the announcement disappears.
+Each Lightning Chain must be treated as one enemy action containing three separate attack events. The structure must support:
 •	One target for the full chain.
 •	Three independently randomized directions.
 •	Three separate timing windows.
@@ -728,7 +766,9 @@ The structure must support:
 •	Chain-level perfect-parry tracking.
 •	A final counterattack when applicable.
 •	Automatic cancellation if the target becomes incapacitated.
-The next turn must not begin until the entire chain, including any counterattack and its damage, has resolved.
+Watch the Thunder is one enemy action targeting all active party members. It has a 0.6-second casting time followed by a 0.3-second team jump window, deals 50 damage to each character who does not jump, and has no directional or parry outcomes.
+Divine Retribution activates a two-playable-turn electric shield using iobrontes_armadura and armadura.mp3. The next damaging attack against Iobrontes deals its normal damage and triggers 30 damage to its attacker; the shield then ends. It also ends after two playable-character turns, whether or not either character attacked, and Iobrontes returns to iobrontes_base on either ending.
+The next turn must not begin until the current enemy action, including its damage and any applicable counterattack, has resolved.
 13.5. Damage and Resource Processing
 Every damaging action must:
 1.	Determine the base damage.
@@ -756,7 +796,7 @@ General Combat
 Dexios
 7.	Triple Lightning deals three hits of 5 damage and consumes no Mana.
 8.	Electric Arc deals 30 damage and consumes 20 Mana.
-9.	Chaotic Lightning deals 50 damage and consumes 50 Chaos energy.
+9.	Chaotic Lightning deals 70 damage and consumes 50 Chaos energy.
 10.	Dexios gains 20 Chaos energy per damaging enemy hit.
 11.	His imperfect block causes 5 damage.
 12.	Every perfect parry prevents damage and deals 5 damage to Iobrontes.
@@ -772,29 +812,33 @@ Sahira
 20.	Hippopotamus Healing restores a selected active ally to maximum Health.
 21.	The healing ability allows the selection of Dexios, Furai, or Sahira.
 22.	Sahira takes no damage from imperfect blocks.
-23.	Three perfect parries in the same chain trigger a 20-damage counterattack.
+24.	Hippopotamus Shield costs no Mana and blocks the next two attacks against a selected active ally.
 Iobrontes
-24.	Iobrontes begins with 1000 Health.
-25.	Every enemy turn uses Lightning Chain.
-26.	Lightning Chain targets only one party member.
-27.	Each chain contains three sequential attacks.
-28.	Each attack chooses an independent random direction.
-29.	Every unblocked lightning bolt deals 10 damage.
-30.	The corresponding Iobrontes directional frame activates for each lightning attack.
+25.	Iobrontes begins with 500 Health.
+26.	Iobrontes chooses Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time.
+27.	The attack name appears in white at the center of the screen for one second, then disappears before the attack begins.
+28.	Lightning Chain targets one active party member and contains three sequential attacks.
+29.	Each Lightning Chain attack chooses an independent random direction and deals 10 unblocked damage.
+30.	The corresponding Iobrontes directional frame activates for each Lightning Chain attack.
+31.	Watch the Thunder uses iobrontes_wtt and trueno.mp3, targets all active party members, and deals 50 damage to each character who does not jump.
+32.	Watch the Thunder has a 0.6-second casting time and a 0.3-second jump window. The team can avoid it by pressing Space once during the window.
+33.	Divine Retribution uses iobrontes_armadura and armadura.mp3.
+34.	Divine Retribution's shield lets the next damaging attack deal its normal damage, retaliates against its attacker for 30 damage, then ends.
+35.	Divine Retribution also expires after two playable-character turns, even if they do not attack. Iobrontes returns to iobrontes_base when the shield ends.
 Defense and Camera
-31.	WASD controls only the character being targeted.
-32.	The camera slightly zooms toward the target.
-33.	The timing ring correctly displays the active defensive window.
-34.	Damage resolution occurs after the defensive window closes at T + 0.1 seconds.
-35.	Defensive results are calculated separately for every lightning bolt.
-36.	The camera returns to its normal position after the chain.
+36.	WASD controls only the character being targeted by Lightning Chain.
+37.	Space triggers a simultaneous team jump only during the Watch the Thunder jump window.
+38.	The timing ring correctly displays the active defensive or jump window.
+39.	Damage resolution occurs after the Lightning Chain defensive window closes at T + 0.1 seconds.
+40.	Defensive results are calculated separately for every Lightning Chain bolt.
+41.	The camera returns to its normal position after Lightning Chain.
 Visuals and Audio
-37.	All supplied character frames are loaded through configurable asset references.
-38.	Missing assets use visible placeholders.
-39.	Attacks display their specified lightning colors and impact effects.
-40.	Background music plays and loops during combat.
-41.	Sound effects accompany major combat actions.
-42.	The battle remains visually readable at 1920 × 1080 resolution.
+42.	All supplied character frames are loaded through configurable asset references.
+43.	Missing assets use visible placeholders.
+44.	Attacks display their specified lightning colors and impact effects.
+45.	Background music plays and loops during combat.
+46.	Sound effects accompany major combat actions.
+47.	The battle remains visually readable at 1920 × 1080 resolution.
 ________________________________________
 15. SUGGESTED IMPLEMENTATION ORDER
 The prototype should be developed in stages, with each stage tested before moving to the next.
@@ -814,11 +858,14 @@ Stage 3 — Playable Character Abilities
 •	Implement Furai's physical attacks and Armor Break.
 •	Implement Sahira's attack and healing ability.
 •	Add resource costs and target selection.
-Stage 4 — Iobrontes's Lightning Chain
+Stage 4 — Iobrontes's Attacks
 •	Implement random target selection.
 •	Implement the three directional lightning attacks.
 •	Load the corresponding directional frames.
 •	Implement projectile movement and attack timing.
+•	Add Watch the Thunder, its team-wide beam, casting, jump window, and damage resolution.
+•	Add Divine Retribution, its electric shield, retaliation damage, and two-player-turn expiration.
+•	Select between Iobrontes's three actions with the specified probabilities and announce each action before it begins.
 Stage 5 — Defensive Mechanics
 •	Implement WASD controls.
 •	Implement the directional warning system.
@@ -853,6 +900,9 @@ The project's asset directory will contain the supplied reference frames for:
 •	Iobrontes
 •	The temple background
 •	Additional combat effects, where available
+•	Dexios, Furai, and Sahira jump frames
+•	Iobrontes's Watch the Thunder frame
+•	Iobrontes's Divine Retribution electric-armor frame
 These assets establish the visual identity and character appearances of the prototype.
 The code must reference them through their registered names, allowing images to be replaced or improved without requiring changes to the core combat systems.
 ________________________________________

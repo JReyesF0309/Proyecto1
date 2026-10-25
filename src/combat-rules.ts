@@ -8,12 +8,14 @@ export interface CharacterStatus {
   health: number;
   mana: number;
   chaos: number;
+  shieldHits: number;
 }
 
 export interface CombatState {
   party: Record<CharacterId, CharacterStatus>;
   iobrontesHealth: number;
   armorBreak: boolean;
+  divineRetributionTurnsRemaining: number;
 }
 
 export interface ResourceCost {
@@ -50,12 +52,13 @@ export const DEFENSE_WINDOW_END_MS =
 
 export const createCombatState = (): CombatState => ({
   party: {
-    dexios: { health: MAX_HEALTH.dexios, mana: MAX_MANA.dexios, chaos: 0 },
-    furai: { health: MAX_HEALTH.furai, mana: MAX_MANA.furai, chaos: 0 },
-    sahira: { health: MAX_HEALTH.sahira, mana: MAX_MANA.sahira, chaos: 0 },
+    dexios: { health: MAX_HEALTH.dexios, mana: MAX_MANA.dexios, chaos: 0, shieldHits: 0 },
+    furai: { health: MAX_HEALTH.furai, mana: MAX_MANA.furai, chaos: 0, shieldHits: 0 },
+    sahira: { health: MAX_HEALTH.sahira, mana: MAX_MANA.sahira, chaos: 0, shieldHits: 0 },
   },
   iobrontesHealth: MAX_IOBRONTES_HEALTH,
   armorBreak: false,
+  divineRetributionTurnsRemaining: 0,
 });
 
 export const canAfford = (status: CharacterStatus, action: ResourceCost): boolean => {
@@ -90,6 +93,18 @@ export const damagePartyMember = (
     status.chaos = Math.min(MAX_CHAOS, status.chaos + CHAOS_PER_DAMAGE);
   }
   return damage;
+};
+
+export const consumeShieldHit = (
+  state: CombatState,
+  character: CharacterId,
+): boolean => {
+  const status = state.party[character];
+  if (status.shieldHits <= 0) {
+    return false;
+  }
+  status.shieldHits -= 1;
+  return true;
 };
 
 export const healPartyMember = (

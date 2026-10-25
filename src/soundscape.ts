@@ -2,14 +2,16 @@ import { GAME_CONFIG } from './game-config';
 import battleMusicUrl from '../assets/music/watch_the_thunder.mp3';
 import victoryMusicUrl from '../assets/music/nike.mp3';
 import curaSoundUrl from '../assets/sfx/cura.mp3';
+import armorSoundUrl from '../assets/sfx/armadura.mp3';
 import dexiosSoundUrl from '../assets/sfx/dexios.mp3';
 import furaiSoundUrl from '../assets/sfx/furai.mp3';
 import iobrontesSoundUrl from '../assets/sfx/iobrontes.mp3';
 import perfectBlockSoundUrl from '../assets/sfx/perfect_block.mp3';
 import sahiraSoundUrl from '../assets/sfx/sahira.mp3';
 import tigerSoundUrl from '../assets/sfx/tigre.mp3';
+import thunderSoundUrl from '../assets/sfx/trueno.mp3';
 
-type AssetSoundEffect = 'dexios' | 'iobrontes' | 'furai' | 'tigre' | 'sahira' | 'cura' | 'perfect_block';
+type AssetSoundEffect = 'dexios' | 'iobrontes' | 'furai' | 'tigre' | 'sahira' | 'cura' | 'perfect_block' | 'trueno' | 'armadura';
 type SoundEffect = 'lightning' | 'impact' | 'physical' | 'magic' | 'heal' | AssetSoundEffect;
 type MusicTrack = 'battle' | 'victory';
 
@@ -48,7 +50,9 @@ export default class Soundscape {
       tigre: new Audio(tigerSoundUrl),
       sahira: new Audio(sahiraSoundUrl),
       cura: new Audio(curaSoundUrl),
+      armadura: new Audio(armorSoundUrl),
       perfect_block: new Audio(perfectBlockSoundUrl),
+      trueno: new Audio(thunderSoundUrl),
     };
     Object.values(this.soundEffects).forEach((effect) => {
       effect.preload = 'auto';
@@ -116,6 +120,8 @@ export default class Soundscape {
       || effect === 'sahira'
       || effect === 'cura'
       || effect === 'perfect_block'
+      || effect === 'trueno'
+      || effect === 'armadura'
     ) {
       this.playAssetSound(effect);
     } else if (effect === 'lightning') {
