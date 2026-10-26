@@ -1,19 +1,37 @@
 import { GAME_CONFIG } from './game-config';
 import battleMusicUrl from '../assets/music/watch_the_thunder.mp3';
+import cosmicBattleMusicUrl from '../assets/music/cosmic_strike.mp3';
 import victoryMusicUrl from '../assets/music/nike.mp3';
+import cosmicAttackSoundUrl from '../assets/sfx/ataque_cosmico.mp3';
+import portalOpenSoundUrl from '../assets/sfx/abrir_portal.mp3';
 import curaSoundUrl from '../assets/sfx/cura.mp3';
 import armorSoundUrl from '../assets/sfx/armadura.mp3';
 import dexiosSoundUrl from '../assets/sfx/dexios.mp3';
 import furaiSoundUrl from '../assets/sfx/furai.mp3';
 import iobrontesSoundUrl from '../assets/sfx/iobrontes.mp3';
+import meteorFallSoundUrl from '../assets/sfx/meteor_fall.mp3';
 import perfectBlockSoundUrl from '../assets/sfx/perfect_block.mp3';
 import sahiraSoundUrl from '../assets/sfx/sahira.mp3';
 import tigerSoundUrl from '../assets/sfx/tigre.mp3';
+import portalTeleportSoundUrl from '../assets/sfx/teleport_ataque.mp3';
 import thunderSoundUrl from '../assets/sfx/trueno.mp3';
 
-type AssetSoundEffect = 'dexios' | 'iobrontes' | 'furai' | 'tigre' | 'sahira' | 'cura' | 'perfect_block' | 'trueno' | 'armadura';
+type AssetSoundEffect =
+  | 'dexios'
+  | 'iobrontes'
+  | 'furai'
+  | 'tigre'
+  | 'sahira'
+  | 'cura'
+  | 'perfect_block'
+  | 'trueno'
+  | 'armadura'
+  | 'ataque_cosmico'
+  | 'abrir_portal'
+  | 'teleport_ataque'
+  | 'meteor_fall';
 type SoundEffect = 'lightning' | 'impact' | 'physical' | 'magic' | 'heal' | AssetSoundEffect;
-type MusicTrack = 'battle' | 'victory';
+type MusicTrack = 'battle-thunder' | 'battle-cosmic' | 'victory';
 
 export default class Soundscape {
   private readonly context = new AudioContext();
@@ -23,7 +41,8 @@ export default class Soundscape {
   private readonly noiseBuffer: AudioBuffer;
   private readonly musicTracks: Record<MusicTrack, HTMLAudioElement>;
   private readonly soundEffects: Record<AssetSoundEffect, HTMLAudioElement>;
-  private activeTrack: MusicTrack | null = 'battle';
+  private readonly overlappingEffects = new Set<HTMLAudioElement>();
+  private activeTrack: MusicTrack | null = 'battle-thunder';
   private enabled = true;
 
   constructor() {
@@ -35,13 +54,24 @@ export default class Soundscape {
     this.master.connect(this.context.destination);
 
     this.musicTracks = {
-      battle: new Audio(battleMusicUrl),
+      'battle-thunder': new Audio(battleMusicUrl),
+      'battle-cosmic': new Audio(cosmicBattleMusicUrl),
       victory: new Audio(victoryMusicUrl),
     };
-    Object.values(this.musicTracks).forEach((track) => {
-      track.loop = true;
+    Object.entries(this.musicTracks).forEach(([name, track]) => {
+      track.loop = name === 'victory';
       track.preload = 'auto';
       this.context.createMediaElementSource(track).connect(this.musicGain);
+    });
+    this.musicTracks['battle-thunder'].addEventListener('ended', () => {
+      if (this.activeTrack === 'battle-thunder') {
+        this.playMusic('battle-cosmic');
+      }
+    });
+    this.musicTracks['battle-cosmic'].addEventListener('ended', () => {
+      if (this.activeTrack === 'battle-cosmic') {
+        this.playMusic('battle-thunder');
+      }
     });
     this.soundEffects = {
       dexios: new Audio(dexiosSoundUrl),
@@ -53,6 +83,10 @@ export default class Soundscape {
       armadura: new Audio(armorSoundUrl),
       perfect_block: new Audio(perfectBlockSoundUrl),
       trueno: new Audio(thunderSoundUrl),
+      ataque_cosmico: new Audio(cosmicAttackSoundUrl),
+      abrir_portal: new Audio(portalOpenSoundUrl),
+      teleport_ataque: new Audio(portalTeleportSoundUrl),
+      meteor_fall: new Audio(meteorFallSoundUrl),
     };
     Object.values(this.soundEffects).forEach((effect) => {
       effect.preload = 'auto';
@@ -122,6 +156,10 @@ export default class Soundscape {
       || effect === 'perfect_block'
       || effect === 'trueno'
       || effect === 'armadura'
+      || effect === 'ataque_cosmico'
+      || effect === 'abrir_portal'
+      || effect === 'teleport_ataque'
+      || effect === 'meteor_fall'
     ) {
       this.playAssetSound(effect);
     } else if (effect === 'lightning') {
@@ -152,6 +190,8 @@ export default class Soundscape {
   destroy(): void {
     Object.values(this.musicTracks).forEach((track) => track.pause());
     Object.values(this.soundEffects).forEach((effect) => effect.pause());
+    this.overlappingEffects.forEach((effect) => effect.pause());
+    this.overlappingEffects.clear();
     this.master.disconnect();
     void this.context.close();
   }
@@ -162,8 +202,19 @@ export default class Soundscape {
       if (!this.enabled) {
         return;
       }
-      audio.currentTime = 0;
-      void audio.play().catch((error: unknown) => {
+      const instance = audio.paused ? audio : audio.cloneNode(true) as HTMLAudioElement;
+      if (instance !== audio) {
+        instance.preload = 'auto';
+        const source = this.context.createMediaElementSource(instance);
+        source.connect(this.effectsGain);
+        this.overlappingEffects.add(instance);
+        instance.addEventListener('ended', () => {
+          source.disconnect();
+          this.overlappingEffects.delete(instance);
+        }, { once: true });
+      }
+      instance.currentTime = 0;
+      void instance.play().catch((error: unknown) => {
         console.error(`No se pudo reproducir el efecto ${effect}:`, error);
       });
     };

@@ -1,51 +1,65 @@
-import arena from '../escenario.png';
+import arena from '../assets/backgrounds/escenario.png';
 import hippoMark from '../assets/effects/hippo-mark.png';
 import tigerMark from '../assets/effects/tiger-mark.png';
-import dexiosDown from '../assets/characters/dexios_abajo.png';
-import dexiosUp from '../assets/characters/dexios_arriba.png';
-import dexiosAttack from '../assets/characters/dexios_ataque.png';
-import dexiosBase from '../assets/characters/dexios_base.png';
-import dexiosWhite from '../assets/characters/dexios_blanco.png';
-import dexiosRight from '../assets/characters/dexios_derecha.png';
-import dexiosHit from '../assets/characters/dexios_herido.png';
-import dexiosLeft from '../assets/characters/dexios_izquierda.png';
-import dexiosJump from '../assets/characters/dexios_salto.png';
-import dexiosRed from '../assets/characters/dexios_rojo.png';
-import furaiDown from '../assets/characters/furai_abajo.png';
-import furaiUp from '../assets/characters/furai_arriba.png';
-import furaiAttack from '../assets/characters/furai_ataque.png';
-import furaiBase from '../assets/characters/furai_base.png';
-import furaiRight from '../assets/characters/furai_derecha.png';
-import furaiHit from '../assets/characters/furai_herido.png';
-import furaiLeft from '../assets/characters/furai_izquierda.png';
-import furaiJump from '../assets/characters/furai_salto.png';
-import furaiBreak from '../assets/characters/furai_romper.png';
-import furaiTiger from '../assets/characters/furai_tigre.png';
-import iobrontesArmor from '../assets/characters/iobrontes_armadura.png';
-import iobrontesDown from '../assets/characters/iobrontes_abajo.png';
-import iobrontesUp from '../assets/characters/iobrontes_arriba.png';
-import iobrontesBase from '../assets/characters/iobrontes_base.png';
-import iobrontesRight from '../assets/characters/iobrontes_derecha.png';
-import iobrontesHit from '../assets/characters/iobrontes_herido.png';
-import iobrontesLeft from '../assets/characters/iobrontes_izquierda.png';
-import iobrontesWatchThunder from '../assets/characters/iobrontes_wtt.png';
-import sahiraDown from '../assets/characters/sahira_abajo.png';
-import sahiraUp from '../assets/characters/sahira_arriba.png';
-import sahiraAttack from '../assets/characters/sahira_ataque.png';
-import sahiraBase from '../assets/characters/sahira_base.png';
-import sahiraRight from '../assets/characters/sahira_derecha.png';
-import sahiraHit from '../assets/characters/sahira_herida.png';
-import sahiraLeft from '../assets/characters/sahira_izquierda.png';
-import sahiraHeal from '../assets/characters/sahira_cura.png';
-import sahiraJump from '../assets/characters/sahira_salto.png';
+import cosmicEffect from '../assets/effects/cosmico.png';
+import portalEffect from '../assets/effects/portal.png';
+import meteorEffect from '../assets/effects/meteoro.png';
+import dexiosDown from '../assets/dexios/dexios_abajo.png';
+import dexiosUp from '../assets/dexios/dexios_arriba.png';
+import dexiosAttack from '../assets/dexios/dexios_ataque.png';
+import dexiosBase from '../assets/dexios/dexios_base.png';
+import dexiosWhite from '../assets/dexios/dexios_blanco.png';
+import dexiosRight from '../assets/dexios/dexios_derecha.png';
+import dexiosHit from '../assets/dexios/dexios_herido.png';
+import dexiosLeft from '../assets/dexios/dexios_izquierda.png';
+import dexiosJump from '../assets/dexios/dexios_salto.png';
+import dexiosRed from '../assets/dexios/dexios_rojo.png';
+import furaiDown from '../assets/furai/furai_abajo.png';
+import furaiUp from '../assets/furai/furai_arriba.png';
+import furaiAttack from '../assets/furai/furai_ataque.png';
+import furaiBase from '../assets/furai/furai_base.png';
+import furaiRight from '../assets/furai/furai_derecha.png';
+import furaiHit from '../assets/furai/furai_herido.png';
+import furaiLeft from '../assets/furai/furai_izquierda.png';
+import furaiJump from '../assets/furai/furai_salto.png';
+import furaiBreak from '../assets/furai/furai_romper.png';
+import furaiTiger from '../assets/furai/furai_tigre.png';
+import iobrontesArmor from '../assets/iobrontes/iobrontes_armadura.png';
+import iobrontesDown from '../assets/iobrontes/iobrontes_abajo.png';
+import iobrontesUp from '../assets/iobrontes/iobrontes_arriba.png';
+import iobrontesBase from '../assets/iobrontes/iobrontes_base.png';
+import iobrontesRight from '../assets/iobrontes/iobrontes_derecha.png';
+import iobrontesHit from '../assets/iobrontes/iobrontes_herido.png';
+import iobrontesLeft from '../assets/iobrontes/iobrontes_izquierda.png';
+import iobrontesWatchThunder from '../assets/iobrontes/iobrontes_wtt.png';
+import kosmelysBase from '../assets/kosmelys/kosmelys_base.png';
+import kosmelysRight from '../assets/kosmelys/kosmelys_derecha.png';
+import kosmelysLeft from '../assets/kosmelys/kosmelys_izquierda.png';
+import kosmelysUp from '../assets/kosmelys/kosmelys_arriba.png';
+import kosmelysShield from '../assets/kosmelys/kosmelys_escudo.png';
+import kosmelysMeteorRain from '../assets/kosmelys/kosmelys_mr.png';
+import kosmelysHit from '../assets/kosmelys/kosmelys_herida.png';
+import sahiraDown from '../assets/sahira/sahira_abajo.png';
+import sahiraUp from '../assets/sahira/sahira_arriba.png';
+import sahiraAttack from '../assets/sahira/sahira_ataque.png';
+import sahiraBase from '../assets/sahira/sahira_base.png';
+import sahiraRight from '../assets/sahira/sahira_derecha.png';
+import sahiraHit from '../assets/sahira/sahira_herida.png';
+import sahiraLeft from '../assets/sahira/sahira_izquierda.png';
+import sahiraHeal from '../assets/sahira/sahira_cura.png';
+import sahiraJump from '../assets/sahira/sahira_salto.png';
 
 export type CharacterId = 'dexios' | 'furai' | 'sahira';
+export type BossId = 'iobrontes' | 'kosmelys';
 export type Direction = 'left' | 'right' | 'up' | 'down';
 
 export const IMAGE_ASSETS = {
   arena,
   hippo_mark: hippoMark,
   tiger_mark: tigerMark,
+  cosmic_effect: cosmicEffect,
+  portal_effect: portalEffect,
+  meteor_effect: meteorEffect,
   dexios_abajo: dexiosDown,
   dexios_arriba: dexiosUp,
   dexios_ataque: dexiosAttack,
@@ -74,6 +88,13 @@ export const IMAGE_ASSETS = {
   iobrontes_herido: iobrontesHit,
   iobrontes_izquierda: iobrontesLeft,
   iobrontes_wtt: iobrontesWatchThunder,
+  kosmelys_base: kosmelysBase,
+  kosmelys_derecha: kosmelysRight,
+  kosmelys_izquierda: kosmelysLeft,
+  kosmelys_arriba: kosmelysUp,
+  kosmelys_escudo: kosmelysShield,
+  kosmelys_mr: kosmelysMeteorRain,
+  kosmelys_herida: kosmelysHit,
   sahira_abajo: sahiraDown,
   sahira_arriba: sahiraUp,
   sahira_ataque: sahiraAttack,
@@ -103,8 +124,20 @@ export const GAME_CONFIG = {
     attackHitIntervalMs: 260,
     attackRecoveryMs: 500,
     spritePoseMs: 650,
+    cosmicPerfectParryWindowMs: 100,
+    cosmicWindUpMs: 187,
+    meteorPreparationMs: 500,
+    meteorTravelMs: 500,
+    meteorFollowUpTravelMs: 700,
+    meteorDefenseOpensBeforeImpactMs: 700,
+    meteorNormalBlockWindowMs: 400,
+    meteorPerfectBlockWindowMs: 400,
+    portalShieldPlayerTurns: 1,
+    portalEffectDurationMs: 620,
+    kosmelysBreathingMs: 1750,
+    kosmelysBreathingPixels: 4,
   },
-  partyOrder: ['furai', 'iobrontes', 'dexios', 'iobrontes', 'sahira', 'iobrontes'] as const,
+  partyOrder: ['furai', 'iobrontes', 'kosmelys', 'dexios', 'iobrontes', 'kosmelys', 'sahira', 'iobrontes', 'kosmelys'] as const,
   characters: {
     furai: {
       name: 'Furai',
@@ -164,11 +197,12 @@ export const GAME_CONFIG = {
     },
     iobrontes: {
       name: 'Iobrontes',
-      x: 1450,
+      title: 'God of Thunder · Tenth Heir of Zeus',
+      x: 1240,
       feetY: 785,
       displayHeight: 535,
       depth: 2,
-      health: 500,
+      health: 550,
       frames: {
         idle: 'iobrontes_base',
         divineRetribution: 'iobrontes_armadura',
@@ -177,6 +211,82 @@ export const GAME_CONFIG = {
         watchThunder: 'iobrontes_wtt',
       },
     },
+    kosmelys: {
+      name: 'Kosmelys',
+      title: 'Goddess of Space · Tenth Heir of Hera',
+      x: 1710,
+      feetY: 785,
+      displayHeight: 535,
+      shadowWidth: 290,
+      shadowHeight: 34,
+      depth: 3,
+      health: 450,
+      frames: {
+        idle: 'kosmelys_base',
+        hit: 'kosmelys_herida',
+        shield: 'kosmelys_escudo',
+        meteorRain: 'kosmelys_mr',
+        attack: {
+          left: 'kosmelys_izquierda',
+          right: 'kosmelys_derecha',
+          up: 'kosmelys_arriba',
+          down: 'MISSING_KOSMELYS_ATTACK_DOWN',
+        },
+      },
+    },
+  },
+  kosmelysAttacks: {
+    cosmicRaysDamage: 15,
+    cosmicBlockedDamage: 5,
+    cosmicRaysProjectiles: 2,
+    meteorRainDamage: 20,
+    meteorBlockedDamage: 5,
+    meteorCount: 5,
+    meteorDexiosCounterDamage: 5,
+    meteorFuraiCounterDamage: 20,
+    cosmicFuraiCounterDamage: 20,
+    cosmicProjectileScale: 0.24,
+    cosmicSpeedRatio: 0.6,
+    lightningReferenceDistance: 560,
+    cosmicInitialDistance: 650,
+    cosmicImpactDistance: 55,
+    meteorScale: 0.18,
+    meteorFallDistance: 600,
+    meteorTravelDistance: 520,
+    meteorLaneOffset: 38,
+    meteorWarningOffset: 70,
+    portalScale: 0.2,
+    portalEffectFadeAlpha: 0.35,
+    portalEffectScale: 1.4,
+    portalEffectRotationDegrees: 360,
+    cosmicRaysChancePercent: 50,
+    portalShieldChancePercent: 30,
+    meteorRainChancePercent: 20,
+  },
+  bossHud: {
+    x: { iobrontes: 32, kosmelys: 1320 },
+    width: 568,
+    height: 94,
+    y: { iobrontes: 108, kosmelys: 108 },
+    labelX: 20,
+    labelY: 6,
+    titleFontSize: 21,
+    subtitleX: 22,
+    subtitleY: 31,
+    subtitleFontSize: 13,
+    barX: 20,
+    barY: 70,
+    barWidth: 420,
+    barHeight: 11,
+    healthTextX: 545,
+    healthTextY: 66,
+  },
+  bossTargetUi: {
+    firstButtonX: 18,
+    buttonY: 48,
+    buttonWidth: 284,
+    buttonHeight: 92,
+    buttonGap: 21,
   },
   enemyAttacks: {
     lightningChainChancePercent: 50,

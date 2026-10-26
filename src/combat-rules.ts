@@ -1,4 +1,4 @@
-import { CharacterId, Direction, GAME_CONFIG } from './game-config';
+import { BossId, CharacterId, Direction, GAME_CONFIG } from './game-config';
 
 export type DefenseOutcome = 'perfect' | 'blocked' | 'failed';
 export type CombatResult = 'victory' | 'defeat';
@@ -13,8 +13,8 @@ export interface CharacterStatus {
 
 export interface CombatState {
   party: Record<CharacterId, CharacterStatus>;
-  iobrontesHealth: number;
-  armorBreak: boolean;
+  bosses: Record<BossId, { health: number; armorBreak: boolean }>;
+  kosmelysPortalShieldTurnsRemaining: number;
   divineRetributionTurnsRemaining: number;
 }
 
@@ -37,6 +37,11 @@ export const MAX_MANA: Record<CharacterId, number> = {
 
 export const MAX_CHAOS = 100;
 export const MAX_IOBRONTES_HEALTH = GAME_CONFIG.characters.iobrontes.health;
+export const MAX_KOSMELYS_HEALTH = GAME_CONFIG.characters.kosmelys.health;
+export const MAX_BOSS_HEALTH: Record<BossId, number> = {
+  iobrontes: MAX_IOBRONTES_HEALTH,
+  kosmelys: MAX_KOSMELYS_HEALTH,
+};
 export const ENEMY_ATTACK_DAMAGE = 10;
 export const IMPERFECT_BLOCK_DAMAGE = 5;
 export const PERFECT_PARRY_DAMAGE = 5;
@@ -56,8 +61,11 @@ export const createCombatState = (): CombatState => ({
     furai: { health: MAX_HEALTH.furai, mana: MAX_MANA.furai, chaos: 0, shieldHits: 0 },
     sahira: { health: MAX_HEALTH.sahira, mana: MAX_MANA.sahira, chaos: 0, shieldHits: 0 },
   },
-  iobrontesHealth: MAX_IOBRONTES_HEALTH,
-  armorBreak: false,
+  bosses: {
+    iobrontes: { health: MAX_IOBRONTES_HEALTH, armorBreak: false },
+    kosmelys: { health: MAX_KOSMELYS_HEALTH, armorBreak: false },
+  },
+  kosmelysPortalShieldTurnsRemaining: 0,
   divineRetributionTurnsRemaining: 0,
 });
 
@@ -75,8 +83,16 @@ export const spendCost = (status: CharacterStatus, action: ResourceCost): void =
 };
 
 export const damageIobrontes = (state: CombatState, amount: number): number => {
-  const damage = Math.min(state.iobrontesHealth, Math.max(0, amount));
-  state.iobrontesHealth -= damage;
+  return damageBoss(state, 'iobrontes', amount);
+};
+
+export const damageBoss = (
+  state: CombatState,
+  boss: BossId,
+  amount: number,
+): number => {
+  const damage = Math.min(state.bosses[boss].health, Math.max(0, amount));
+  state.bosses[boss].health -= damage;
   return damage;
 };
 
@@ -150,7 +166,7 @@ export const damageForDefense = (
 };
 
 export const getBattleResult = (state: CombatState): CombatResult | null => {
-  if (state.iobrontesHealth <= 0) {
+  if (Object.values(state.bosses).every((boss) => boss.health <= 0)) {
     return 'victory';
   }
   if (Object.values(state.party).every((character) => character.health <= 0)) {

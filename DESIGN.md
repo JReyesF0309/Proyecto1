@@ -4,7 +4,7 @@ Document Status: Implementation Specification
 Target Platform: PC (Phaser, browser)
 Genre: Turn-Based RPG with Real-Time Directional Defense
 Visual Perspective: 2D character-based combat with foreground/background depth
-Prototype Scope: Three playable characters, one boss, one arena, and one complete combat encounter.
+Prototype Scope: Three playable characters, two bosses, one arena, and one complete dual-boss combat encounter.
 Note to the implementer: This document is intended to be self-contained. Implement the mechanics and values described here without relying on previous versions. Numerical values, timings, character positions, camera settings, and animation references must be stored in configuration files whenever possible.
 ________________________________________
 1. GAME OVERVIEW
@@ -15,11 +15,11 @@ The player controls a party of three characters:
 •	Dexios: A lightning-based fighter who uses electricity and Chaos energy.
 •	Furai: A tiger-themed fighter specializing in physical attacks, armor breaking, and defensive counterattacks.
 •	Sahira: A jackal-themed fighter and healer with strong defensive capabilities.
-The party faces Iobrontes, God of Thunder and the Twelfth Heir of Zeus, inside his temple.
-The prototype focuses entirely on one combat encounter, demonstrating the game's core mechanics, character abilities, directional defense system, party management, and visual identity.
+The party faces Iobrontes, God of Thunder and the Tenth Heir of Zeus, and Kosmelys, Goddess of Space and Tenth Heir of Hera, inside Iobrontes's temple.
+The prototype focuses entirely on this dual-boss combat encounter, demonstrating the game's core mechanics, character abilities, directional defense system, party management, and visual identity.
 1.2. Prototype Objectives
 The prototype must:
-1.	Implement a complete three-character party versus one boss encounter.
+1.	Implement a complete three-character party versus Iobrontes and Kosmelys.
 2.	Use a fixed turn order without a speed-stat system.
 3.	Allow each playable character to execute their unique abilities.
 4.	Implement Iobrontes's three-hit directional Lightning Chain, team-targeting Watch the Thunder, and Divine Retribution.
@@ -31,8 +31,10 @@ The prototype must:
 10.	Use a slight camera zoom to emphasize the character targeted by Iobrontes.
 11.	Include background battle music.
 12.	Establish a functional system that can later be expanded with more characters and encounters.
+13.	Implement Kosmelys's Cosmic Rays, Portal Shield, and sequential Meteor Rain with their specified targeting, defense, damage, counterattack, probability, and audio behavior.
+14.	Keep the two bosses' health, status, abilities, and turns independent; victory requires defeating both bosses.
 1.3. Out of Scope
-This prototype will not include exploration, interactive dialogue, inventory, character progression, equipment selection, additional bosses, multiple arenas, or a complete save system.
+This prototype will not include exploration, interactive dialogue, inventory, character progression, equipment selection, additional bosses beyond Iobrontes and Kosmelys, multiple arenas, or a complete save system.
 Character speed statistics will also be excluded. Turn order will remain fixed throughout the encounter.
 ________________________________________
 2. SETTING AND ART DIRECTION
@@ -168,34 +170,43 @@ ________________________________________
 4. COMBAT SYSTEM
 4.1. General Structure
 Combat is turn-based.
-The player controls three characters while Iobrontes acts as the enemy boss.
+The player controls three characters while Iobrontes and Kosmelys act as independent enemy bosses.
 Each character has unique attacks and defensive behavior.
-The combat continues until the boss is defeated or all three party members are incapacitated.
+The combat continues until both bosses are defeated or all three party members are incapacitated.
 4.2. Fixed Turn Order
 The prototype will not calculate turn order using character speed.
 Instead, the following sequence is fixed:
 Turn Position	Acting Character
 1	Furai
 2	Iobrontes
-3	Dexios
-4	Iobrontes
-5	Sahira
-6	Iobrontes
-After turn position 6, the sequence restarts at position 1.
+3	Kosmelys
+4	Dexios
+5	Iobrontes
+6	Kosmelys
+7	Sahira
+8	Iobrontes
+9	Kosmelys
+After turn position 9, the sequence restarts at position 1.
 Furai
   ↓
 Iobrontes
+  ↓
+Kosmelys
   ↓
 Dexios
   ↓
 Iobrontes
   ↓
+Kosmelys
+  ↓
 Sahira
   ↓
 Iobrontes
   ↓
+Kosmelys
+  ↓
 Repeat
-Iobrontes therefore acts three times during every complete six-position cycle.
+Iobrontes and Kosmelys each act three times during every complete nine-position cycle.
 Incapacitated Characters
 When a playable character reaches zero health:
 •	They become incapacitated.
@@ -203,12 +214,13 @@ When a playable character reaches zero health:
 •	Their turn is automatically skipped.
 •	The combat continues with the remaining characters.
 •	Their HUD must indicate that they are incapacitated.
-For the initial implementation, only the incapacitated party member's turn is skipped. Iobrontes's positions in the fixed turn sequence remain unchanged.
-This means Iobrontes may receive consecutive turns if a skipped party-member turn falls between two boss turns.
+For the initial implementation, only the incapacitated party member's turn is skipped. Boss positions in the fixed turn sequence remain unchanged. A defeated boss's remaining turns are skipped, not transferred to the other boss.
+This means a boss may receive consecutive turns if a skipped party-member turn falls between two boss turns.
 The battle only ends in defeat when all three playable characters have zero health.
 4.3. Target Selection
 During each Lightning Chain, Iobrontes selects exactly one active party member at random and keeps that target for all three lightning attacks.
 Watch the Thunder targets all active party members simultaneously and requires no single-target selection.
+For Cosmic Rays, Kosmelys selects one conscious playable character once per ability and keeps that target for both projectiles. Meteor Rain selects a conscious playable character independently for each of its five sequential meteors.
 4.4. Targeting Feedback
 The game must clearly communicate which character Iobrontes is attacking.
 Before a Lightning Chain begins:
@@ -419,9 +431,9 @@ ________________________________________
 8. BOSS — IOBRONTES
 8.1. Starting Statistics
 Attribute	Initial Value	Maximum
-Health	500	500
+Health	550	550
 Initial Sprite: iobrontes_base
-Iobrontes is the only enemy in the prototype. He has three actions: Lightning Chain, Watch the Thunder, and Divine Retribution.
+Iobrontes is one of two independent bosses in the prototype. He has three actions: Lightning Chain, Watch the Thunder, and Divine Retribution. His co-boss, Kosmelys, has separate statistics, abilities, health, and turns as specified in the dual-boss combat sections.
 Before each action, the game displays its name in white at the center of the screen for one second. The action begins only after this announcement disappears.
 Iobrontes chooses Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time.
 8.2. Ability — Lightning Chain
@@ -669,9 +681,7 @@ Before any Iobrontes action, display its name in white at the center of the scre
 ________________________________________
 11. AUDIO AND MUSIC
 11.1. Background Battle Music
-The combat must include continuously playing background music using `assets/music/watch_the_thunder.mp3`.
-The battle track loops while the encounter is active.
-When Iobrontes reaches 0 health, the battle track transitions to `assets/music/nike.mp3`, which loops throughout the victory screen until the battle restarts.
+The combat alternates between `assets/music/watch_the_thunder.mp3` and `assets/music/cosmic_strike.mp3`, playing each track from beginning to end while the encounter is active. Do not overlap or individually loop the battle tracks. When both bosses reach 0 Health, stop the active battle track and transition to `assets/music/nike.mp3`, which loops throughout the victory screen until the battle restarts.
 11.2. Sound Effects
 Use the supplied sound effects in `assets/sfx/`:
 •	`dexios.mp3` plays for Triple Lightning, Electric Arc, and Chaotic Lightning.
@@ -685,6 +695,10 @@ Use the supplied sound effects in `assets/sfx/`:
 •	`cura.mp3` plays for Hippopotamus Healing.
 •	`cura.mp3` plays for Hippopotamus Shield.
 •	`perfect_block.mp3` plays for every perfect block by Dexios, Furai, or Sahira.
+•	`ataque_cosmico.mp3` plays on each Cosmic Rays projectile cast and midpoint direction change.
+•	`abrir_portal.mp3` plays once when Portal Shield activates.
+•	`teleport_ataque.mp3` plays once per ability redirected by Portal Shield.
+•	`meteor_fall.mp3` plays when each Meteor Rain meteor begins its descent.
 Existing generic effects may be used for other combat feedback.
 Sound effects should support the combat without overpowering the background music.
 11.3. Audio Behavior
@@ -697,14 +711,12 @@ Sound effects should support the combat without overpowering the background musi
 ________________________________________
 12. VICTORY AND DEFEAT CONDITIONS
 12.1. Victory Condition
-The player wins when:
-Iobrontes reaches 0 Health.
-The boss begins with 500 Health.
-Once his Health reaches zero:
+The player wins only when both Iobrontes and Kosmelys reach 0 Health. Iobrontes begins with 550 Health and Kosmelys with 450 Health. Defeating one boss does not end combat; the other continues taking its scheduled turns.
+Once both bosses have reached zero Health:
 1.	The current action finishes or is safely interrupted.
 2.	The combat state changes to Victory.
 3.	Combat inputs are disabled.
-4.	Iobrontes's defeat frame or placeholder is displayed.
+4.	The bosses' defeat frames or placeholders are displayed.
 5.	A victory message appears.
 12.2. Defeat Condition
 The player loses when:
@@ -733,14 +745,17 @@ The following values must be editable without changing the main combat logic:
 •	Ability costs.
 •	Chaos energy generation.
 •	Enemy attack damage.
+•	Boss ability-selection probabilities and availability rules.
 •	Turn order.
 •	Projectile timing.
 •	Defense timing windows.
+•	Ability phase timing, including sequential multi-hit and Meteor Rain events.
 •	Character positions and scales.
 •	Camera zoom and transition speed.
 •	Animation references.
 •	Visual effects.
 •	Audio volume.
+•	Audio resource paths and sound-effect event configuration.
 13.3. Combat State Management
 The combat system should use clearly separated states.
 Recommended states:
@@ -755,7 +770,7 @@ Recommended states:
 9.	VICTORY
 10.	DEFEAT
 The system must prevent contradictory actions, such as selecting a new attack while another attack is still executing.
-13.4. Enemy Attack Logic
+13.4. Boss Attack Logic
 Choose Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time at the start of each Iobrontes turn. Announce the selected action in white at the center of the screen for one second, and start it only after the announcement disappears.
 Each Lightning Chain must be treated as one enemy action containing three separate attack events. The structure must support:
 •	One target for the full chain.
@@ -768,6 +783,7 @@ Each Lightning Chain must be treated as one enemy action containing three separa
 •	Automatic cancellation if the target becomes incapacitated.
 Watch the Thunder is one enemy action targeting all active party members. It has a 0.6-second casting time followed by a 0.3-second team jump window, deals 50 damage to each character who does not jump, and has no directional or parry outcomes.
 Divine Retribution activates a two-playable-turn electric shield using iobrontes_armadura and armadura.mp3. The next damaging attack against Iobrontes deals its normal damage and triggers 30 damage to its attacker; the shield then ends. It also ends after two playable-character turns, whether or not either character attacked, and Iobrontes returns to iobrontes_base on either ending.
+Kosmelys independently selects Cosmic Rays (50%), Portal Shield (30%), or Meteor Rain (20%). If Portal Shield is unavailable because it is already active, redistribute its probability proportionally among the available abilities. Cosmic Rays targets one conscious character with both sequential projectiles, changes each projectile's direction once at its travel midpoint, and resolves each projectile once. Meteor Rain resolves five meteors strictly sequentially: the first has a 0.5-second casting phase and 0.5-second travel, and each following meteor begins falling as soon as the preceding perfect-parry window closes, with 0.7-second travel. Every meteor uses normal-block and perfect-parry windows relative to impact, character-specific results, and any eligible counterattacks. Portal Shield redirects one entire offensive ability to a conscious party member and observes its one-character-turn duration.
 The next turn must not begin until the current enemy action, including its damage and any applicable counterattack, has resolved.
 13.5. Damage and Resource Processing
 Every damaging action must:
@@ -787,12 +803,12 @@ ________________________________________
 14. PROTOTYPE ACCEPTANCE CRITERIA
 The prototype will be considered complete when the following conditions are satisfied.
 General Combat
-1.	The game displays all three playable characters and Iobrontes.
+1.	The game displays all three playable characters, Iobrontes, and Kosmelys.
 2.	The characters follow the required foreground/background formation.
 3.	The fixed turn order works correctly.
 4.	Incapacitated characters have their turns skipped.
 5.	Iobrontes only targets active characters.
-6.	The battle ends when Iobrontes reaches zero Health or all three party members are incapacitated.
+6.	The battle ends when both bosses reach zero Health or all three party members are incapacitated.
 Dexios
 7.	Triple Lightning deals three hits of 5 damage and consumes no Mana.
 8.	Electric Arc deals 30 damage and consumes 20 Mana.
@@ -814,7 +830,7 @@ Sahira
 22.	Sahira takes no damage from imperfect blocks.
 24.	Hippopotamus Shield costs no Mana and blocks the next two attacks against a selected active ally.
 Iobrontes
-25.	Iobrontes begins with 500 Health.
+25.	Iobrontes begins with 550 Health; Kosmelys begins with 450 Health.
 26.	Iobrontes chooses Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time.
 27.	The attack name appears in white at the center of the screen for one second, then disappears before the attack begins.
 28.	Lightning Chain targets one active party member and contains three sequential attacks.
@@ -836,21 +852,32 @@ Visuals and Audio
 42.	All supplied character frames are loaded through configurable asset references.
 43.	Missing assets use visible placeholders.
 44.	Attacks display their specified lightning colors and impact effects.
-45.	Background music plays and loops during combat.
+45.	Watch the Thunder and Cosmic Strike alternate without individually looping during combat.
 46.	Sound effects accompany major combat actions.
 47.	The battle remains visually readable at 1920 × 1080 resolution.
+48.	Kosmelys's Cosmic Rays targets one party member for both projectiles; each changes direction at its midpoint, moves the same effect to the new directional origin without resetting remaining travel time, and resolves damage exactly once.
+49.	Cosmic Rays applies the specified Dexios, Furai, and Sahira defensive and counterattack rules.
+50.	Meteor Rain launches five meteors one at a time, with no overlapping projectile, targeting indicator, defensive window, or unresolved event; each new meteor begins falling as soon as the previous perfect-parry window closes.
+51.	The first Meteor Rain meteor has a 0.5-second casting phase and 0.5-second travel; following meteors begin falling immediately after the preceding window closes and travel for 0.7 seconds. Every meteor has a 0.4-second normal-block window from T − 0.7 to T − 0.3, a 0.4-second perfect-parry window from T − 0.3 to T + 0.1, and resolves only after T + 0.1.
+52.	Dexios counterattacks Kosmelys for 5 damage after every meteor he perfectly parries.
+53.	Furai deals one 20-damage Tiger Parry after Meteor Rain only if he was targeted at least once and perfectly parried every meteor assigned to him.
+54.	Sahira blocks any meteor with a correct W input in the full 0.8-second window; she has no perfect-parry result or counterattack.
+55.	Meteor Rain applies Chaos generation, target exclusion for incapacitated characters, and the no-zoom camera behavior.
+56.	Kosmelys's ability selection uses the 50% / 30% / 20% distribution and proportionally redistributes unavailable Portal Shield probability.
+57.	The four Kosmelys sound effects play at their specified cast, direction-change, activation, redirection, and meteor-fall events without interrupting music.
+58.	The dual-boss encounter keeps the nine-position turn order and ends in victory only after both bosses are defeated.
 ________________________________________
 15. SUGGESTED IMPLEMENTATION ORDER
 The prototype should be developed in stages, with each stage tested before moving to the next.
 Stage 1 — Battlefield and Party Formation
 •	Load the supplied temple background.
-•	Place Iobrontes in the background.
+•	Place Iobrontes and Kosmelys in the background.
 •	Place Furai, Dexios, and Sahira in the requested formation.
 •	Configure sprite scaling and drawing order.
 •	Implement the initial HUD.
 Stage 2 — Combat State and Turn Order
 •	Create the character statistics.
-•	Implement the fixed six-position turn sequence.
+•	Implement the fixed nine-position turn sequence.
 •	Add incapacitation logic.
 •	Add victory and defeat conditions.
 Stage 3 — Playable Character Abilities
@@ -866,6 +893,7 @@ Stage 4 — Iobrontes's Attacks
 •	Add Watch the Thunder, its team-wide beam, casting, jump window, and damage resolution.
 •	Add Divine Retribution, its electric shield, retaliation damage, and two-player-turn expiration.
 •	Select between Iobrontes's three actions with the specified probabilities and announce each action before it begins.
+•	Add Kosmelys's Cosmic Rays, Portal Shield, and sequential Meteor Rain actions, with independent ability selection and boss state.
 Stage 5 — Defensive Mechanics
 •	Implement WASD controls.
 •	Implement the directional warning system.
@@ -880,8 +908,8 @@ Stage 6 — Camera and Visual Feedback
 •	Add damage numbers and defense result labels.
 •	Add lightning and impact effects.
 Stage 7 — Audio
-•	Add looping background battle music.
-•	Add combat sound effects.
+•	Add alternating background battle music.
+•	Add existing and Kosmelys-specific combat sound effects.
 •	Balance audio levels.
 Stage 8 — Final Integration and Testing
 •	Verify all damage calculations.
@@ -891,6 +919,7 @@ Stage 8 — Final Integration and Testing
 •	Test all defensive windows.
 •	Verify that animations and camera transitions do not interrupt combat.
 •	Confirm victory and defeat behavior.
+•	Verify the nine-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
 ________________________________________
 16. VISUAL REFERENCES
 The project's asset directory will contain the supplied reference frames for:
@@ -898,6 +927,7 @@ The project's asset directory will contain the supplied reference frames for:
 •	Furai
 •	Sahira
 •	Iobrontes
+•	Kosmelys
 •	The temple background
 •	Additional combat effects, where available
 •	Dexios, Furai, and Sahira jump frames
@@ -906,4 +936,991 @@ The project's asset directory will contain the supplied reference frames for:
 These assets establish the visual identity and character appearances of the prototype.
 The code must reference them through their registered names, allowing images to be replaced or improved without requiring changes to the core combat systems.
 ________________________________________
-End of Document — Version 0.3
+Core Design Specification — Version 0.3
+
+
+# LA DEXÍADA — DUAL BOSS FIGHT UPDATE
+**Design Document Update — Kosmelys Implementation**
+
+**Target file:** `DESIGN.md`  
+**Scope:** Expand the existing combat prototype into a simultaneous dual-boss encounter featuring Iobrontes and Kosmelys.
+
+## IMPORTANT IMPLEMENTATION INSTRUCTIONS
+
+Update the existing game and incorporate every change described below into `DESIGN.md`.
+
+Do not rebuild the game from scratch. Preserve the existing combat mechanics, character statistics, attacks, defensive systems, animations, sound effects, and user interface unless a change is explicitly requested.
+
+Kosmelys must be integrated as a second, fully functional boss fighting alongside Iobrontes.
+
+Both bosses must be present on the battlefield simultaneously, with independent Health bars, abilities, combat states, and turns.
+
+Reorganize the assets directory to accommodate the new Kosmelys sprites, effects, and music while keeping all previously implemented resources functional.
+
+Any new values required for the implementation, including timing, damage, animation paths, probabilities, positioning, and camera behavior, should be placed in configuration files rather than hard-coded.
+
+---
+
+# 1. BOSS HEALTH AND DUAL-BOSS INTERFACE
+
+## 1.1. Iobrontes — Health Update
+
+Iobrontes's maximum Health is increased to **550 HP**.
+
+Update his initial Health, maximum Health, HUD display, and any related configuration values.
+
+All of his previously implemented abilities and mechanics must remain functional, including Divine Retribution if it is already present in the current build.
+
+Do not change the existing attack probabilities unless required by another explicit instruction.
+
+## 1.2. Kosmelys — New Boss
+
+Add Kosmelys as a second boss.
+
+**Full Title:** Kosmelys, Goddess of Space, Tenth Heir of Hera.
+
+| Attribute | Value |
+|---|---|
+| Maximum Health | 450 |
+| Initial Health | 450 |
+| Role | Second boss |
+| Element | Space / Cosmic Magic |
+| Initial Sprite | `kosmelys_base.png` |
+| Asset Source | `kosmelys_assets/` |
+
+Kosmelys appears in the same arena as Iobrontes and fights alongside him.
+
+Both bosses must be visible simultaneously.
+
+The existing three playable characters—Furai, Dexios, and Sahira—remain in their current formation.
+
+Kosmelys should be positioned near Iobrontes, in the background area of the battlefield, while maintaining enough separation to make their sprites, attacks, and effects visually distinguishable.
+
+The exact positions and scales of both bosses must be adjustable through configuration.
+
+## 1.3. Boss Health Bars
+
+The boss interface must display two independent Health bars.
+
+**Iobrontes**
+
+- Display name: Iobrontes
+- Subtitle: God of Thunder, Tenth Heir of Zeus
+- Health: 550 / 550
+- Bar color: Purple, with lightning-inspired styling
+
+**Kosmelys**
+
+- Display name: Kosmelys
+- Subtitle: Goddess of Space, Tenth Heir of Hera
+- Health: 450 / 450
+- Bar color: Purple, with cosmic or spatial styling
+
+Kosmelys's Health bar must be positioned directly below Iobrontes's Health bar.
+
+Both bars must update independently when the corresponding boss receives damage.
+
+Neither Health bar should disappear merely because the other boss has been defeated.
+
+---
+
+# 2. KOSMELYS — CHARACTER ASSETS AND ANIMATION STATES
+
+All Kosmelys frames are provided in the `kosmelys_assets` directory.
+
+Use the supplied artwork without changing her visual design.
+
+Her default idle frame is:
+
+`kosmelys_base.png`
+
+Register the following animation states:
+
+| State | Asset |
+|---|---|
+| Idle | `kosmelys_base.png` |
+| Attack Right | `kosmelys_derecha.png` |
+| Attack Left | `kosmelys_izquierda.png` |
+| Attack Up | `kosmelys_arriba.png` |
+| Attack Down | Temporary labeled placeholder (no supplied down frame) |
+| Portal Shield | `kosmelys_escudo.png` |
+| Meteor Rain | `kosmelys_mr.png` |
+
+The file for Portal Shield should be resolved using its actual supplied filename and extension.
+
+Preserve the actual filenames, including capitalization, because asset paths may be case-sensitive.
+
+When Kosmelys performs an attack, she must switch from her idle frame to the corresponding action frame.
+
+After her action finishes, she must return to `kosmelys_base.png`, except while Portal Shield remains active.
+
+If an asset is missing, use an explicitly labeled temporary placeholder rather than an unrelated image.
+
+---
+
+# 3. KOSMELYS — ATTACK 1: COSMIC RAYS
+
+## 3.1. Basic Description
+
+**Ability Name:** Cosmic Rays  
+**Number of Projectiles:** 2  
+**Damage per Projectile:** 15  
+**Maximum Total Damage:** 30  
+**Target Count:** 1 playable character for both projectiles  
+**Element:** Cosmic / Spatial  
+**Projectile Effect:** `cosmico.png`
+
+At the beginning of the ability, Kosmelys selects one random conscious playable character. Both projectiles target that same character; the target cannot change between projectiles. Only the targeted character responds to each projectile, and the player must not switch defensive control to another party member during the ability.
+
+Each projectile is a separate attack event with its own direction, animation, movement, defensive timing, and damage resolution.
+
+The projectiles must be launched sequentially, not as one combined hit. The second projectile begins only after the first has resolved.
+
+The main mechanic is that **each cosmic projectile changes its attack direction exactly halfway through its journey**.
+
+This makes Cosmic Rays fundamentally different from Iobrontes's Lightning Chain.
+
+The player must observe the projectile's final direction before attempting to defend. The camera remains slightly focused on the selected target throughout both attacks, using the existing slight zoom behavior without obstructing directional indicators or the projectile's direction change.
+
+## 3.2. Initial Direction
+
+For each cosmic projectile, the game selects an initial direction. The two projectiles should use different initial directions.
+
+The possible directions are:
+
+- Up
+- Down
+- Left
+- Right
+
+When the initial direction is selected, Kosmelys activates the corresponding directional frame.
+
+For example:
+
+- Initial direction Left → `kosmelys_izquierda.png`
+- Initial direction Right → `kosmelys_derecha.png`
+- Initial direction Up → `kosmelys_arriba.png`
+- Initial direction Down → a labeled temporary placeholder because no down frame was supplied
+
+The projectile begins moving toward its target while Kosmelys displays the relevant casting pose.
+
+## 3.3. Mid-Flight Direction Change
+
+When a projectile reaches exactly **50% of its total travel time**, its direction changes.
+
+The game randomly selects a new direction, but the new direction must be different from the original one.
+
+The new direction is selected from the other three possibilities.
+
+At this exact moment:
+
+1. The original trajectory visibly changes.
+2. The `cosmico.png` effect disappears from its previous trajectory.
+3. The same projectile effect reappears at the appropriate attack origin for the newly selected direction and redirects toward the same target.
+4. Kosmelys switches to the frame corresponding to the new direction.
+5. The directional warning updates.
+6. The player must now defend against the new direction.
+
+The effect's relocation is a visual repositioning of the same attack event. It must not create an additional damaging projectile, reset the target, restart the casting sequence, or cause damage to be applied twice. Preserve the projectile's remaining travel time after the change. Both projectiles follow this behavior independently.
+
+### Example
+
+Kosmelys initially launches a cosmic projectile from the left.
+
+Her displayed frame is:
+
+`kosmelys_izquierda.png`
+
+Halfway through the projectile's journey, the game changes its direction to Up.
+
+Kosmelys immediately changes to:
+
+`kosmelys_arriba.png`
+
+The cosmic projectile changes trajectory and approaches the target from above.
+
+The correct defensive input becomes **W**, not A.
+
+The projectile continues its remaining movement and resolves according to the final direction.
+
+This mechanic must happen independently for both cosmic projectiles.
+
+## 3.4. Projectile Speed and Timing
+
+Each Cosmic Rays projectile travels at **60% of the speed of an Iobrontes Lightning Chain projectile**.
+
+This refers to movement speed, not total animation duration.
+
+Therefore, Cosmic Rays projectiles should travel more slowly than Lightning Chain projectiles.
+
+If the effective Lightning Chain travel time is 0.373 seconds for the same travel distance, the corresponding Cosmic Rays travel time should be approximately:
+
+0.373 / 0.60 = 0.622 seconds.
+
+This calculation is a reference. The implementation should compare effective projectile movement rather than blindly copying durations if projectile distances differ.
+
+The speed reduction must not accidentally be applied twice.
+
+The projectile must remain visually readable throughout the direction change.
+
+The direction changes exactly once at the 50% travel point. Each projectile has an independent defensive window and resolves separately. The direction change and subsequent defense must not produce more than one damage resolution for a projectile.
+
+## 3.5. Defensive Input and Character-Specific Results
+
+Cosmic Rays uses the existing directional defense system.
+
+The targeted character uses WASD:
+
+| Key | Direction |
+|---|---|
+| W | Up |
+| A | Left |
+| S | Down |
+| D | Right |
+
+However, the defense must be evaluated using the projectile's **final direction**, not its initial one.
+
+Because the projectile changes direction halfway through its journey, the implementation must ensure that the player cannot successfully resolve the attack before the final direction has been revealed.
+
+Required behavior:
+
+1. Show the projectile's initial direction during the first half of its movement.
+2. Change the direction exactly at the midpoint.
+3. Open the valid defensive input period at or after the direction change, so the player cannot resolve the attack before its final direction has been revealed.
+4. Display the usual defense timing indicator.
+5. Evaluate the input exclusively against the new direction.
+6. Resolve the attack once its defensive window closes, exactly once.
+
+The existing character-specific block damage rules remain active. A failed defense causes 15 damage. Successful imperfect blocks follow the existing character-specific blocking rules, and a perfect parry prevents damage. Configure precise Cosmic Rays input thresholds because the direction change leaves less reaction time than Lightning Chain.
+
+**Dexios:** Each perfect parry prevents all damage and independently deals 5 counterdamage to Kosmelys. Perfect-parrying both projectiles deals 10 total counterdamage. Dexios does not need to parry both projectiles to trigger an individual counterattack.
+
+**Furai:** He must perfectly parry both projectiles from the same Cosmic Rays ability to activate one counterattack. If both are parried, he takes no damage, displays `Tiger Parry`, activates `furai_ataque`, deals 20 damage to Kosmelys, then returns to his idle frame. If only one is perfectly parried, that projectile deals no damage but does not trigger a counterattack. A normal block or failed defense on either projectile prevents the chain counterattack. The counterattack can trigger only once per Cosmic Rays ability. This Cosmic Rays rule is separate from the three-parry Lightning Chain rule.
+
+**Sahira:** She has no perfect parry or counterattack. Any correct directional input during the active defensive window prevents all damage. She must block both projectiles separately.
+
+---
+
+# 4. KOSMELYS — ATTACK 2: PORTAL SHIELD
+
+## 4.1. Basic Description
+
+**Ability Name:** Portal Shield  
+**Type:** Defensive / Attack Redirection  
+**Direct Damage:** 0  
+**Activation Frame:** `kosmelys_escudo.png`
+**Redirection Effect:** `portal.png`  
+**Duration:** One allied character's turn
+
+Kosmelys creates a spatial shield around herself.
+
+The shield remains active until:
+
+- A qualifying attack against Kosmelys triggers its redirection effect, or
+- The next playable character finishes their turn without activating the shield.
+
+Whichever happens first ends the shield.
+
+While the shield remains active, Kosmelys displays her Portal Shield frame.
+
+## 4.2. Attack Redirection
+
+If a playable character attacks Kosmelys while Portal Shield is active, Kosmelys redirects that attack toward a random conscious playable character.
+
+The redirected target may be:
+
+- Dexios
+- Furai
+- Sahira
+
+The target is selected randomly from all party members who still have Health remaining.
+
+The character who launched the original attack may also be selected.
+
+### Redirection Sequence
+
+1. A playable character selects an offensive ability.
+2. The player chooses Kosmelys as the target.
+3. The game detects that Portal Shield is active.
+4. The attack is intercepted by Kosmelys's spatial barrier.
+5. The game randomly selects a conscious party member.
+6. A portal effect appears over the newly selected target, using `portal.png`.
+7. The attack is redirected toward that character.
+8. The redirected attack applies its damage to the selected party member.
+9. Portal Shield is consumed.
+10. Kosmelys returns to `kosmelys_base.png`.
+
+Kosmelys must not take damage from an attack successfully redirected by Portal Shield.
+
+## 4.3. Multi-Hit Attacks
+
+An offensive ability containing multiple hits is treated as **one ability** for the purposes of Portal Shield.
+
+For example, Triple Lightning has three hits.
+
+If Dexios uses Triple Lightning against a protected Kosmelys:
+
+1. Portal Shield activates once.
+2. One random conscious party member is selected.
+3. All three hits are redirected toward that same character.
+4. Each hit retains its original damage.
+5. The shield disappears after the full ability resolves.
+
+The game must not select a different random target for each hit.
+
+The same principle applies to Furai's Tiger Fang.
+
+## 4.4. Interaction with Other Abilities
+
+**Furai — Armor Break**
+
+Armor Break does not deal direct damage.
+
+For this implementation, applying Armor Break does not trigger Portal Shield's attack redirection.
+
+The existing tiger mark and damage amplification mechanics remain unchanged.
+
+Armor Break should be associated with the enemy it is applied to. A mark applied to Iobrontes should not automatically amplify damage against Kosmelys.
+
+**Dexios — Chaotic Lightning**
+
+If Chaotic Lightning is redirected, its offensive damage is redirected to the selected party member.
+
+Any self-damage associated with the ability remains attached to Dexios according to the existing implementation.
+
+**Sahira — Hippopotamus Shield**
+
+If the selected party member has an active Hippopotamus Shield, the redirected attack can be absorbed according to the existing shield rules.
+
+For multi-hit attacks, each damaging hit is treated separately when consuming Hippopotamus Shield charges.
+
+**Healing Abilities**
+
+Healing does not target Kosmelys and therefore cannot activate Portal Shield.
+
+## 4.5. Defensive Input During Redirection
+
+For the first implementation, Portal Shield's redirection should resolve as a magical attack reflection rather than as another real-time directional attack.
+
+The redirected target receives damage directly unless protected by an appropriate defensive effect such as Hippopotamus Shield.
+
+WASD is not activated for this redirection.
+
+This rule keeps the ability focused on strategic decision-making rather than duplicating Cosmic Rays or Lightning Chain.
+
+## 4.6. Shield Expiration
+
+Portal Shield lasts for only **one playable character turn**.
+
+For example:
+
+1. Kosmelys activates Portal Shield.
+2. Furai's turn begins.
+3. Furai chooses to attack Iobrontes rather than Kosmelys.
+4. Furai finishes his action.
+5. Kosmelys's Portal Shield expires automatically.
+6. Kosmelys returns to her base frame.
+
+The shield does not last for an entire party rotation.
+
+If Kosmelys is attacked during the protected turn, the shield is consumed immediately after that attack is redirected.
+
+Portal Shield cannot stack with itself.
+
+If the shield is already active, Kosmelys should not waste another action refreshing it unless an explicit refresh mechanic is added later.
+
+---
+
+# 5. KOSMELYS — ATTACK 3: METEOR RAIN
+
+## 5.1. Basic Description
+
+**Ability Name:** Meteor Rain  
+**Type:** Sequential Multi-Target Cosmic Attack  
+**Number of Meteors:** 5  
+**Damage per Meteor:** 20  
+**Maximum Total Damage:** 100 across all targets  
+**Casting Frame:** `kosmelys_mr.png`  
+**Meteor Effect:** `meteoro.png`
+
+Kosmelys summons five meteors that fall one after another toward the playable characters. The attack sequences must be strictly sequential and must never overlap.
+
+Each meteor independently selects a target from the conscious party members.
+
+Unlike Cosmic Rays, this ability may require the player to defend different characters in succession.
+
+All meteors approach from above.
+
+Therefore, their required defensive direction is always **Up (W)**.
+
+## 5.2. Target Selection
+
+Each meteor randomly selects one conscious party member.
+
+Eligible targets are:
+
+- Furai
+- Dexios
+- Sahira
+
+The same character may be selected multiple times.
+
+For example, a five-meteor sequence could target:
+
+1. Dexios
+2. Sahira
+3. Dexios
+4. Furai
+5. Sahira
+
+Each target must be visually identifiable before its meteor reaches the character.
+
+If a character becomes incapacitated before a later meteor selects its target, that character must be removed from the random target pool.
+
+## 5.3. Individual Meteor Timing and Defensive Windows
+
+The first meteor has a 0.5-second casting/preparation phase followed by 0.5 seconds of visible travel. Each subsequent meteor begins falling as soon as the previous meteor's defense window closes and travels for 0.7 seconds. The impact time is T. Each meteor's 0.8-second defense window is:
+
+| Timing relative to impact T | Result |
+|---|---|
+| Before T − 0.7 s | Input ignored |
+| T − 0.7 s to T − 0.3 s | Normal block (0.4 s) |
+| T − 0.3 s to T + 0.1 s | Perfect parry (0.4 s) |
+| After T + 0.1 s | Failed defense if no valid input was registered |
+
+For the first meteor, the attack sequence starts at 0 ms and impact occurs at 1000 ms; its active window opens at 300 ms, the perfect-parry period begins at 700 ms, and the window closes at 1100 ms. Each following meteor's impact occurs 700 ms after it starts falling; its active window opens immediately, the perfect-parry period begins at 400 ms, and the window closes at 800 ms. Do not resolve damage at the visual impact time.
+
+The timing indicator is yellow during the normal-block window, white and glowing during the perfect-parry window, and inactive after the window closes. Sahira has no perfect-parry mechanic: any correct W input during either active period is a normal successful block.
+
+The meteor reaches the target visually at T, but damage is not finalized at that moment. Wait until T + 0.1 seconds, then resolve the result and apply damage or counterattack. This allows a valid perfect parry shortly after visual impact. Every meteor resolves damage exactly once.
+
+## 5.4. Sequential Meteor Sequence — No Overlap
+
+Each meteor must complete its entire attack sequence before the next meteor begins. There must never be more than one active meteor, targeting indicator, defensive window, or unresolved meteor attack at the same time.
+
+For each of the five meteors, in order:
+
+1. Randomly select one conscious playable character.
+2. Display the targeting indicator above that character.
+3. For the first meteor, begin the 0.5-second casting phase. For each following meteor, begin its fall immediately after the previous defensive window closes.
+4. Launch `meteoro.png` toward the target; the first meteor travels for 0.5 seconds and each following meteor travels for 0.7 seconds.
+5. Allow the player to defend using W during the active defensive window.
+6. Wait until the defensive window closes at T + 0.1 seconds.
+7. Resolve the block, perfect parry, or failed defense.
+8. Apply damage and any applicable counterattack.
+9. Display the defensive result and remove the resolved meteor.
+10. Begin the next meteor's fall immediately, without an extra delay or casting phase.
+
+Repeat until all five meteors have resolved. The meteor must disappear before the next one begins. Do not advance to the next combat turn until the ability and any eligible counterattack have fully completed.
+
+## 5.5. Defensive Inputs and Character-Specific Results
+
+Each meteor requires an individual defensive response. The correct input is always **W — Defend Up**. Every meteor has its own attack identifier, target, projectile, casting and travel timers, input result, and resolution state. One W press resolves only the current meteor; it cannot block multiple meteors. In this sequential system, input overlap is not possible.
+
+**Dexios**
+
+- Normal block: receives 5 damage.
+- Perfect parry: receives 0 damage and independently counterattacks Kosmelys for 5 damage.
+- Failed defense: receives 20 damage.
+- Each individual perfect parry triggers its own 5-damage counterattack against Kosmelys; Dexios need not perfect-parry the full Meteor Rain.
+- If Dexios takes damage, he continues to generate Chaos energy according to the existing rules.
+
+**Furai**
+
+- Normal block: receives 5 damage.
+- Perfect parry on an individual meteor: receives 0 damage, with no immediate counterattack.
+- Failed defense: receives 20 damage.
+- Furai must perfectly parry every meteor assigned to him during this Meteor Rain to trigger one 20-damage counterattack. He must be targeted at least once; meteors assigned to other characters do not count against him.
+- Track all meteors assigned to Furai during the ability. Initialize this tracking for each Meteor Rain, and clear it when the ability ends. If any assigned meteor is normally blocked or missed, he does not qualify.
+- After all five meteors resolve, check Furai's assigned results. If all are perfect parries, display `Tiger Parry`, activate `furai_ataque`, deal 20 damage to Kosmelys, and return Furai to his idle frame. This counterattack triggers at most once per Meteor Rain.
+
+Example: for the targets Dexios, Furai, Sahira, Furai, Dexios, Furai must perfectly parry meteors 2 and 4. If both are perfect parries, he counterattacks; if either is a normal block or failed defense, he does not.
+
+**Sahira**
+
+- She has no perfect-parry or counterattack mechanic.
+- Any correct W input during the full 0.8-second window prevents all damage.
+- A failed defense causes 20 damage.
+- Do not display a Perfect Parry result. Show a single successful-block indicator throughout the active window.
+
+## 5.6. Camera, Targeting, and Sound Effects
+
+**Meteor Rain must not use individual target camera zooms.**
+
+The camera stays at its normal battlefield position throughout the ability.
+
+All three playable characters must remain visible. Only one meteor and one targeting indicator are active at a time.
+
+The game must communicate the current target through:
+
+- A warning indicator above the targeted character.
+- The falling meteor's visible trajectory.
+- A timing indicator associated with that character.
+- Distinct visual effects at impact.
+
+Play `meteor_fall.mp3` once for each meteor when its visible descent begins. The audio system must allow separate sound instances if needed without cutting off another meteor sound.
+
+## 5.7. Damage Resolution
+
+Each meteor deals 20 damage if it is not successfully defended against.
+
+Damage is calculated separately for each meteor only after its defensive window closes at T + 0.1 seconds.
+
+If a meteor is prevented by Hippopotamus Shield, consume one shield charge for that hit.
+
+If a targeted character becomes incapacitated, safely resolve or cancel that pending attack without errors; exclude the character from subsequent target selection.
+
+The ability ends only after all five meteor sequences have resolved or the battle has entered a terminal state.
+
+---
+
+# 6. PLAYER ATTACK TARGET SELECTION
+
+The combat system must now support choosing between two enemy bosses.
+
+Before executing an offensive ability, the player must select the intended enemy target:
+
+- Iobrontes
+- Kosmelys
+
+Both bosses must appear as selectable targets while they are conscious.
+
+## 6.1. Target Selection Sequence
+
+1. The active playable character opens their ability menu.
+2. The player selects an ability.
+3. If the ability targets an enemy, a boss selection interface appears.
+4. The player chooses Iobrontes or Kosmelys.
+5. The selected boss is visually highlighted.
+6. The character executes the ability.
+7. Damage and effects are applied to the selected boss.
+
+If one boss has been defeated, that boss becomes unavailable as a target.
+
+The remaining boss must continue fighting normally.
+
+## 6.2. Ability Targeting Rules
+
+| Ability | Target Type |
+|---|---|
+| Dexios — Triple Lightning | Iobrontes or Kosmelys |
+| Dexios — Electric Arc | Iobrontes or Kosmelys |
+| Dexios — Chaotic Lightning | Iobrontes or Kosmelys |
+| Furai — Tiger Spear | Iobrontes or Kosmelys |
+| Furai — Tiger Fang | Iobrontes or Kosmelys |
+| Furai — Armor Break | Iobrontes or Kosmelys |
+| Sahira — Jackal Strike | Iobrontes or Kosmelys |
+| Sahira — Hippopotamus Healing | Conscious playable ally |
+| Sahira — Hippopotamus Shield | Conscious playable ally |
+
+Healing and defensive support abilities retain their ally selection menus.
+
+Enemy-targeting abilities must correctly interact with Portal Shield when Kosmelys is protected.
+
+## 6.3. Targeting Visuals
+
+The selected enemy should receive a visible outline, marker, or other targeting indicator.
+
+The interface must show which boss is currently selected before the attack begins.
+
+If the player cancels target selection, the game should return to the ability menu without spending resources or ending the turn.
+
+Resource costs are deducted only after the ability and its target are confirmed.
+
+---
+
+# 7. AUDIO — ALTERNATING BATTLE MUSIC
+
+The current battle soundtrack must be expanded to alternate between two songs.
+
+The existing battle track is:
+
+`watch_the_thunder.mp3`
+
+The new battle track is:
+
+`cosmic_strike.mp3`
+
+Both audio files must be loaded from the project's music assets directory.
+
+## 7.1. Playback Sequence
+
+At the beginning of combat, play:
+
+**Watch the Thunder**
+
+When the song finishes naturally, immediately start:
+
+**Cosmic Strike**
+
+When Cosmic Strike finishes naturally, immediately restart:
+
+**Watch the Thunder**
+
+This sequence repeats continuously while the encounter remains active.
+
+The intended playback order is:
+
+Watch the Thunder → Cosmic Strike → Watch the Thunder → Cosmic Strike → Repeat.
+
+## 7.2. Playback Rules
+
+- Each song must play from beginning to end.
+- Do not loop either song individually.
+- The music system must automatically detect when the current track finishes.
+- The next track begins immediately after the previous one ends.
+- Do not play both tracks simultaneously.
+- Avoid gaps, unintended silence, or unwanted overlap between tracks.
+- The alternation must work regardless of which boss is currently taking a turn.
+
+The music alternation is independent of turn order and attack selection.
+
+## 7.3. Victory and Defeat
+
+When both bosses are defeated:
+
+1. Stop the active battle track.
+2. Transition to the existing victory music, `nike.mp3`.
+3. Continue the normal victory sequence.
+
+If all three playable characters are defeated, stop the battle music and trigger the existing defeat sequence.
+
+The alternating music system must stop once combat ends.
+
+Browser autoplay restrictions must still be respected.
+
+## 7.4. Kosmelys Sound Effects
+
+Register the following sound effects in the existing audio configuration. They play alongside background music and must not interrupt it. Store their paths and volume values in the existing audio configuration.
+
+| Combat event | Sound file | Playback requirement |
+|---|---|---|
+| Each Cosmic Rays projectile cast | `ataque_cosmico.mp3` | Play at the actual cast event. |
+| Each Cosmic Rays projectile direction change | `ataque_cosmico.mp3` | Play at the actual midpoint direction-change event. |
+| Portal Shield activation | `abrir_portal.mp3` | Play once when `kosmelys_escudo` activates; do not repeat while the shield remains active. |
+| Portal Shield redirection | `teleport_ataque.mp3` | Play when `portal.png` appears above the redirected target; once per redirected ability, not per hit. Do not play if the shield expires without redirecting an attack. |
+| Each falling Meteor Rain meteor | `meteor_fall.mp3` | Play when that meteor begins its visible descent. |
+
+Cosmic Rays normally produces four `ataque_cosmico.mp3` events per ability: one cast and one direction change for each of its two projectiles. Allow separate sound instances to play when necessary. Meteor Rain produces five `meteor_fall.mp3` events per ability, one as each sequential meteor begins falling. If a previous sound is still playing when the next meteor starts, allow the new sound instance without cutting off the previous one. Do not replace the battle music or existing sound effects.
+
+---
+
+# 8. ASSET DIRECTORY REORGANIZATION
+
+Reorganize the asset directory to clearly separate each character's frames, enemy effects, music, and sound effects.
+
+The recommended structure is:
+
+```text
+assets/
+│
+├── dexios/
+│   └── [existing Dexios frames]
+│
+├── furai/
+│   └── [existing Furai frames]
+│
+├── sahira/
+│   └── [existing Sahira frames]
+│
+├── iobrontes/
+│   └── [existing Iobrontes frames]
+│
+├── kosmelys/
+│   ├── kosmelys_base.png
+│   ├── kosmelys_derecha.png
+│   ├── kosmelys_izquierda.png
+│   ├── kosmelys_arriba.png
+│   ├── kosmelys_escudo.png
+│   ├── kosmelys_herida.png
+│   └── kosmelys_mr.png
+│
+├── effects/
+│   ├── cosmico.png
+│   ├── portal.png
+│   ├── meteoro.png
+│   ├── tiger-mark.png
+│   ├── hippo-mark.png
+│   └── [existing combat effects]
+│
+├── music/
+│   ├── watch_the_thunder.mp3
+│   ├── cosmic_strike.mp3
+│   └── nike.mp3
+│
+├── sfx/
+│   ├── ataque_cosmico.mp3
+│   ├── abrir_portal.mp3
+│   ├── teleport_ataque.mp3
+│   ├── meteor_fall.mp3
+│   └── [existing sound effects]
+│
+└── backgrounds/
+    └── escenario.png
+```
+
+The Kosmelys character frames are supplied in `kosmelys_assets/`. Copy them into `assets/kosmelys/`, and place `cosmico.png`, `portal.png`, and `meteoro.png` in `assets/effects/`. The supplied directory has no down-attack frame, so display a labeled temporary placeholder instead.
+
+Use the exact filename and extension found in the supplied asset directory when registering each file. The names above represent the expected organization and must not be used to silently rename files whose actual names differ.
+
+### Asset Migration Rules
+
+1. Preserve all existing asset files.
+2. Do not delete or overwrite existing sprites.
+3. Update all asset references in the Phaser preload system.
+4. Keep character frames separate from projectile effects.
+5. Update the asset configuration or manifest file.
+6. Verify that every existing attack still loads its correct resources.
+7. Verify that every Kosmelys ability displays the intended frame and effect.
+8. Update `DESIGN.md` to reflect the new paths and asset organization.
+
+The asset reorganization must not break any previously implemented combat mechanics.
+
+---
+
+# 9. DUAL-BOSS COMBAT RULES
+
+## 9.1. Independent Bosses
+
+Iobrontes and Kosmelys are independent enemies.
+
+Each boss has:
+
+- Its own Health.
+- Its own ability selection.
+- Its own action animations.
+- Its own combat turn.
+- Its own temporary status effects.
+- Its own defeated state.
+
+Both bosses must be present at the beginning of the encounter.
+
+## 9.2. Victory Condition
+
+The player wins only when **both Iobrontes and Kosmelys reach zero Health**.
+
+Defeating one boss does not end the battle.
+
+The surviving boss continues acting normally.
+
+Once defeated, a boss:
+
+- Cannot be selected as a target.
+- Cannot use abilities.
+- Cannot receive additional turns.
+- Cannot activate defensive effects.
+- No longer participates in enemy target selection or attack resolution.
+
+The existing victory music and victory screen must trigger only after both bosses have been defeated.
+
+## 9.3. Defeat Condition
+
+The defeat condition remains unchanged.
+
+The player loses when Dexios, Furai, and Sahira have all reached zero Health.
+
+If one or two playable characters are incapacitated, the battle continues.
+
+## 9.4. Compatibility with Existing Abilities
+
+All existing mechanics must continue functioning in the dual-boss encounter.
+
+In particular:
+
+- Dexios continues generating Chaos energy when taking eligible damage.
+- Furai's Armor Break remains attached to its selected boss.
+- Sahira can heal or protect conscious allies.
+- Hippopotamus Shield can protect against damaging attacks, including eligible redirected attacks and meteors.
+- Iobrontes retains his existing abilities and unique defensive interactions.
+- Kosmelys's Portal Shield only redirects attacks intended for Kosmelys.
+
+Boss-specific status effects must not automatically transfer from one boss to the other.
+
+## 9.5. Kosmelys Ability Selection
+
+Kosmelys has three available abilities:
+
+1. Cosmic Rays
+2. Portal Shield
+3. Meteor Rain
+
+Select an ability using these configurable probabilities, independently from Iobrontes's ability-selection system:
+
+| Ability | Probability |
+|---|---:|
+| Cosmic Rays | 50% |
+| Portal Shield | 30% |
+| Meteor Rain | 20% |
+| **Total** | **100%** |
+
+These probabilities apply each time Kosmelys selects an ability. If Portal Shield is already active and cannot be selected again, redistribute its 30% probability proportionally across the currently available attacks for that selection; do not waste Kosmelys's turn. For example, when only Cosmic Rays and Meteor Rain remain available, redistribute their probabilities in the original 50:20 ratio. Keep the selected attack's existing announcement, frame activation, animation, damage, and resolution behavior.
+
+Existing Iobrontes attack probabilities must remain unchanged.
+
+---
+
+# 10. TECHNICAL VALIDATION
+
+After implementing the dual-boss update, verify the following behavior.
+
+### Kosmelys
+
+- Kosmelys spawns alongside Iobrontes.
+- She starts with 450 Health.
+- Her Health bar appears below Iobrontes's.
+- Cosmic Rays launches two projectiles.
+- Each projectile deals 15 damage if undefended.
+- One conscious party member is selected once and targeted by both projectiles.
+- The camera remains slightly focused on that selected character through both projectiles.
+- Every cosmic projectile changes direction at the exact midpoint of its journey.
+- The new direction always differs from its initial direction.
+- The two projectiles use different initial directions.
+- Kosmelys switches to the corresponding frame when the direction changes.
+- The `cosmico.png` effect disappears from its old trajectory and reappears at the new directional origin.
+- Repositioning preserves the target and remaining travel time, does not restart casting, and never creates an extra damage event.
+- Cosmic Rays moves at 60% of Lightning Chain's projectile speed.
+- Dexios counterattacks for 5 damage after each Cosmic Rays perfect parry.
+- Furai counterattacks for 20 damage only after perfectly parrying both Cosmic Rays projectiles; one missed or normal-blocked projectile prevents the counter.
+- Sahira blocks each Cosmic Rays projectile separately and has no perfect parry or counterattack.
+- Portal Shield redirects one complete offensive ability to one randomly selected conscious party member.
+- Portal Shield expires after one allied turn if not triggered.
+- Portal Shield uses `portal.png` when redirecting damage.
+- Portal Shield activation and redirection sounds play only at their specified events.
+- Meteor Rain launches five meteors.
+- Every meteor deals 20 damage if undefended.
+- All meteor attacks originate from above.
+- Meteors can target the same character repeatedly.
+- Meteors resolve strictly one at a time: no more than one meteor, targeting indicator, defensive window, or unresolved event is active.
+- The first meteor has a 0.5-second casting phase and 0.5-second travel; every following meteor begins falling as soon as the previous defense window closes and travels for 0.7 seconds.
+- Every meteor's normal-block window runs from T − 0.7 to T − 0.3, and its perfect-parry window runs from T − 0.3 to T + 0.1; damage resolves only after T + 0.1.
+- Dexios counterattacks for 5 damage after every Meteor Rain perfect parry.
+- Furai counterattacks once for 20 damage after all five meteors only if every meteor targeting him was perfectly parried and he was targeted at least once.
+- Sahira blocks any meteor with a correct W input during the full 0.8-second window, without a perfect-parry result.
+- `meteor_fall.mp3` plays when each meteor begins its visible descent.
+- Meteor Rain does not zoom the camera toward individual targets.
+- Kosmelys's ability probabilities are 50% Cosmic Rays, 30% Portal Shield, and 20% Meteor Rain; when Portal Shield is unavailable, redistribute its probability proportionally across the available attacks.
+- `ataque_cosmico.mp3` plays on each projectile cast and direction change; `abrir_portal.mp3` on shield activation; `teleport_ataque.mp3` on redirection.
+- All four new Kosmelys sound files are registered with configurable paths and volumes and do not interrupt the battle music.
+
+### Existing Combat
+
+- Iobrontes starts with 550 Health.
+- All previously specified Iobrontes and playable-character mechanics remain functional.
+- Both bosses have independent Health values.
+- Enemy-targeting abilities can select either boss.
+- Healing and support abilities continue selecting allies.
+- Furai's Armor Break applies to the chosen boss only.
+- Sahira's defensive behavior remains unchanged.
+- Incapacitated characters cannot act or be selected as new attack targets.
+- The fight continues after one boss is defeated.
+- Victory occurs only when both bosses are defeated.
+
+### Assets and Audio
+
+- All existing assets remain functional.
+- Kosmelys's frames load correctly.
+- `cosmico.png`, `portal.png`, and `meteoro.png` display correctly.
+- The two battle songs alternate automatically.
+- Victory music starts only when both bosses have been defeated.
+- The asset manifest and `DESIGN.md` reflect the new project structure.
+- The fixed nine-position turn order remains unchanged.
+- The dual-boss victory and defeat conditions remain unchanged.
+
+---
+
+# 11. NEW FIXED TURN ORDER
+
+The prototype continues to use a fixed turn sequence.
+
+Do not implement character Speed statistics or dynamic initiative calculations.
+
+The new combat order is:
+
+| Position | Acting Character |
+|---|---|
+| 1 | Furai |
+| 2 | Iobrontes |
+| 3 | Kosmelys |
+| 4 | Dexios |
+| 5 | Iobrontes |
+| 6 | Kosmelys |
+| 7 | Sahira |
+| 8 | Iobrontes |
+| 9 | Kosmelys |
+
+After position 9, the sequence returns to position 1.
+
+### Complete Turn Cycle
+
+```text
+Furai
+  ↓
+Iobrontes
+  ↓
+Kosmelys
+  ↓
+Dexios
+  ↓
+Iobrontes
+  ↓
+Kosmelys
+  ↓
+Sahira
+  ↓
+Iobrontes
+  ↓
+Kosmelys
+  ↓
+REPEAT
+```
+
+Each complete nine-position cycle contains:
+
+- One turn for Furai.
+- One turn for Dexios.
+- One turn for Sahira.
+- Three turns for Iobrontes.
+- Three turns for Kosmelys.
+
+## 11.1. Incapacitated Characters
+
+If a playable character has zero Health, skip their turn.
+
+The other positions in the sequence remain unchanged.
+
+Do not remove the boss turns that occur before or after the incapacitated character's turn.
+
+## 11.2. Defeated Bosses
+
+If Iobrontes or Kosmelys has zero Health, skip that boss's remaining turns.
+
+The surviving boss continues acting whenever its own position is reached.
+
+Do not transfer turns from a defeated boss to the surviving boss.
+
+For example, if Kosmelys is defeated, the sequence continues with the remaining active turn positions:
+
+Furai → Iobrontes → Dexios → Iobrontes → Sahira → Iobrontes → Repeat.
+
+## 11.3. Turn Resolution
+
+Each action must finish completely before the next turn begins.
+
+This includes:
+
+- Attack animations.
+- Projectile movement.
+- Defensive input windows.
+- Damage calculations.
+- Status effect activation or expiration.
+- Counterattacks.
+- Camera transitions.
+- Victory or defeat checks.
+
+A new turn must not begin while a previous action is still being resolved.
+
+**This nine-position sequence is the required turn order for the current dual-boss prototype.**
+
+---
+
+**End of Dual Boss Update — Kosmelys Implementation**
