@@ -1,5 +1,5 @@
 LA DEXÍADA — GAME DESIGN DOCUMENT
-Version: 0.3 — Three-Character Combat Prototype
+Version: 0.5 — Dual-Boss Combat Prototype
 Document Status: Implementation Specification
 Target Platform: PC (Phaser, browser)
 Genre: Turn-Based RPG with Real-Time Directional Defense
@@ -69,8 +69,8 @@ Character images must support transparency.
 Assets should be scaled at runtime while preserving their original proportions.
 2.3. Screen Composition
 The arena must communicate depth through character placement, scaling, and floor perspective.
-The three playable characters stand closer to the camera, facing Iobrontes.
-Iobrontes stands farther away, facing the party and the camera.
+The three playable characters stand closer to the camera, facing Iobrontes and Kosmelys.
+Iobrontes and Kosmelys stand farther away, facing the party and the camera. Both bosses must be visible simultaneously.
 Party Formation
 Furai — Left
 •	Positioned on the left side of the party.
@@ -92,10 +92,14 @@ Iobrontes — Background
 •	Standing farther away than all three party members.
 •	Facing the playable characters.
 •	His upright posture must communicate divine authority.
+Kosmelys — Background
+•	Positioned near Iobrontes in the background area.
+•	Separated enough from Iobrontes to distinguish both sprites, attacks, and effects.
+•	Facing the playable characters.
 Formation Diagram
                   TEMPLE BACKGROUND
 
-                      IOBRONTES
+              IOBRONTES   KOSMELYS
 
 
        FURAI
@@ -110,15 +114,16 @@ Scene Layering
 From back to front:
 1.	Temple background and sky.
 2.	Iobrontes.
-3.	Background magical effects.
-4.	Furai.
-5.	Dexios.
-6.	Sahira.
-7.	Foreground magical effects.
-8.	Combat HUD and directional indicators.
+3.	Kosmelys.
+4.	Background magical effects.
+5.	Furai.
+6.	Dexios.
+7.	Sahira.
+8.	Foreground magical effects.
+9.	Combat HUD and directional indicators.
 The final draw order may be adjusted dynamically for attack effects, but the party formation must maintain a consistent sense of depth.
 2.4. Camera Behavior
-The camera normally displays the complete battlefield, including all three playable characters and Iobrontes.
+The camera normally displays the complete battlefield, including all three playable characters, Iobrontes, and Kosmelys.
 When Iobrontes selects a target:
 1.	The game identifies the chosen character.
 2.	The camera smoothly moves and zooms slightly toward that character.
@@ -132,12 +137,13 @@ Suggested initial camera values:
 •	Camera transition duration: 0.2–0.3 seconds.
 •	Return transition: approximately 0.3 seconds.
 These values are adjustable and must not be hard-coded.
+Boss positions and scales must also be configurable. Keep both bosses visible together without allowing their sprites, attacks, or effects to obscure one another.
 ________________________________________
 3. ASSET AND ANIMATION SYSTEM
 3.1. Asset Availability
 All provided character frames will be included in the project's asset directory.
 The implementation must load the supplied graphical resources using their specified asset names.
-The asset loading system must allow images to be replaced without modifying the combat logic.
+The asset loading system must allow images to be replaced without modifying the combat logic. Kosmelys's frames and effects are provided in `kosmelys_assets/`; preserve their actual filenames and capitalization, and register them through the asset configuration system.
 The names written in this document identify the required animation poses or frames.
 3.2. Animation Requirements
 A state-based visual system must manage the displayed frame or animation for each character.
@@ -150,6 +156,7 @@ Possible states include:
 •	Special ability
 •	Counterattacking
 •	Defeated
+Kosmelys uses `kosmelys_base.png` as her idle frame, `kosmelys_derecha.png`, `kosmelys_izquierda.png`, and `kosmelys_arriba.png` for directional attacks, `kosmelys_escudo.png` for Portal Shield, and `kosmelys_mr.png` for Meteor Rain. Use a clearly labeled placeholder for the missing downward attack frame. Resolve the Portal Shield file using its actual supplied filename and extension. Return her to `kosmelys_base.png` after an action unless Portal Shield remains active. Do not change the supplied artwork's design.
 When a character begins an action, the appropriate frame must replace their idle frame.
 Once the action ends, the character returns to the idle frame unless they have been defeated.
 Dexios, Furai, and Sahira gently move up and down while in their base idle frame.
@@ -504,6 +511,16 @@ Duration: 2 playable-character turns
 Divine Retribution covers Iobrontes in an electric shield. The next attack that damages him still deals its normal damage, then the shield immediately retaliates against its attacker for 30 damage and disappears.
 The shield lasts until that hit occurs or two playable-character turns have ended, whichever comes first. Count turns whether or not the character attacks Iobrontes; a skipped incapacitated-character turn also counts. If Dexios and Sahira take their turns without damaging Iobrontes, the shield has expired by Furai's next turn.
 Whenever the shield is consumed or expires, Iobrontes returns to iobrontes_base. If another action temporarily changes his frame while the shield remains active, restore iobrontes_armadura when that action's frame ends.
+8.5. Boss — Kosmelys
+Full Title: Kosmelys, Goddess of Space, Tenth Heir of Hera
+Role: Second boss
+Element: Space / Cosmic Magic
+Initial Health: 450
+Maximum Health: 450
+Initial Sprite: `kosmelys_base.png`
+Asset Source: `kosmelys_assets/`
+Kosmelys fights alongside Iobrontes in the same arena. Her Health, abilities, combat state, temporary status effects, and turns are independent. She selects Cosmic Rays (50%), Portal Shield (30%), or Meteor Rain (20%) independently from Iobrontes. If Portal Shield is already active and unavailable, redistribute its probability proportionally across the available abilities; do not waste her turn. Preserve Iobrontes's existing ability probabilities.
+Kosmelys's abilities are specified in the dual-boss update below: Cosmic Rays fires two 15-damage projectiles at the same selected conscious character; Portal Shield redirects one complete offensive ability to one randomly selected conscious party member and lasts one playable-character turn; Meteor Rain targets five sequential meteors at a conscious party member, selecting again for each meteor. Use the ability-specific direction changes, timing windows, defensive outcomes, counterattacks, animation, and damage rules specified in the detailed ability sections below.
 ________________________________________
 9. DIRECTIONAL DEFENSE AND PARRY SYSTEM
 9.1. Core Mechanic
@@ -608,11 +625,16 @@ ________________________________________
 Iobrontes's HUD appears near the top of the screen.
 It displays:
 Iobrontes
-God of Thunder, Twelfth Heir of Zeus
+God of Thunder, Tenth Heir of Zeus
 Below the name is a purple lightning-themed Health bar.
-Health: 500 / 500
+Health: 550 / 550
 The bar updates whenever Iobrontes takes damage.
 Its appearance should be inspired by purple lightning, matching his attacks and divine identity.
+Kosmelys's independent Health bar appears directly below Iobrontes's. It displays:
+Kosmelys
+Goddess of Space, Tenth Heir of Hera
+Health: 450 / 450
+Use purple styling with a cosmic or spatial appearance. Update both bars independently, and do not hide either bar merely because the other boss has been defeated.
 10.2. Party HUD
 The player must be able to see the status of all three playable characters.
 Each character has an individual HUD panel.
@@ -756,6 +778,7 @@ The following values must be editable without changing the main combat logic:
 •	Visual effects.
 •	Audio volume.
 •	Audio resource paths and sound-effect event configuration.
+•	Both bosses' Health, positions, scales, status effects, ability availability, and independent turn states.
 13.3. Combat State Management
 The combat system should use clearly separated states.
 Recommended states:
@@ -809,6 +832,8 @@ General Combat
 4.	Incapacitated characters have their turns skipped.
 5.	Iobrontes only targets active characters.
 6.	The battle ends when both bosses reach zero Health or all three party members are incapacitated.
+7.	Both bosses remain visible simultaneously and have independent Health bars, actions, combat states, and defeated states.
+8.	Defeating one boss does not end the encounter; the surviving boss continues acting at its scheduled positions, and defeated boss turns are skipped rather than transferred.
 Dexios
 7.	Triple Lightning deals three hits of 5 damage and consumes no Mana.
 8.	Electric Arc deals 30 damage and consumes 20 Mana.
@@ -866,6 +891,11 @@ Visuals and Audio
 56.	Kosmelys's ability selection uses the 50% / 30% / 20% distribution and proportionally redistributes unavailable Portal Shield probability.
 57.	The four Kosmelys sound effects play at their specified cast, direction-change, activation, redirection, and meteor-fall events without interrupting music.
 58.	The dual-boss encounter keeps the nine-position turn order and ends in victory only after both bosses are defeated.
+59.	The Kosmelys Health bar displays her title and 450 / 450 Health directly below Iobrontes's 550 / 550 Health bar; both bars update independently and remain visible until the encounter ends.
+60.	Kosmelys's `kosmelys_base.png`, directional attack frames, Portal Shield frame, and Meteor Rain frame are registered with their supplied filenames; missing frames use labeled placeholders.
+61.	Kosmelys independently selects Cosmic Rays, Portal Shield, and Meteor Rain with the 50% / 30% / 20% distribution, proportionally redistributing unavailable Portal Shield probability.
+62.	Portal Shield redirects one complete attack to one conscious party member and expires after one playable-character turn; boss-specific statuses do not transfer between bosses.
+63.	The asset directory preserves all existing resources and includes Kosmelys's sprites, effects, and music at their configured paths.
 ________________________________________
 15. SUGGESTED IMPLEMENTATION ORDER
 The prototype should be developed in stages, with each stage tested before moving to the next.
@@ -875,6 +905,7 @@ Stage 1 — Battlefield and Party Formation
 •	Place Furai, Dexios, and Sahira in the requested formation.
 •	Configure sprite scaling and drawing order.
 •	Implement the initial HUD.
+•	Register Kosmelys's supplied sprites and effects from `kosmelys_assets/` without changing their visual design.
 Stage 2 — Combat State and Turn Order
 •	Create the character statistics.
 •	Implement the fixed nine-position turn sequence.
@@ -894,6 +925,7 @@ Stage 4 — Iobrontes's Attacks
 •	Add Divine Retribution, its electric shield, retaliation damage, and two-player-turn expiration.
 •	Select between Iobrontes's three actions with the specified probabilities and announce each action before it begins.
 •	Add Kosmelys's Cosmic Rays, Portal Shield, and sequential Meteor Rain actions, with independent ability selection and boss state.
+•	Add the two independent boss Health bars, with Kosmelys's bar directly below Iobrontes's.
 Stage 5 — Defensive Mechanics
 •	Implement WASD controls.
 •	Implement the directional warning system.
@@ -920,6 +952,7 @@ Stage 8 — Final Integration and Testing
 •	Verify that animations and camera transitions do not interrupt combat.
 •	Confirm victory and defeat behavior.
 •	Verify the nine-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
+•	Verify independent boss states, ability selection, and defeated-boss turn skipping.
 ________________________________________
 16. VISUAL REFERENCES
 The project's asset directory will contain the supplied reference frames for:
@@ -936,7 +969,7 @@ The project's asset directory will contain the supplied reference frames for:
 These assets establish the visual identity and character appearances of the prototype.
 The code must reference them through their registered names, allowing images to be replaced or improved without requiring changes to the core combat systems.
 ________________________________________
-Core Design Specification — Version 0.3
+Core Design Specification — Version 0.5
 
 
 # LA DEXÍADA — DUAL BOSS FIGHT UPDATE
@@ -1924,3 +1957,5 @@ A new turn must not begin while a previous action is still being resolved.
 ---
 
 **End of Dual Boss Update — Kosmelys Implementation**
+
+**This is version 0.5.**
