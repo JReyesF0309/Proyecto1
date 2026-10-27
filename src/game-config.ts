@@ -48,11 +48,11 @@ import sahiraHit from '../assets/sahira/sahira_herida.png';
 import sahiraLeft from '../assets/sahira/sahira_izquierda.png';
 import sahiraHeal from '../assets/sahira/sahira_cura.png';
 import sahiraJump from '../assets/sahira/sahira_salto.png';
-import dexiosIcon from '../dexios_icono.png';
-import furaiIcon from '../furai_icono.png';
-import sahiraIcon from '../sahira_icono.png';
-import iobrontesIcon from '../iobrontes_icono.png';
-import kosmelysIcon from '../kosmelys_icono.png';
+import dexiosIcon from '../assets/dexios/dexios_icono.png';
+import furaiIcon from '../assets/furai/furai_icono.png';
+import sahiraIcon from '../assets/sahira/sahira_icono.png';
+import iobrontesIcon from '../assets/iobrontes/iobrontes_icono.png';
+import kosmelysIcon from '../assets/kosmelys/kosmelys_icono.png';
 
 export type CharacterId = 'dexios' | 'furai' | 'sahira';
 export type BossId = 'iobrontes' | 'kosmelys';

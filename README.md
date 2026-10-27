@@ -38,7 +38,7 @@ Cada rayo sin bloquear causa 10 de daño. El bloqueo imperfecto causa 5 a Dexios
 
 ## Recursos y comprobaciones
 
-El escenario y las imágenes se cargan desde `escenario.png` y `assets/characters/`. Los fondos negros de los fotogramas se eliminan al cargar para conservar los detalles oscuros del vestuario. Las referencias, posiciones, estadísticas, habilidades, escalas y tiempos están centralizados en `src/game-config.ts`.
+El escenario se carga desde `assets/backgrounds/`; los fotogramas y los iconos de cada personaje, desde su carpeta dentro de `assets/` (`dexios/`, `furai/`, `sahira/`, `iobrontes/` y `kosmelys/`). Los efectos, la música y los efectos de sonido están en `assets/effects/`, `assets/music/` y `assets/sfx/`. Los fondos negros de los fotogramas se eliminan al cargar para conservar los detalles oscuros del vestuario. Las referencias, posiciones, estadísticas, habilidades, escalas y tiempos están centralizados en `src/game-config.ts`.
 
 ```sh
 npm run typecheck
