@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import CombatScene from './combat-scene';
 import { GAME_CONFIG } from './game-config';
+import WelcomeScene from './welcome-scene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -17,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: false,
     roundPixels: false,
   },
-  scene: [CombatScene],
+  scene: [WelcomeScene, CombatScene],
 };
 
 new Phaser.Game(config);

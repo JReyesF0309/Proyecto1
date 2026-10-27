@@ -53,6 +53,8 @@ import furaiIcon from '../assets/furai/furai_icono.png';
 import sahiraIcon from '../assets/sahira/sahira_icono.png';
 import iobrontesIcon from '../assets/iobrontes/iobrontes_icono.png';
 import kosmelysIcon from '../assets/kosmelys/kosmelys_icono.png';
+import iobrontesCover from '../assets/iobrontes/iobrontes_portada.png';
+import kosmelysCover from '../assets/kosmelys/kosmelys_portada.png';
 
 export type CharacterId = 'dexios' | 'furai' | 'sahira';
 export type BossId = 'iobrontes' | 'kosmelys';
@@ -117,6 +119,11 @@ export const ICON_ASSETS = {
   sahira: sahiraIcon,
   iobrontes: iobrontesIcon,
   kosmelys: kosmelysIcon,
+} as const;
+
+export const COVER_ASSETS = {
+  iobrontes: iobrontesCover,
+  kosmelys: kosmelysCover,
 } as const;
 
 export const GAME_CONFIG = {

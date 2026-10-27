@@ -1,6 +1,6 @@
 # La Dexíada
 
-Prototipo de combate por turnos en el Templo de Iobrontes, desarrollado con Phaser y TypeScript según [DESIGN.md](./DESIGN.md). Incluye a Dexios, Furai y Sahira contra Iobrontes, con el escenario y los fotogramas de personaje suministrados.
+Prototipo de combate por turnos en el Templo de Iobrontes, desarrollado con Phaser y TypeScript según [DESIGN.md](./DESIGN.md). Incluye una pantalla de bienvenida en inglés, a Dexios, Furai y Sahira contra Iobrontes y Kosmelys, y el escenario con sus fotogramas.
 
 ## Ejecución
 
@@ -15,7 +15,7 @@ Para abrir la versión de escritorio con Electron, ejecuta `npm run electron`.
 
 ## Turnos y habilidades
 
-El orden es fijo: **Furai → Iobrontes → Dexios → Iobrontes → Sahira → Iobrontes**, y se repite. Los personajes incapacitados se saltan; Iobrontes escoge al azar un aliado consciente para su cadena de tres ataques.
+El juego comienza en `escena_bienvenida`; pulsa `Enter` o haz clic para entrar en `escena_combate_dificil`. El orden de turnos es fijo: **Furai → Iobrontes → Kosmelys → Dexios → Iobrontes → Kosmelys → Sahira → Iobrontes → Kosmelys**, y se repite. Los personajes incapacitados se saltan.
 
 - **Dexios:** Triple Lightning — 3 × 5 de daño, gratis; Electric Arc — 30 de daño, 20 de maná; Chaotic Lightning — 70 de daño, 50 de Caos y 10 de daño propio.
 - **Furai:** Tiger Spear — 15 de daño, gratis; Tiger Fang — 2 × 15 de daño, 20 de maná; Armor Break — el siguiente ataque elegido duplica su primer impacto, 20 de maná.
@@ -27,7 +27,7 @@ Armor Break potencia solo el primer impacto de la siguiente habilidad ofensiva s
 
 - `1`, `2`, `3` o los botones del menú: elegir una habilidad.
 - Al curar: selecciona a Dexios, Furai o Sahira con `1`, `2`, `3` o pulsa su panel. No se puede reanimar a un personaje incapacitado.
-- `W`, `A`, `S`, `D`: defenderse arriba, izquierda, abajo y derecha durante los ataques de Iobrontes. Solo se acepta el primer input dentro de la ventana.
+- `W`, `A`, `S`, `D`: defenderse arriba, izquierda, abajo y derecha durante los ataques de los jefes. `Space`: saltar en equipo durante la ventana indicada. Solo se acepta el primer input dentro de la ventana.
 - `M`: silenciar o activar el audio.
 - `Esc`: cancelar la selección de objetivo de curación.
 - `R`: volver a empezar después de la victoria o derrota.

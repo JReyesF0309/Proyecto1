@@ -34,6 +34,7 @@ import {
   WIND_UP_MS,
   PROJECTILE_TRAVEL_MS,
 } from './combat-rules';
+import stripBlackMattes from './strip-black-matte';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
@@ -207,7 +208,7 @@ export default class CombatScene extends Phaser.Scene {
   private cosmicProjectile?: Phaser.GameObjects.Image;
 
   constructor() {
-    super({ key: 'combat' });
+    super({ key: 'escena_combate_dificil' });
   }
 
   preload(): void {
@@ -259,7 +260,10 @@ export default class CombatScene extends Phaser.Scene {
     this.previousTurnWasBoss = false;
     this.lastTurnActor = null;
     this.soundscape = new Soundscape();
-    this.stripCharacterMattes();
+    stripBlackMattes(
+      this.textures,
+      Object.keys(IMAGE_ASSETS).filter((key) => key !== 'arena'),
+    );
     this.createArena();
     this.createCharacters();
     this.createIndicators();
@@ -359,67 +363,6 @@ export default class CombatScene extends Phaser.Scene {
       this.createImpact(target.x, target.feetY - target.displayHeight * 0.52, COLORS.purple, 1.1);
       this.showFloatingText('IMPACTO', target.x, target.feetY - target.displayHeight - 20, '#ead8ff');
     }
-  }
-
-  private stripCharacterMattes(): void {
-    Object.keys(IMAGE_ASSETS)
-      .filter((key) => key !== 'arena')
-      .forEach((key) => {
-        const texture = this.textures.get(key);
-        const source = texture.getSourceImage();
-        if (!(source instanceof HTMLImageElement) && !(source instanceof HTMLCanvasElement)) {
-          throw new Error(`No se pudo procesar el fotograma ${key}`);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = source.width;
-        canvas.height = source.height;
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        if (!context) {
-          throw new Error(`No se pudo preparar el fotograma ${key}`);
-        }
-        context.drawImage(source, 0, 0);
-        const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-        const pixelCount = canvas.width * canvas.height;
-        const queue = new Uint32Array(pixelCount);
-        let queueStart = 0;
-        let queueEnd = 0;
-        const enqueueMattePixel = (index: number): void => {
-          const offset = index * 4;
-          if (
-            pixels.data[offset + 3] === 0
-            || pixels.data[offset] > 24
-            || pixels.data[offset + 1] > 24
-            || pixels.data[offset + 2] > 24
-          ) {
-            return;
-          }
-          pixels.data[offset + 3] = 0;
-          queue[queueEnd] = index;
-          queueEnd += 1;
-        };
-
-        for (let x = 0; x < canvas.width; x += 1) {
-          enqueueMattePixel(x);
-          enqueueMattePixel((canvas.height - 1) * canvas.width + x);
-        }
-        for (let y = 0; y < canvas.height; y += 1) {
-          enqueueMattePixel(y * canvas.width);
-          enqueueMattePixel(y * canvas.width + canvas.width - 1);
-        }
-        while (queueStart < queueEnd) {
-          const index = queue[queueStart];
-          queueStart += 1;
-          const x = index % canvas.width;
-          const y = Math.floor(index / canvas.width);
-          if (x > 0) enqueueMattePixel(index - 1);
-          if (x + 1 < canvas.width) enqueueMattePixel(index + 1);
-          if (y > 0) enqueueMattePixel(index - canvas.width);
-          if (y + 1 < canvas.height) enqueueMattePixel(index + canvas.width);
-        }
-        context.putImageData(pixels, 0, 0);
-        this.textures.remove(key);
-        this.textures.addCanvas(key, canvas);
-      });
   }
 
   private createArena(): void {
