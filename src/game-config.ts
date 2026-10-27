@@ -48,6 +48,11 @@ import sahiraHit from '../assets/sahira/sahira_herida.png';
 import sahiraLeft from '../assets/sahira/sahira_izquierda.png';
 import sahiraHeal from '../assets/sahira/sahira_cura.png';
 import sahiraJump from '../assets/sahira/sahira_salto.png';
+import dexiosIcon from '../dexios_icono.png';
+import furaiIcon from '../furai_icono.png';
+import sahiraIcon from '../sahira_icono.png';
+import iobrontesIcon from '../iobrontes_icono.png';
+import kosmelysIcon from '../kosmelys_icono.png';
 
 export type CharacterId = 'dexios' | 'furai' | 'sahira';
 export type BossId = 'iobrontes' | 'kosmelys';
@@ -106,18 +111,35 @@ export const IMAGE_ASSETS = {
   sahira_salto: sahiraJump,
 } as const;
 
+export const ICON_ASSETS = {
+  dexios: dexiosIcon,
+  furai: furaiIcon,
+  sahira: sahiraIcon,
+  iobrontes: iobrontesIcon,
+  kosmelys: kosmelysIcon,
+} as const;
+
 export const GAME_CONFIG = {
   canvas: { width: 1920, height: 1080 },
-  camera: { targetZoom: 1.08, focusMs: 260, returnMs: 300 },
+  camera: {
+    targetZoom: 1.08,
+    playerZoom: 1.34,
+    bossTargetZoom: 1.24,
+    focusMs: 260,
+    selectionMs: 380,
+    returnMs: 300,
+  },
   timing: {
     windUpMs: 187,
     projectileTravelMs: 373,
     defenseOpensBeforeImpactMs: 500,
     perfectParryStartsBeforeImpactMs: 100,
     defenseClosesAfterImpactMs: 100,
+    defenseHintLeadMs: 100,
     resultDurationMs: 1019,
     nextBoltDelayMs: 373,
     enemyAttackAnnouncementMs: 1000,
+    enemyTurnGapMs: 500,
     watchTheThunderCastMs: 600,
     jumpWindowMs: 300,
     jumpPoseMs: 700,
@@ -264,29 +286,32 @@ export const GAME_CONFIG = {
     meteorRainChancePercent: 20,
   },
   bossHud: {
-    x: { iobrontes: 32, kosmelys: 1320 },
-    width: 568,
-    height: 94,
-    y: { iobrontes: 108, kosmelys: 108 },
+    x: { iobrontes: 970, kosmelys: 1480 },
+    width: 420,
+    height: 90,
+    y: { iobrontes: 145, kosmelys: 145 },
     labelX: 20,
-    labelY: 6,
-    titleFontSize: 21,
+    labelY: 5,
+    titleFontSize: 22,
     subtitleX: 22,
     subtitleY: 31,
     subtitleFontSize: 13,
-    barX: 20,
-    barY: 70,
-    barWidth: 420,
-    barHeight: 11,
-    healthTextX: 545,
-    healthTextY: 66,
+    barX: 22,
+    barY: 63,
+    barWidth: 285,
+    barHeight: 12,
+    healthTextX: 398,
+    healthTextY: 61,
   },
+  turnQueueHud: { x: 26, y: 145, iconSize: 56, gap: 9 },
+  partyHud: { x: 1520, y: 660, width: 370, height: 94, gap: 10, portraitSize: 64 },
+  actionHud: { x: 740, y: 375, width: 440, height: 330 },
   bossTargetUi: {
-    firstButtonX: 18,
-    buttonY: 48,
-    buttonWidth: 284,
-    buttonHeight: 92,
-    buttonGap: 21,
+    firstButtonX: 10,
+    buttonY: 56,
+    buttonWidth: 195,
+    buttonHeight: 76,
+    buttonGap: 14,
   },
   enemyAttacks: {
     lightningChainChancePercent: 50,

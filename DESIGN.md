@@ -1959,3 +1959,1057 @@ A new turn must not begin while a previous action is still being resolved.
 **End of Dual Boss Update — Kosmelys Implementation**
 
 **This is version 0.5.**
+
+Nuevos cambios:
+1.	Que las flechas direccionales para la defensa muestre la tecla adecuada para defenderse entre W, A, S y D. También para el ataque de área como Watch the thunder tiene que mostrarse la barra espaciadora bien.
+2.	Aumenta un 0.5 segundos de tiempo entre ataques de Iobrontes y Kosmelys
+
+# LA DEXÍADA — REDISEÑO COMPLETO DE LA INTERFAZ DE COMBATE EN PHASER
+
+## 1. OBJETIVO PRINCIPAL
+
+Quiero realizar un rediseño completo de la interfaz de combate de **La Dexíada**, mi videojuego desarrollado en Phaser.
+
+La finalidad es transformar la interfaz actual en una experiencia JRPG mucho más cinematográfica, elegante y dinámica, conservando todas las mecánicas de combate existentes.
+
+He preparado tres bocetos que deben servir como referencias visuales para la implementación.
+
+**IMPORTANTE: Este trabajo consiste en rediseñar la interfaz, no en reconstruir el sistema de combate.**
+
+Debes examinar primero cómo está organizado actualmente el código, identificar los sistemas que ya funcionan y reutilizarlos.
+
+No debes modificar los sprites originales, las habilidades, las estadísticas, los cálculos de daño ni las reglas del combate.
+
+---
+
+## 2. ARCHIVOS DE REFERENCIA
+
+### 2.1. Bocetos de interfaz
+
+He creado tres imágenes que muestran cómo debe funcionar y verse la nueva interfaz.
+
+Sus nombres son:
+
+**boceto_combate**
+
+Es la imagen principal que muestra la distribución completa de la interfaz durante el combate.
+
+Define:
+- Posiciones generales de los personajes.
+- Distribución de los dos bosses.
+- Cola de turnos en la esquina superior izquierda.
+- Información de los enemigos en la zona superior.
+- Estado de los aliados en la parte inferior derecha.
+- Distribución general de los elementos permanentes del HUD.
+
+**boceto_elegir_ataque**
+
+Muestra cómo debe verse la pantalla durante el turno de un personaje jugable.
+
+Define:
+- Zoom cinematográfico hacia el personaje activo.
+- Menú de habilidades.
+- Posición aproximada de la ventana.
+- Distribución de las tres opciones de ataque.
+- Composición de la cámara durante la elección.
+
+**boceto_objetivo**
+
+Muestra cómo debe verse la pantalla cuando el jugador selecciona a qué enemigo atacar.
+
+Define:
+- Zoom hacia los dos bosses.
+- Composición que permite visualizar ambos enemigos ampliados.
+- Flecha indicadora del objetivo.
+- Selección de uno de los dos dioses.
+
+### Instrucciones sobre los bocetos
+
+Debes examinar las tres imágenes antes de implementar los cambios.
+
+Los bocetos representan el diseño y la composición que quiero conseguir.
+
+No son imágenes que deban utilizarse como fondos del juego ni interfaces estáticas.
+
+**Debes recrear sus elementos mediante objetos reales de Phaser**, conectados a los sistemas existentes.
+
+Respeta especialmente las posiciones relativas, tamaños, agrupaciones de elementos y cambios de cámara.
+
+Puedes mejorar los acabados, la tipografía y la ornamentación para obtener una interfaz profesional, pero sin alterar sustancialmente la composición de los bocetos.
+
+---
+
+## 3. ARCHIVOS DE ICONOS DE PERSONAJES
+
+Los siguientes archivos serán utilizados para representar a cada personaje en la interfaz:
+
+| Archivo | Personaje |
+|---|---|
+| `iobrontes_icono` | Ióbrontēs |
+| `kosmelys_icono` | Kosmelys |
+| `dexios_icono` | Dexios |
+| `sahira_icono` | Sahira |
+| `furai_icono` | Furai |
+
+Estos nombres identifican los recursos gráficos. Utiliza las extensiones y rutas reales que encuentres en el proyecto.
+
+### Uso de los iconos
+
+Los iconos se utilizarán principalmente en dos elementos:
+
+**A. Cola de turnos**
+
+Los cinco iconos deben poder aparecer en la cola situada en la esquina superior izquierda.
+
+Cada icono representa quién actuará en ese turno.
+
+Un mismo personaje puede aparecer varias veces si tiene varias acciones dentro de los próximos seis turnos.
+
+**B. Panel de estado de aliados**
+
+Los iconos de Dexios, Furai y Sahira deben aparecer junto a sus barras de vida y maná.
+
+### Requisitos técnicos
+
+- Cargar los archivos mediante el sistema de recursos de Phaser.
+- Reutilizar las texturas cargadas.
+- Mantener sus proporciones originales.
+- No estirar ni deformar las imágenes.
+- No sustituirlos por letras o círculos de colores si los archivos están disponibles.
+- Utilizar máscaras circulares o marcos decorativos cuando corresponda.
+- No duplicar innecesariamente los archivos originales.
+
+Si algún recurso no se encuentra, identifica cuál falta e informa del problema.
+
+---
+
+## 4. RESOLUCIÓN Y DISTRIBUCIÓN GENERAL
+
+La interfaz está diseñada para una resolución de referencia de:
+
+**1920 × 1080 píxeles — 16:9**
+
+Utiliza `boceto_combate` como principal referencia para distribuir los elementos.
+
+### Distribución
+
+**Esquina superior izquierda**
+
+Cola de los siguientes seis turnos.
+
+**Parte superior**
+
+Información de los dos jefes.
+
+**Zona central**
+
+Escenario y sprites de combate.
+
+**Lateral inferior derecho**
+
+Panel de estado de los personajes jugables.
+
+**Paneles temporales**
+
+Menús de habilidades y selección de objetivos, que aparecerán únicamente cuando corresponda.
+
+### Posicionamiento de personajes
+
+Mantener el escenario y los sprites actuales.
+
+La distribución de los aliados debe seguir el boceto:
+
+- Furai a la izquierda.
+- Dexios en la zona central.
+- Sahira hacia la derecha.
+- Espacio preparado para un cuarto personaje futuro.
+
+Los enemigos serán:
+
+- Ióbrontēs.
+- Kosmelys.
+
+No cambiar sus diseños gráficos ni reemplazar sus animaciones.
+
+Ajustar las posiciones y escalas únicamente cuando sea necesario para reproducir la composición visual deseada.
+
+---
+
+## 5. COLA DE TURNOS
+
+En la esquina superior izquierda debe aparecer una columna compacta con los iconos de los próximos seis turnos.
+
+La cola muestra:
+
+**El turno actual + los cinco siguientes.**
+
+Por ejemplo:
+
+1. Furai.
+2. Ióbrontēs.
+3. Kosmelys.
+4. Dexios.
+5. Ióbrontēs.
+6. Kosmelys.
+
+Esta secuencia es únicamente ilustrativa.
+
+La interfaz debe consultar el sistema real de turnos del juego y representar su secuencia auténtica.
+
+### Funcionamiento
+
+Cuando empieza el combate:
+- Mostrar los seis turnos correspondientes.
+
+Cuando comienza un turno:
+- El icono correspondiente ocupa la primera posición.
+- El primer icono debe diferenciarse del resto.
+
+Cuando termina un turno:
+- La lista avanza.
+- Desaparece el turno completado.
+- Los demás ascienden.
+- Se incorpora el siguiente turno al final.
+
+Si un personaje queda derrotado:
+- La lista debe respetar el sistema existente que omite sus acciones.
+- No debe presentar como ejecutable un turno que realmente no ocurrirá.
+
+Si un personaje o boss actúa varias veces:
+- Su icono aparecerá tantas veces como corresponda.
+
+### Apariencia
+
+- Iconos compactos.
+- Organización vertical.
+- Separación uniforme.
+- Marcos sutiles.
+- Turno activo destacado.
+- Los otros cinco iconos ligeramente menos prominentes.
+
+Se puede añadir una transición visual breve al actualizar la cola.
+
+No quiero textos enormes ni paneles que oculten gran parte del escenario.
+
+---
+
+## 6. INFORMACIÓN DE LOS DOS BOSSES
+
+En la parte superior deben mostrarse los indicadores de vida de ambos enemigos.
+
+Seguir la distribución de `boceto_combate`.
+
+### IÓBRONTĒS
+
+Mostrar:
+- Nombre: IÓBRONTĒS.
+- Título divino correspondiente.
+- Barra de vida morada.
+- Vida actual y máxima, si esos valores ya se muestran en el juego.
+
+### KOSMELYS
+
+Mostrar:
+- Nombre: KOSMELYS.
+- Título divino correspondiente.
+- Barra de vida naranja o dorada.
+- Vida actual y máxima, si corresponde.
+
+Mantener los títulos completos y los valores establecidos en los datos actuales del juego.
+
+### Comportamiento
+
+Las barras deben actualizarse automáticamente cuando cada boss recibe daño o recupera vida.
+
+Los indicadores no deben perder su posición cuando la cámara aplica zoom.
+
+Si un boss es derrotado, su indicador debe reflejar el estado correspondiente.
+
+El diseño visual debe transmitir importancia y solemnidad, sin resultar demasiado recargado.
+
+---
+
+## 7. PANEL DE ESTADO DE ALIADOS
+
+La interfaz actual tiene paneles grandes en la parte inferior.
+
+Quiero sustituirlos por el diseño compacto de `boceto_combate`.
+
+En la parte inferior derecha aparecerá una columna vertical con los personajes jugables.
+
+### DEXIOS
+
+Icono: `dexios_icono`
+
+Barras:
+- Verde: HP.
+- Azul: MP.
+- Roja: CHAOS.
+
+### FURAI
+
+Icono: `furai_icono`
+
+Barras:
+- Verde: HP.
+- Azul: MP.
+
+### SAHIRA
+
+Icono: `sahira_icono`
+
+Barras:
+- Verde: HP.
+- Azul: MP.
+
+### CUARTO PERSONAJE
+
+Dejar preparado un espacio para un futuro integrante.
+
+Por ahora no debe tener habilidades ni participar en el combate.
+
+Puede aparecer como espacio vacío o desactivado, según el boceto.
+
+### Comportamiento de las barras
+
+- Deben representar los valores reales.
+- Deben actualizarse al recibir daño.
+- Deben actualizarse al utilizar habilidades.
+- Deben actualizarse al recuperar recursos.
+- Deben conservar los valores entre turnos.
+- Deben reflejar correctamente cuando un personaje ha sido derrotado.
+
+No reiniciar ni reemplazar las estadísticas originales.
+
+### Diseño
+
+Quiero barras horizontales pequeñas, fáciles de leer, situadas junto a los iconos.
+
+El panel debe ocupar mucho menos espacio que la interfaz anterior.
+
+---
+
+## 8. SELECCIÓN DE HABILIDADES — ZOOM AL PERSONAJE
+
+Tomar como referencia exacta:
+
+**`boceto_elegir_ataque`**
+
+Cuando empieza el turno de un personaje controlado por el jugador, la cámara debe realizar un zoom cinematográfico hacia él.
+
+### Secuencia
+
+1. Termina el turno anterior.
+2. Se identifica al personaje activo.
+3. Se actualiza la cola de turnos.
+4. La cámara se desplaza hacia el personaje activo.
+5. Se realiza un zoom muy pronunciado.
+6. Aparece una ventana translúcida con sus habilidades.
+7. Se habilita la selección por teclado y mouse.
+
+### Cámara
+
+El personaje debe ocupar una porción importante de la pantalla.
+
+Quiero que el zoom sea notorio, no un acercamiento mínimo.
+
+Debe permitir apreciar los detalles de su sprite.
+
+Evitar recortar excesivamente su cuerpo o sus animaciones.
+
+### Ventana de habilidades
+
+Debe ser un rectángulo con fondo oscuro translúcido.
+
+Quiero que el escenario siga siendo parcialmente visible detrás de la ventana.
+
+Dentro aparecerán las tres habilidades disponibles del personaje.
+
+Ejemplo de distribución:
+
+1 — Primera habilidad
+
+2 — Segunda habilidad
+
+3 — Tercera habilidad
+
+Los nombres y funciones deben obtenerse del sistema actual.
+
+No inventar habilidades nuevas ni sustituir las existentes.
+
+### Control por teclado
+
+- Tecla `1`: seleccionar habilidad 1.
+- Tecla `2`: seleccionar habilidad 2.
+- Tecla `3`: seleccionar habilidad 3.
+
+### Control con mouse
+
+Cada habilidad debe ser un botón interactivo.
+
+Al pasar el cursor:
+- Resaltar ligeramente la habilidad.
+- Mostrar claramente que es seleccionable.
+
+Al hacer clic:
+- Seleccionar esa habilidad.
+
+### Restricciones
+
+Si una habilidad no tiene suficiente maná o no cumple los requisitos para ejecutarse:
+- Debe mostrarse deshabilitada.
+- No debe poder seleccionarse.
+- El sistema no debe gastar recursos.
+
+Las acciones solo se ejecutan cuando la selección sea válida.
+
+### Posicionamiento
+
+El panel debe seguir la composición de `boceto_elegir_ataque`.
+
+No debe tapar completamente al personaje.
+
+Debe situarse de forma que tanto el personaje como sus habilidades sean claramente visibles.
+
+---
+
+## 9. SELECCIÓN DE OBJETIVOS — ZOOM A LOS BOSSES
+
+Tomar como referencia:
+
+**`boceto_objetivo`**
+
+Cuando el jugador elige una habilidad que requiere seleccionar un enemigo, se activa el modo de selección de objetivo.
+
+### Secuencia
+
+1. El jugador selecciona una habilidad.
+2. El menú de habilidades desaparece.
+3. La cámara sale del zoom del aliado.
+4. Se desplaza hacia la zona de los bosses.
+5. Se aplica un zoom muy pronunciado.
+6. Ambos bosses deben verse grandes.
+7. Aparece una flecha indicando el objetivo al que se está apuntando.
+8. El jugador selecciona uno de los bosses.
+
+### Apariencia
+
+Los dos jefes deben seguir siendo visibles durante la selección.
+
+No quiero que el zoom termine mostrando exclusivamente a uno de ellos.
+
+Se debe poder comparar visualmente ambos objetivos.
+
+### Flecha indicadora
+
+La flecha debe señalar claramente al boss seleccionado.
+
+Debe estar posicionada cerca de él, sin taparlo innecesariamente.
+
+El objetivo señalado debe distinguirse de manera inmediata.
+
+Se puede añadir un pequeño resplandor o borde de selección, pero evitar efectos excesivos.
+
+### Control por teclado
+
+- Tecla `1`: seleccionar y confirmar a Ióbrontēs.
+- Tecla `2`: seleccionar y confirmar a Kosmelys.
+
+### Control con mouse
+
+El jugador podrá hacer clic directamente sobre el sprite del boss correspondiente.
+
+Al pasar el mouse sobre un enemigo:
+- La flecha debe indicar ese objetivo.
+- Debe existir una respuesta visual que muestre que puede seleccionarse.
+
+Al hacer clic:
+- Se confirma el objetivo.
+
+El sistema debe utilizar las zonas interactivas de los sprites correctamente, incluso cuando la cámara tenga zoom.
+
+### Confirmación
+
+Al elegir un objetivo válido:
+
+1. Se guarda el objetivo seleccionado.
+2. Se cierra la interfaz de selección.
+3. Se prepara la cámara para la ejecución del ataque.
+4. Se reproduce la habilidad existente.
+5. Se aplican los efectos según las mecánicas actuales.
+6. Se actualizan los recursos y la vida de los personajes.
+
+### Enemigos derrotados
+
+No permitir seleccionar a un enemigo que ya no pueda recibir ataques según las reglas actuales.
+
+Si queda un solo enemigo disponible, el sistema debe permitir seleccionarlo correctamente.
+
+Las habilidades que no necesitan objetivo o afectan a todos los enemigos deben conservar su lógica actual y no abrir una selección individual innecesaria.
+
+---
+
+## 10. CANCELAR SELECCIÓN — ESCAPE Y BACK
+
+Durante la selección de objetivos quiero poder retroceder.
+
+### Teclado
+
+Pulsar `Escape`.
+
+### Mouse
+
+Añadir un botón visible que diga:
+
+**Back**
+
+### Comportamiento
+
+Al pulsar Escape o hacer clic en Back:
+
+1. Cancelar la selección del enemigo.
+2. No ejecutar ninguna habilidad.
+3. No consumir maná.
+4. No modificar las estadísticas.
+5. No terminar el turno.
+6. Desactivar el modo de selección de objetivo.
+7. Volver a enfocar al personaje activo.
+8. Restaurar el zoom de selección de habilidades.
+9. Volver a mostrar las tres habilidades.
+
+De esta manera, el jugador podrá cambiar de opinión antes de confirmar el ataque.
+
+El botón Back solo debe aparecer cuando tenga sentido retroceder.
+
+---
+
+## 11. SISTEMA DE CÁMARA
+
+La cámara es uno de los elementos más importantes del rediseño.
+
+Quiero distinguir tres encuadres principales.
+
+### A. CÁMARA GENERAL
+
+Es la vista normal del combate.
+
+Se muestran:
+- Los aliados.
+- Los bosses.
+- El escenario.
+- La cola de turnos.
+- Los indicadores de estado.
+
+La composición debe corresponder a `boceto_combate`.
+
+### B. CÁMARA DE HABILIDADES
+
+Se activa cuando llega el turno de un aliado.
+
+Debe:
+- Enfocar al personaje activo.
+- Acercar considerablemente la cámara.
+- Mantener al personaje bien encuadrado.
+- Mostrar el panel translúcido de habilidades.
+
+La composición debe corresponder a `boceto_elegir_ataque`.
+
+### C. CÁMARA DE OBJETIVOS
+
+Se activa al elegir una habilidad que necesita objetivo.
+
+Debe:
+- Desplazarse hacia los bosses.
+- Acercar considerablemente la cámara.
+- Mantener visibles a ambos.
+- Mostrar la flecha del objetivo.
+- Permitir la selección por teclado o mouse.
+
+La composición debe corresponder a `boceto_objetivo`.
+
+### Transiciones
+
+No quiero cambios instantáneos y bruscos entre los encuadres.
+
+Utilizar interpolaciones suaves para:
+- Movimiento de cámara.
+- Zoom.
+- Restauración del encuadre general.
+
+Las transiciones deben ser rápidas y fluidas, sin volver lento el ritmo del combate.
+
+Los valores exactos de zoom y duración deben ajustarse según la posición real y las dimensiones de los sprites.
+
+No establecer valores arbitrarios sin comprobar cómo se ven en pantalla.
+
+### Muy importante
+
+El sistema de cámara no debe alterar:
+- Las ventanas de parry.
+- La duración de los ataques.
+- Las animaciones defensivas.
+- Los tiempos de reacción.
+- El funcionamiento de habilidades.
+
+El zoom debe ser una presentación visual, no una modificación de las reglas del combate.
+
+---
+
+## 12. INTERFAZ PERMANENTE E INTERFAZ CONTEXTUAL
+
+Quiero separar correctamente los elementos permanentes de los temporales.
+
+### Elementos permanentes
+
+Deben mantenerse correctamente posicionados:
+- Cola de turnos.
+- Información de los bosses.
+- Panel de estado de aliados.
+
+### Elementos contextuales
+
+Aparecerán únicamente durante ciertas acciones:
+- Menú de habilidades.
+- Flecha de selección de objetivo.
+- Botón Back.
+- Indicadores de defensa ya existentes.
+
+### Interacción con el zoom
+
+Los elementos del HUD deben permanecer anclados a la pantalla.
+
+**No quiero que las barras de vida ni los iconos se hagan enormes cuando la cámara acerca a un personaje.**
+
+Utilizar una solución apropiada para Phaser, como una cámara independiente para la interfaz o elementos con `setScrollFactor(0)` cuando corresponda.
+
+El menú contextual debe estar visualmente situado según el boceto, pero mantenerse legible e interactivo durante los acercamientos.
+
+---
+
+## 13. CONTROLES DE LA NUEVA INTERFAZ
+
+### Selección de habilidades
+
+| Entrada | Acción |
+|---|---|
+| 1 | Primera habilidad |
+| 2 | Segunda habilidad |
+| 3 | Tercera habilidad |
+| Mouse | Seleccionar una habilidad |
+
+### Selección de objetivos
+
+| Entrada | Acción |
+|---|---|
+| 1 | Seleccionar a Ióbrontēs |
+| 2 | Seleccionar a Kosmelys |
+| Mouse | Seleccionar haciendo clic en el boss |
+| Escape | Volver a habilidades |
+| Back | Volver a habilidades |
+
+### Controles defensivos
+
+Conservar los controles actuales:
+
+| Entrada | Acción |
+|---|---|
+| W | Defender arriba |
+| A | Defender izquierda |
+| S | Defender abajo |
+| D | Defender derecha |
+| Space | Saltar o esquivar cuando corresponda |
+
+También conservar los controles existentes para:
+- Reiniciar el combate.
+- Controlar el audio.
+- Cualquier otra acción implementada.
+
+### Evitar conflictos
+
+Las teclas `1`, `2` y `3` deben interpretarse según la fase activa.
+
+Por ejemplo:
+
+Si estoy seleccionando habilidades, `1` significa primera habilidad.
+
+Si estoy seleccionando un objetivo, `1` significa atacar a Ióbrontēs.
+
+Durante una defensa, esas teclas no deben activar accidentalmente habilidades o selecciones.
+
+No debe ser posible ejecutar dos acciones por una sola pulsación.
+
+---
+
+## 14. TURNOS ENEMIGOS Y DEFENSAS
+
+Cuando llegue el turno de un boss:
+
+- Actualizar la cola de turnos.
+- Ocultar los menús de habilidades.
+- Desactivar la selección de objetivos.
+- Ejecutar el comportamiento enemigo existente.
+- Mostrar las animaciones correspondientes.
+- Mantener visibles los indicadores necesarios.
+
+Durante los ataques enemigos, el jugador debe seguir pudiendo defenderse con las mecánicas originales.
+
+No modificar:
+- Parry perfecto.
+- Parry imperfecto.
+- Bloqueos direccionales.
+- Saltos evasivos.
+- Contraataques.
+- Costes de recursos.
+- Cálculos de daño.
+- Ventanas de tiempo.
+
+En particular, conservar las diferencias entre las defensas de Dexios, Furai y Sahira.
+
+Sahira debe mantener su sistema especial de bloqueo, sin incorporar un parry perfecto que no existe en su diseño.
+
+Las animaciones de cámara no deben interferir con la sincronización del ataque enemigo ni con la posibilidad de reaccionar a tiempo.
+
+---
+
+## 15. ESTILO ARTÍSTICO
+
+Quiero una interfaz que encaje con la estética de La Dexíada.
+
+Inspiración:
+- Mitología griega.
+- Fantasía.
+- JRPG.
+- Combate cinematográfico.
+
+### Colores
+
+Paleta principal:
+- Morado.
+- Dorado.
+- Negro translúcido.
+
+Colores funcionales:
+- Verde: vida.
+- Azul: maná.
+- Rojo: caos.
+- Morado: vida de Ióbrontēs.
+- Naranja o dorado: vida de Kosmelys.
+
+### Ornamentación
+
+Se pueden incorporar:
+- Bordes dorados finos.
+- Patrones de grecas griegas.
+- Pequeños símbolos divinos.
+- Detalles decorativos discretos.
+
+Evitar:
+- Marcos excesivamente grandes.
+- Ventanas demasiado opacas.
+- Efectos visuales innecesarios.
+- Texto demasiado pequeño.
+- Exceso de ornamentación.
+
+La prioridad es mantener una interfaz legible y elegante.
+
+Los personajes deben seguir siendo los protagonistas visuales.
+
+---
+
+## 16. IMPLEMENTACIÓN TÉCNICA EN PHASER
+
+Antes de escribir código, inspecciona el proyecto actual.
+
+Identifica:
+- Escena principal de combate.
+- Sistema de turnos.
+- Sistema de habilidades.
+- Sistema de objetivos.
+- Controles de teclado.
+- Controles del mouse.
+- Cámaras.
+- Gestión de sprites.
+- Sistema de carga de recursos.
+- Paneles existentes.
+- Animaciones de ataque y defensa.
+
+### Recursos
+
+Localiza los archivos:
+
+- `boceto_combate`
+- `boceto_elegir_ataque`
+- `boceto_objetivo`
+- `iobrontes_icono`
+- `kosmelys_icono`
+- `dexios_icono`
+- `sahira_icono`
+- `furai_icono`
+
+Busca sus extensiones y rutas reales.
+
+Los tres bocetos son referencias de diseño, mientras que los cinco iconos son recursos que se mostrarán en el juego.
+
+No inventar rutas ni cambiar sus nombres innecesariamente.
+
+### Organización de la interfaz
+
+Recomiendo separar los sistemas de:
+
+1. Cola de turnos.
+2. Indicadores de vida de bosses.
+3. Panel de estado de aliados.
+4. Menú de habilidades.
+5. Selección de objetivos.
+6. Transiciones de cámara.
+
+Pueden implementarse como componentes o funciones independientes según la estructura existente.
+
+Evitar reescribir el sistema completo cuando sea posible reutilizar componentes actuales.
+
+### Estados de interfaz
+
+Gestionar claramente los estados:
+
+- `PLAYER_ABILITY_SELECT`
+- `ENEMY_TARGET_SELECT`
+- `ACTION_EXECUTION`
+- `ENEMY_TURN`
+- `DEFENSE_PHASE`
+- `BATTLE_END`
+
+Estos nombres son orientativos. Si ya existe una máquina de estados, integrarse en ella en lugar de crear otra que entre en conflicto.
+
+### Seguridad de interacciones
+
+- No registrar varias veces un mismo evento de teclado.
+- No permitir clics duplicados.
+- Bloquear acciones incompatibles durante las transiciones.
+- Eliminar o desactivar correctamente los listeners que dejen de utilizarse.
+- Evitar que Escape provoque varias cancelaciones.
+- No permitir confirmar un objetivo mientras la cámara todavía está cambiando si eso genera errores.
+- No permitir acciones después de finalizar el combate.
+
+### Resolución
+
+Trabajar sobre la resolución base de 1920 × 1080.
+
+Mantener proporciones, posiciones relativas y legibilidad si cambia el tamaño de la ventana.
+
+No deformar los sprites ni los iconos.
+
+---
+
+## 17. EJEMPLO DEL FLUJO COMPLETO
+
+Este es el comportamiento que quiero observar al jugar.
+
+### PASO 1 — EMPIEZA EL TURNO DE DEXIOS
+
+- La cola de turnos muestra a Dexios en primera posición.
+- La cámara se acerca cinematográficamente a Dexios.
+- Aparece el menú de habilidades.
+
+La apariencia debe seguir `boceto_elegir_ataque`.
+
+### PASO 2 — SELECCIONO UNA HABILIDAD
+
+Pulso la tecla `2`.
+
+El juego identifica la segunda habilidad real de Dexios.
+
+Comprueba sus requisitos.
+
+Si necesita seleccionar un objetivo, pasa a la siguiente fase.
+
+### PASO 3 — ZOOM A LOS BOSSES
+
+- El menú de habilidades desaparece.
+- La cámara se desplaza hacia Ióbrontēs y Kosmelys.
+- Ambos aparecen grandes.
+- Aparece la flecha de selección.
+
+La apariencia debe seguir `boceto_objetivo`.
+
+### PASO 4 — ELIJO UN OBJETIVO
+
+Puedo pulsar:
+
+- `1` para Ióbrontēs.
+- `2` para Kosmelys.
+
+También puedo hacer clic directamente en cualquiera de ellos.
+
+### PASO 5 — OPCIÓN DE RETROCEDER
+
+Si no quiero realizar ese ataque, pulso Escape o hago clic en Back.
+
+Entonces:
+- Se cancela la selección.
+- La cámara regresa a Dexios.
+- Reaparece el menú de habilidades.
+- No he gastado recursos ni perdido el turno.
+
+### PASO 6 — CONFIRMO EL ATAQUE
+
+Si confirmo un enemigo:
+- Desaparece la interfaz de selección.
+- La cámara presenta la acción.
+- Dexios realiza su ataque correspondiente.
+- Se ejecutan las animaciones existentes.
+- Se calculan los daños.
+- Se actualizan las barras.
+- Termina el turno.
+
+### PASO 7 — SIGUIENTE TURNO
+
+- La cola avanza.
+- Se identifica al siguiente personaje.
+- Si es aliado, se activa su selección de habilidades.
+- Si es enemigo, se ejecuta su comportamiento.
+- El combate continúa normalmente.
+
+---
+
+## 18. ELEMENTOS QUE DEBEN PERMANECER INTACTOS
+
+No modificar las reglas existentes del juego.
+
+Especialmente:
+
+- Orden de turnos.
+- Estadísticas.
+- Vida máxima.
+- Maná máximo.
+- Caos de Dexios.
+- Habilidades individuales.
+- Daños.
+- Costes.
+- Estados alterados.
+- Parrys.
+- Ventanas de defensa.
+- Bloqueos direccionales.
+- Evasiones.
+- Contraataques.
+- Animaciones de los sprites.
+- Mecánicas especiales de los bosses.
+- Condiciones de victoria.
+- Condiciones de derrota.
+- Audio.
+- Reinicio del combate.
+
+Si una modificación visual requiere cambiar parte del código existente, conservar su comportamiento original.
+
+La nueva interfaz debe utilizar los sistemas del combate, no sustituirlos por sistemas paralelos incompatibles.
+
+---
+
+## 19. ORDEN RECOMENDADO DE IMPLEMENTACIÓN
+
+Quiero que realices el rediseño de forma ordenada.
+
+### Etapa 1 — Analizar el proyecto
+
+Examinar la estructura del código y localizar los recursos.
+
+Determinar qué sistemas pueden reutilizarse.
+
+### Etapa 2 — Implementar la interfaz general
+
+Utilizar `boceto_combate`.
+
+Crear:
+- Cola de turnos.
+- Información de bosses.
+- Panel de estado de aliados.
+- Distribución general.
+
+Comprobar que todas las barras muestran valores reales.
+
+### Etapa 3 — Selección de habilidades
+
+Utilizar `boceto_elegir_ataque`.
+
+Implementar:
+- Zoom al aliado.
+- Menú translúcido.
+- Controles 1, 2 y 3.
+- Botones interactivos.
+
+### Etapa 4 — Selección de objetivos
+
+Utilizar `boceto_objetivo`.
+
+Implementar:
+- Zoom a los bosses.
+- Flecha de selección.
+- Teclas 1 y 2.
+- Selección con mouse.
+- Escape.
+- Botón Back.
+
+### Etapa 5 — Integración con el combate
+
+Conectar los sistemas nuevos a:
+- Habilidades existentes.
+- Consumo de recursos.
+- Turnos.
+- Daño.
+- Animaciones.
+- Estados de derrota.
+
+### Etapa 6 — Pruebas
+
+Comprobar al menos:
+
+- Turnos de los tres aliados.
+- Turnos de ambos bosses.
+- Selección de las tres habilidades.
+- Selección de Ióbrontēs.
+- Selección de Kosmelys.
+- Cancelación mediante Escape.
+- Cancelación mediante Back.
+- Clics del mouse.
+- Actualización de las barras.
+- Actualización de los seis turnos.
+- Comportamiento cuando un personaje muere.
+- Comportamiento cuando un boss muere.
+- Defensas durante los turnos enemigos.
+- Condiciones de victoria y derrota.
+- Posicionamiento de la UI durante todos los zooms.
+- Restauración correcta de la cámara.
+
+### Etapa 7 — Acabados visuales
+
+Cuando todo funcione, añadir:
+- Transiciones suaves.
+- Resaltados.
+- Bordes decorativos.
+- Pequeñas animaciones de los paneles.
+- Ajustes de espaciado, tipografía y proporciones.
+
+---
+
+## 20. RESULTADO FINAL ESPERADO
+
+Quiero que el sistema de combate tenga tres presentaciones principales:
+
+**1. Vista general — `boceto_combate`**
+
+Muestra todo el combate, los enemigos, los aliados, las barras y la cola de turnos.
+
+**2. Elección de habilidades — `boceto_elegir_ataque`**
+
+Zoom cinematográfico al personaje activo con un menú translúcido de tres habilidades seleccionables mediante teclado o mouse.
+
+**3. Elección de objetivo — `boceto_objetivo`**
+
+Zoom cinematográfico a los dos dioses, con una flecha indicadora del objetivo, selección mediante teclado o mouse y opción Back para regresar.
+
+Los iconos de los personajes deben obtenerse de los cinco archivos indicados anteriormente.
+
+**La prioridad es que esta nueva interfaz funcione correctamente dentro del combate que ya existe, que respete mis bocetos y que haga mucho más cinematográfica la experiencia del jugador.**
+
+No quiero que reconstruyas todo el juego ni que cambies sus mecánicas.
+
+Quiero una nueva presentación visual profesional, dinámica y funcional sobre el sistema ya implementado.

@@ -1,5 +1,12 @@
 import Phaser from 'phaser';
-import { BossId, CharacterId, Direction, GAME_CONFIG, IMAGE_ASSETS } from './game-config';
+import {
+  BossId,
+  CharacterId,
+  Direction,
+  GAME_CONFIG,
+  ICON_ASSETS,
+  IMAGE_ASSETS,
+} from './game-config';
 import Soundscape from './soundscape';
 import {
   canAfford,
@@ -63,6 +70,7 @@ type Ability = (typeof GAME_CONFIG.abilities)[CharacterId][number];
 
 interface PartyCard {
   container: Phaser.GameObjects.Container;
+  portrait: Phaser.GameObjects.Image;
   name: Phaser.GameObjects.Text;
   turn: Phaser.GameObjects.Text;
   health: Phaser.GameObjects.Text;
@@ -72,6 +80,13 @@ interface PartyCard {
   healthBar: Phaser.GameObjects.Graphics;
   manaBar: Phaser.GameObjects.Graphics;
   chaosBar?: Phaser.GameObjects.Graphics;
+}
+
+interface TurnQueueSlot {
+  container: Phaser.GameObjects.Container;
+  portrait: Phaser.GameObjects.Image;
+  label: Phaser.GameObjects.Text;
+  background: Phaser.GameObjects.Graphics;
 }
 
 interface ShieldMark {
@@ -91,6 +106,7 @@ interface BossHud {
   panel: Phaser.GameObjects.Graphics;
   label: Phaser.GameObjects.Text;
   selected: Phaser.GameObjects.Text;
+  accent: number;
 }
 
 interface MeteorEvent {
@@ -135,6 +151,7 @@ export default class CombatScene extends Phaser.Scene {
   private kosmelysFrameGeneration = 0;
   private missingBossLabels!: Record<BossId, Phaser.GameObjects.Text>;
   private partyCards!: Record<CharacterId, PartyCard>;
+  private turnQueueSlots!: TurnQueueSlot[];
   private bossHud!: Record<BossId, BossHud>;
   private turnText!: Phaser.GameObjects.Text;
   private attackAnnouncement!: Phaser.GameObjects.Text;
@@ -151,6 +168,13 @@ export default class CombatScene extends Phaser.Scene {
   private soundscape!: Soundscape;
   private uiCamera!: Phaser.Cameras.Scene2D.Camera;
   private audioText!: Phaser.GameObjects.Text;
+  private actionPanel!: Phaser.GameObjects.Graphics;
+  private targetArrow!: Phaser.GameObjects.Text;
+  private backButton!: Phaser.GameObjects.Container;
+  private spaceKeyBadge!: Phaser.GameObjects.Container;
+  private cameraTransitioning = false;
+  private previousTurnWasBoss = false;
+  private lastTurnActor: CharacterId | BossId | null = null;
   private activeBolt?: Phaser.GameObjects.Graphics;
   private attackDirection: Direction | null = null;
   private responseDirection: Direction | null = null;
@@ -190,6 +214,9 @@ export default class CombatScene extends Phaser.Scene {
         this.load.image(key, asset);
       }
     });
+    Object.entries(ICON_ASSETS).forEach(([id, asset]) => {
+      this.load.image(`icon_${id}`, asset);
+    });
   }
 
   create(): void {
@@ -225,6 +252,9 @@ export default class CombatScene extends Phaser.Scene {
     this.cosmicFuraiPerfectParries = 0;
     this.previousCosmicInitialDirection = null;
     this.cosmicRevealed = false;
+    this.cameraTransitioning = false;
+    this.previousTurnWasBoss = false;
+    this.lastTurnActor = null;
     this.soundscape = new Soundscape();
     this.stripCharacterMattes();
     this.createArena();
@@ -241,9 +271,11 @@ export default class CombatScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
     this.input.on('pointerdown', this.startAudio, this);
+    this.input.on('pointerdown', this.handleUiPointer, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
       this.input.off('pointerdown', this.startAudio, this);
+      this.input.off('pointerdown', this.handleUiPointer, this);
       this.soundscape.destroy();
     });
 
@@ -387,22 +419,6 @@ export default class CombatScene extends Phaser.Scene {
   private createArena(): void {
     this.add.image(WIDTH / 2, HEIGHT / 2, 'arena').setDisplaySize(WIDTH, HEIGHT);
     this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, 0x171323, 0.14);
-    this.add.text(WIDTH / 2, 25, 'LA DEXÍADA', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '35px',
-      fontStyle: 'bold',
-      color: '#f1d99e',
-      stroke: '#171326',
-      strokeThickness: 5,
-    }).setOrigin(0.5, 0);
-    this.add.text(WIDTH / 2, 69, 'TEMPLO DE IOBRONTES  ·  XANTARCHÍA', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '15px',
-      letterSpacing: 3,
-      color: '#e1d4e7',
-      stroke: '#171326',
-      strokeThickness: 3,
-    }).setOrigin(0.5, 0);
     this.cameras.main.setZoom(1);
     this.cameras.main.centerOn(WIDTH / 2, HEIGHT / 2);
   }
@@ -442,7 +458,7 @@ export default class CombatScene extends Phaser.Scene {
     const bossShadow = this.add.ellipse(boss.x, boss.feetY - 4, 500, 42, 0x100d1b, 0.38)
       .setDepth(boss.depth - 1);
     this.tweens.add({
-      targets: [this.boss, bossShadow],
+      targets: this.boss,
       y: `-=4`,
       duration: 1450,
       yoyo: true,
@@ -454,6 +470,32 @@ export default class CombatScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(kosmelys.depth);
     this.sizeSprite(this.kosmelysBoss, kosmelys.frames.idle, kosmelys.displayHeight);
+    [this.boss, this.kosmelysBoss].forEach((sprite) => {
+      sprite.setInteractive({ useHandCursor: true });
+      sprite.on('pointerover', () => {
+        const id = sprite === this.boss ? 'iobrontes' : 'kosmelys';
+        if (this.phase === 'target-boss' && !this.cameraTransitioning) {
+          this.highlightBossTarget(id);
+        }
+      });
+      sprite.on('pointerout', () => {
+        if (this.phase === 'target-boss' && this.selectedBoss !== null) {
+          this.highlightBossTarget(this.selectedBoss);
+        }
+      });
+      sprite.on('pointerdown', () => {
+        const id = sprite === this.boss ? 'iobrontes' : 'kosmelys';
+        this.confirmSelectedBossTarget(id);
+      });
+    });
+    this.targetArrow = this.add.text(0, 0, '▼', {
+      fontFamily: 'Georgia, serif',
+      fontSize: '38px',
+      fontStyle: 'bold',
+      color: '#f4d276',
+      stroke: '#171326',
+      strokeThickness: 6,
+    }).setOrigin(0.5, 1).setDepth(18).setVisible(false);
     this.missingBossLabels = {
       iobrontes: this.createMissingBossLabel('iobrontes'),
       kosmelys: this.createMissingBossLabel('kosmelys'),
@@ -467,7 +509,7 @@ export default class CombatScene extends Phaser.Scene {
       0.35,
     ).setDepth(kosmelys.depth - 1);
     this.tweens.add({
-      targets: [this.kosmelysBoss, kosmelysShadow],
+      targets: this.kosmelysBoss,
       y: `-=${GAME_CONFIG.timing.kosmelysBreathingPixels}`,
       duration: GAME_CONFIG.timing.kosmelysBreathingMs,
       yoyo: true,
@@ -558,14 +600,14 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private createHud(): void {
-    this.turnText = this.add.text(WIDTH / 2, 116, '', {
+    this.turnText = this.add.text(176, 112, '', {
       fontFamily: 'Georgia, serif',
-      fontSize: '27px',
+      fontSize: '22px',
       fontStyle: 'bold',
       color: '#f3e3c0',
       stroke: '#171326',
       strokeThickness: 5,
-    }).setOrigin(0.5, 0).setDepth(21);
+    }).setOrigin(0, 0).setDepth(21);
     this.attackAnnouncement = this.add.text(WIDTH / 2, HEIGHT / 2, '', {
       fontFamily: 'Georgia, serif',
       fontSize: '28px',
@@ -575,53 +617,96 @@ export default class CombatScene extends Phaser.Scene {
       strokeThickness: 6,
       align: 'center',
     }).setOrigin(0.5).setDepth(24).setVisible(false);
-    this.promptText = this.add.text(WIDTH / 2, 153, '', {
+    this.promptText = this.add.text(176, 143, '', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '17px',
+      fontSize: '15px',
       color: '#e9dff1',
       stroke: '#171326',
       strokeThickness: 4,
       align: 'center',
-    }).setOrigin(0.5, 0).setDepth(21);
+    }).setOrigin(0, 0).setDepth(21);
 
     this.bossHud = {
       iobrontes: this.createBossHud('iobrontes'),
       kosmelys: this.createBossHud('kosmelys'),
     };
 
-    this.partyCards = {
-      furai: this.createPartyCard('furai', 26),
-      dexios: this.createPartyCard('dexios', 428),
-      sahira: this.createPartyCard('sahira', 830),
-    };
+    const queueLayout = GAME_CONFIG.turnQueueHud;
+    this.turnQueueSlots = Array.from({ length: 6 }, (_, index) => {
+      const container = this.add.container(queueLayout.x, queueLayout.y + index * (queueLayout.iconSize + queueLayout.gap))
+        .setDepth(21);
+      const background = this.add.graphics();
+      const portrait = this.add.image(queueLayout.iconSize / 2 + 5, queueLayout.iconSize / 2, 'icon_furai')
+        .setDisplaySize(queueLayout.iconSize - 8, queueLayout.iconSize - 8);
+      const label = this.add.text(queueLayout.iconSize + 15, queueLayout.iconSize / 2, '', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#e8deeb',
+      }).setOrigin(0, 0.5);
+      container.add([background, portrait, label]);
+      return { container, portrait, label, background };
+    });
 
-    const actionPanel = this.add.graphics().setDepth(20);
-    actionPanel.fillStyle(COLORS.panel, 0.97);
-    actionPanel.fillRoundedRect(1234, 704, 654, 352, 16);
-    actionPanel.lineStyle(2, COLORS.gold, 0.8);
-    actionPanel.strokeRoundedRect(1234, 704, 654, 352, 16);
-    this.targetText = this.add.text(1561, 668, '', {
+    const partyLayout = GAME_CONFIG.partyHud;
+    this.partyCards = {
+      dexios: this.createPartyCard('dexios', partyLayout.x),
+      furai: this.createPartyCard('furai', partyLayout.x),
+      sahira: this.createPartyCard('sahira', partyLayout.x),
+    };
+    (['dexios', 'furai', 'sahira'] as const).forEach((id, index) => {
+      this.partyCards[id].container.setY(partyLayout.y + index * (partyLayout.height + partyLayout.gap));
+    });
+    const reserve = this.add.container(partyLayout.x, partyLayout.y + 3 * (partyLayout.height + partyLayout.gap))
+      .setDepth(20);
+    const reserveFrame = this.add.graphics();
+    reserveFrame.fillStyle(COLORS.ink, 0.42);
+    reserveFrame.fillRoundedRect(0, 0, partyLayout.width, 56, 10);
+    reserveFrame.lineStyle(1, COLORS.gold, 0.3);
+    reserveFrame.strokeRoundedRect(0, 0, partyLayout.width, 56, 10);
+    reserve.add([
+      reserveFrame,
+      this.add.text(18, 19, '＋', { fontFamily: 'Arial, sans-serif', fontSize: '19px', color: '#b7a9c2' }),
+      this.add.text(52, 21, 'ESPACIO DE COMPAÑERO', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#9e93a6',
+      }),
+    ]);
+
+    const actionLayout = GAME_CONFIG.actionHud;
+    this.actionPanel = this.add.graphics().setDepth(20);
+    this.targetText = this.add.text(actionLayout.x + actionLayout.width / 2, actionLayout.y - 28, '', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '18px',
+      fontSize: '15px',
       fontStyle: 'bold',
       color: '#fff4d2',
       stroke: '#171326',
       strokeThickness: 4,
       align: 'center',
     }).setOrigin(0.5, 0.5).setDepth(22);
-    this.actionContent = this.add.container(1250, 724).setDepth(23);
+    const spaceKeyFrame = this.add.graphics();
+    spaceKeyFrame.fillStyle(0x171326, 0.94);
+    spaceKeyFrame.fillRoundedRect(0, 0, 154, 38, 7);
+    spaceKeyFrame.lineStyle(2, 0xffffff, 0.86);
+    spaceKeyFrame.strokeRoundedRect(0, 0, 154, 38, 7);
+    this.spaceKeyBadge = this.add.container((WIDTH - 154) / 2, HEIGHT - 82, [
+      spaceKeyFrame,
+      this.add.text(77, 9, 'SPACE', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        align: 'center',
+      }).setOrigin(0.5, 0),
+    ]).setDepth(24).setVisible(false);
+    this.actionContent = this.add.container(actionLayout.x + 18, actionLayout.y + 42).setDepth(23);
+    this.backButton = this.createBackButton(actionLayout);
 
-    this.add.text(28, 789, 'DEFENSA: W arriba  ·  A izquierda  ·  S abajo  ·  D derecha  ·  SPACE: salto en equipo', {
+    this.add.text(28, HEIGHT - 25, 'M · AUDIO    R · REINICIAR', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '14px',
-      fontStyle: 'bold',
-      color: '#f1d99e',
-      stroke: '#171326',
-      strokeThickness: 4,
-    }).setDepth(20);
-    this.add.text(28, 1056, '1–3: habilidades  ·  M: audio  ·  R: volver a empezar', {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '13px',
+      fontSize: '11px',
       color: '#e1d4e7',
       stroke: '#171326',
       strokeThickness: 3,
@@ -652,30 +737,36 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private createPartyCard(id: CharacterId, x: number): PartyCard {
-    const container = this.add.container(x, 864).setDepth(20);
+    const layout = GAME_CONFIG.partyHud;
+    const container = this.add.container(x, layout.y).setDepth(20);
     const background = this.add.graphics();
     background.fillStyle(COLORS.panel, 0.97);
-    background.fillRoundedRect(0, 0, 384, 180, 14);
+    background.fillRoundedRect(0, 0, layout.width, layout.height, 12);
     background.lineStyle(2, COLORS.gold, 0.52);
-    background.strokeRoundedRect(0, 0, 384, 180, 14);
-    const name = this.add.text(17, 8, GAME_CONFIG.characters[id].name.toUpperCase(), {
+    background.strokeRoundedRect(0, 0, layout.width, layout.height, 12);
+    const portrait = this.add.image(layout.portraitSize / 2 + 10, layout.height / 2, `icon_${id}`);
+    portrait.setDisplaySize(layout.portraitSize, layout.portraitSize);
+    const name = this.add.text(layout.portraitSize + 26, 7, GAME_CONFIG.characters[id].name.toUpperCase(), {
       fontFamily: 'Georgia, serif',
-      fontSize: '19px',
+      fontSize: '17px',
       fontStyle: 'bold',
       color: '#f3e3c0',
     });
-    const turn = this.add.text(366, 11, '', {
+    const turn = this.add.text(layout.width - 12, 9, '', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '11px',
+      fontSize: '10px',
       fontStyle: 'bold',
       color: '#ffe187',
     }).setOrigin(1, 0);
-    const health = this.add.text(17, 34, '', this.resourceStyle('#a9efbd'));
+    const textX = layout.portraitSize + 26;
+    const barX = textX + 104;
+    const barWidth = layout.width - barX - 18;
+    const health = this.add.text(textX, 29, '', this.resourceStyle('#a9efbd'));
     const healthBar = this.add.graphics();
-    const mana = this.add.text(17, 74, '', this.resourceStyle('#a4ddff'));
+    const mana = this.add.text(textX, 49, '', this.resourceStyle('#a4ddff'));
     const manaBar = this.add.graphics();
     const chaos = id === 'dexios'
-      ? this.add.text(17, 114, '', this.resourceStyle('#ffb1b1'))
+      ? this.add.text(textX, 69, '', this.resourceStyle('#ffb1b1'))
       : undefined;
     const chaosBar = id === 'dexios' ? this.add.graphics() : undefined;
     const selection = this.add.text(17, 164, '', {
@@ -683,14 +774,12 @@ export default class CombatScene extends Phaser.Scene {
       fontSize: '11px',
       fontStyle: 'bold',
       color: '#d1c4dc',
-    }).setPosition(17, 160);
-    container.add(
-      [background, name, turn, health, healthBar, mana, manaBar, selection]
-        .concat(chaos ? [chaos, chaosBar!] : []),
-    );
-    container.setSize(384, 180);
+    }).setPosition(barX, layout.height - 13);
+    container.add([background, portrait, name, turn, health, healthBar, mana, manaBar, selection]
+      .concat(chaos ? [chaos, chaosBar!] : []));
+    container.setSize(layout.width, layout.height);
     container.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, 384, 180),
+      new Phaser.Geom.Rectangle(0, 0, layout.width, layout.height),
       Phaser.Geom.Rectangle.Contains,
     );
     container.on('pointerdown', () => {
@@ -700,6 +789,7 @@ export default class CombatScene extends Phaser.Scene {
     });
     return {
       container,
+      portrait,
       name,
       turn,
       health,
@@ -717,9 +807,10 @@ export default class CombatScene extends Phaser.Scene {
     const x = layout.x[id];
     const y = layout.y[id];
     const panel = this.add.graphics().setDepth(20);
+    const accent = id === 'iobrontes' ? COLORS.purple : 0xe9a64e;
     panel.fillStyle(COLORS.panel, 0.94);
     panel.fillRoundedRect(x, y, layout.width, layout.height, 14);
-    panel.lineStyle(2, COLORS.purple, 0.84);
+    panel.lineStyle(2, accent, 0.84);
     panel.strokeRoundedRect(x, y, layout.width, layout.height, 14);
     const config = GAME_CONFIG.characters[id];
     const label = this.add.text(x + layout.labelX, y + layout.labelY, config.name.toUpperCase(), {
@@ -751,7 +842,7 @@ export default class CombatScene extends Phaser.Scene {
         this.chooseBossTarget(id);
       }
     });
-    return { panel, label, selected, healthBar, healthText };
+    return { panel, label, selected, healthBar, healthText, accent };
   }
 
   private createIndicators(): void {
@@ -764,25 +855,29 @@ export default class CombatScene extends Phaser.Scene {
     badge.strokeRoundedRect(-66, -43, 132, 86, 15);
     this.warningArrow = this.add.text(0, 0, '', {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '57px',
+      fontSize: '30px',
       fontStyle: 'bold',
       color: '#f1d9ff',
+      align: 'center',
+      lineSpacing: -8,
     }).setOrigin(0.5);
     this.warning.add([badge, this.warningArrow]);
 
   }
 
   private createActionButton(ability: Ability, index: number): void {
-    const y = 20 + index * 71;
+    const layout = GAME_CONFIG.actionHud;
+    const width = layout.width - 36;
+    const y = 12 + index * 86;
     const background = this.add.graphics();
     const color = ability.color;
     background.fillStyle(COLORS.panelLight, 1);
-    background.fillRoundedRect(0, 0, 620, 59, 9);
+    background.fillRoundedRect(0, 0, width, 76, 8);
     background.lineStyle(2, color, 0.52);
-    background.strokeRoundedRect(0, 0, 620, 59, 9);
-    const name = this.add.text(16, 8, `${index + 1}  ·  ${ability.name.toUpperCase()}`, {
+    background.strokeRoundedRect(0, 0, width, 76, 8);
+    const name = this.add.text(15, 10, `${index + 1}   ${ability.name.toUpperCase()}`, {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '16px',
+      fontSize: '15px',
       fontStyle: 'bold',
       color: '#f3e9d6',
     });
@@ -791,72 +886,93 @@ export default class CombatScene extends Phaser.Scene {
       : ability.resource === 'chaos'
         ? `${ability.cost} CAOS`
         : 'GRATIS';
-    const detail = this.add.text(16, 34, `${ability.detail}  ·  ${costLabel}`, {
+    const detail = this.add.text(15, 42, `${ability.detail}  ·  ${costLabel}`, {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '13px',
+      fontSize: '12px',
       color: '#d0c2dc',
     });
     const available = this.activeCharacter !== null
-      && canAfford(this.state.party[this.activeCharacter], ability);
+      && canAfford(this.state.party[this.activeCharacter], ability)
+      && !this.cameraTransitioning;
     const button = this.add.container(0, y, [background, name, detail])
-      .setSize(620, 59)
+      .setSize(width, 76)
       .setAlpha(available && this.phase === 'player' ? 1 : 0.42);
     button.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, 620, 59),
+      new Phaser.Geom.Rectangle(0, 0, width, 76),
       Phaser.Geom.Rectangle.Contains,
     );
     button.on('pointerover', () => {
       if (available && this.phase === 'player' && !this.allyTargetingAbility) {
         background.clear();
         background.fillStyle(0x40344f, 1);
-        background.fillRoundedRect(0, 0, 620, 59, 9);
+        background.fillRoundedRect(0, 0, width, 76, 8);
         background.lineStyle(2, color, 0.95);
-        background.strokeRoundedRect(0, 0, 620, 59, 9);
+        background.strokeRoundedRect(0, 0, width, 76, 8);
       }
     });
     button.on('pointerout', () => {
       background.clear();
       background.fillStyle(COLORS.panelLight, 1);
-      background.fillRoundedRect(0, 0, 620, 59, 9);
+      background.fillRoundedRect(0, 0, width, 76, 8);
       background.lineStyle(2, color, 0.52);
-      background.strokeRoundedRect(0, 0, 620, 59, 9);
+      background.strokeRoundedRect(0, 0, width, 76, 8);
     });
-    button.on('pointerdown', () => this.performAbility(ability));
+    button.on('pointerdown', () => {
+      if (available) {
+        this.performAbility(ability);
+      }
+    });
     this.actionContent.add(button);
   }
 
   private updateActionMenu(): void {
+    const visible = !this.cameraTransitioning && (
+      this.phase === 'player'
+      || this.allyTargetingAbility !== null
+    );
+    const layout = GAME_CONFIG.actionHud;
+    const targetMode = this.phase === 'target-boss';
+    const panel = layout;
+    this.actionPanel.clear();
+    this.actionPanel.setVisible(visible);
+    if (visible) {
+      this.actionPanel.fillStyle(COLORS.ink, 0.82);
+      this.actionPanel.fillRoundedRect(panel.x, panel.y, panel.width, panel.height, 12);
+      this.actionPanel.lineStyle(1.5, COLORS.gold, 0.72);
+      this.actionPanel.strokeRoundedRect(panel.x, panel.y, panel.width, panel.height, 12);
+    }
+    this.backButton.setVisible(targetMode && !this.cameraTransitioning);
     this.actionContent.removeAll(true);
+    this.actionContent.setPosition(
+      panel.x + 18,
+      panel.y + 39,
+    );
+    this.targetText.setPosition(
+      targetMode ? WIDTH / 2 : layout.x + layout.width / 2,
+      targetMode ? 795 : layout.y - 28,
+    );
+    this.backButton.setPosition(
+      targetMode ? WIDTH / 2 - 95 : panel.x + panel.width - 190,
+      targetMode ? 835 : panel.y + 8,
+    );
     if (this.phase === 'ended') {
       return;
     }
     if (this.phase === 'target-boss' && this.targetingAbility) {
-      this.actionContent.add(this.add.text(
-        12,
-        0,
-        'ELIGE OBJETIVO: IOBRONTES O KOSMELYS  ·  ESC: CANCELAR',
-        {
-          fontFamily: 'Arial, sans-serif',
-          fontSize: '15px',
-          fontStyle: 'bold',
-          color: '#f3e9d6',
-        },
-      ));
-      this.createBossTargetButton('iobrontes', 0);
-      this.createBossTargetButton('kosmelys', 1);
+      this.targetText.setText('1 · IÓBRONTĒS     2 · KOSMELYS     ESC · BACK');
       return;
     }
     if (this.allyTargetingAbility) {
       const shieldTargeting = this.allyTargetingAbility === 'hippopotamus-shield';
       this.actionContent.add(this.add.text(
-        12,
+        0,
         0,
         shieldTargeting
           ? 'ELIGE UN ALIADO CON VIDA PARA PROTEGERLO'
           : 'ELIGE UN ALIADO CON VIDA PARA RESTAURARLO',
         {
           fontFamily: 'Arial, sans-serif',
-          fontSize: '15px',
+          fontSize: '12px',
           fontStyle: 'bold',
           color: shieldTargeting ? '#baffcb' : '#c8ffe9',
         },
@@ -884,17 +1000,18 @@ export default class CombatScene extends Phaser.Scene {
 
   private createBossTargetButton(id: BossId, index: number): void {
     const layout = GAME_CONFIG.bossTargetUi;
-    const x = layout.firstButtonX + index * (layout.buttonWidth + layout.buttonGap);
+    const x = 4 + index * (layout.buttonWidth + layout.buttonGap);
+    const y = 36;
     const alive = this.state.bosses[id].health > 0;
     const selected = this.selectedBoss === id;
     const background = this.add.graphics();
     background.fillStyle(selected ? 0x49376a : COLORS.panelLight, 1);
-    background.fillRoundedRect(x, layout.buttonY, layout.buttonWidth, layout.buttonHeight, 10);
+    background.fillRoundedRect(0, 0, layout.buttonWidth, layout.buttonHeight, 8);
     background.lineStyle(2, alive ? (selected ? COLORS.yellow : COLORS.purple) : COLORS.red, 0.85);
-    background.strokeRoundedRect(x, layout.buttonY, layout.buttonWidth, layout.buttonHeight, 10);
+    background.strokeRoundedRect(0, 0, layout.buttonWidth, layout.buttonHeight, 8);
     const label = this.add.text(
-      x + layout.buttonWidth / 2,
-      layout.buttonY + 14,
+      layout.buttonWidth / 2,
+      11,
       `${index + 1}  ${GAME_CONFIG.characters[id].name.toUpperCase()}`,
       {
       fontFamily: 'Arial, sans-serif',
@@ -905,8 +1022,8 @@ export default class CombatScene extends Phaser.Scene {
       },
     ).setOrigin(0.5, 0);
     const health = this.add.text(
-      x + layout.buttonWidth / 2,
-      layout.buttonY + 43,
+      layout.buttonWidth / 2,
+      39,
       `${this.state.bosses[id].health} / ${MAX_BOSS_HEALTH[id]} HP`,
       {
         fontFamily: 'Arial, sans-serif',
@@ -915,37 +1032,44 @@ export default class CombatScene extends Phaser.Scene {
         align: 'center',
       },
     ).setOrigin(0.5, 0);
-    const button = this.add.container(0, 0, [background, label, health])
+    const button = this.add.container(x, y, [background, label, health])
       .setSize(layout.buttonWidth, layout.buttonHeight)
-      .setAlpha(alive ? 1 : 0.42);
+      .setAlpha(alive && !this.cameraTransitioning ? 1 : 0.42);
     button.setInteractive(
-      new Phaser.Geom.Rectangle(x, layout.buttonY, layout.buttonWidth, layout.buttonHeight),
+      new Phaser.Geom.Rectangle(0, 0, layout.buttonWidth, layout.buttonHeight),
       Phaser.Geom.Rectangle.Contains,
     );
-    button.on('pointerdown', () => this.chooseBossTarget(id));
+    button.on('pointerdown', () => this.confirmSelectedBossTarget(id));
+    button.on('pointerover', () => {
+      if (alive && !this.cameraTransitioning) {
+        this.highlightBossTarget(id);
+      }
+    });
     this.actionContent.add(button);
   }
 
   private createTargetButton(id: CharacterId, index: number, available: boolean): void {
-    const x = 4 + index * 203;
+    const x = 4 + index * 132;
+    const width = 124;
+    const y = 38;
     const background = this.add.graphics();
     background.fillStyle(COLORS.panelLight, 1);
-    background.fillRoundedRect(x, 51, 194, 84, 10);
+    background.fillRoundedRect(0, 0, width, 62, 8);
     background.lineStyle(2, available ? COLORS.teal : COLORS.red, 0.7);
-    background.strokeRoundedRect(x, 51, 194, 84, 10);
-    const label = this.add.text(x + 97, 70, `${index + 1}  ${GAME_CONFIG.characters[id].name.toUpperCase()}`, {
+    background.strokeRoundedRect(0, 0, width, 62, 8);
+    const label = this.add.text(width / 2, 20, `${index + 1}  ${GAME_CONFIG.characters[id].name.toUpperCase()}`, {
       fontFamily: 'Arial, sans-serif',
-      fontSize: '15px',
+      fontSize: '11px',
       fontStyle: 'bold',
       color: available ? '#e7fff7' : '#918698',
       align: 'center',
-      wordWrap: { width: 178 },
+      wordWrap: { width: width - 10 },
     }).setOrigin(0.5, 0);
-    const button = this.add.container(0, 0, [background, label])
-      .setSize(194, 140)
+    const button = this.add.container(x, y, [background, label])
+      .setSize(width, 62)
       .setAlpha(available ? 1 : 0.45);
     button.setInteractive(
-      new Phaser.Geom.Rectangle(x, 51, 194, 84),
+      new Phaser.Geom.Rectangle(0, 0, width, 62),
       Phaser.Geom.Rectangle.Contains,
     );
     button.on('pointerdown', () => {
@@ -957,29 +1081,29 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private refreshHud(): void {
-    (['furai', 'dexios', 'sahira'] as const).forEach((id) => {
+    const partyLayout = GAME_CONFIG.partyHud;
+    const barX = partyLayout.portraitSize + 26 + 104;
+    const barWidth = partyLayout.width - barX - 18;
+    (['dexios', 'furai', 'sahira'] as const).forEach((id) => {
       const status = this.state.party[id];
       const card = this.partyCards[id];
       const maximumHealth = MAX_HEALTH[id];
       const maximumMana = MAX_MANA[id];
       const incapacitated = status.health <= 0;
       card.name.setColor(incapacitated ? '#938a98' : '#f3e3c0');
-      card.turn.setText(
-        this.activeCharacter === id && this.phase === 'player'
-          ? 'TU TURNO'
-          : this.targetCharacter === id && this.phase !== 'player'
-            ? 'OBJETIVO'
-          : incapacitated
-            ? 'INCAPACITADO'
-            : '',
-      );
-      card.container.setAlpha(incapacitated ? 0.5 : 1);
-      this.updateBar(card.healthBar, 17, 58, 350, 13, status.health, maximumHealth, COLORS.green);
-      this.updateBar(card.manaBar, 17, 98, 350, 13, status.mana, maximumMana, COLORS.blue);
+      card.turn.setText(this.activeCharacter === id && this.phase === 'player'
+        ? 'TU TURNO'
+        : this.targetCharacter === id && this.phase !== 'player'
+          ? 'OBJETIVO'
+          : incapacitated ? 'CAÍDO' : '');
+      card.container.setAlpha(incapacitated ? 0.48 : 1);
+      card.portrait.setAlpha(incapacitated ? 0.38 : 1);
+      this.updateBar(card.healthBar, barX, 33, barWidth, 7, status.health, maximumHealth, COLORS.green);
+      this.updateBar(card.manaBar, barX, 53, barWidth, 7, status.mana, maximumMana, COLORS.blue);
       card.health.setText(`VIDA  ${status.health} / ${maximumHealth}`);
       card.mana.setText(`MANÁ  ${status.mana} / ${maximumMana}`);
       if (id === 'dexios' && card.chaos && card.chaosBar) {
-        this.updateBar(card.chaosBar, 17, 138, 350, 13, status.chaos, MAX_CHAOS, COLORS.red);
+        this.updateBar(card.chaosBar, barX, 73, barWidth, 7, status.chaos, MAX_CHAOS, COLORS.red);
         card.chaos.setText(`CAOS  ${status.chaos} / ${MAX_CHAOS}`);
       }
       const targetLabel = this.allyTargetingAbility
@@ -989,19 +1113,19 @@ export default class CombatScene extends Phaser.Scene {
             ? 'No se puede proteger'
             : 'No se puede reanimar'
         : '';
-      card.selection.setText(targetLabel);
+      card.selection.setText(targetLabel ? 'SELECCIONA EN ESTE PANEL' : '');
       this.shieldMarks[id].counter.setText(String(status.shieldHits));
       this.shieldMarks[id].container.setVisible(status.shieldHits > 0);
       const bg = card.container.getAt(0) as Phaser.GameObjects.Graphics;
       bg.clear();
-      bg.fillStyle(COLORS.panel, 0.97);
-      bg.fillRoundedRect(0, 0, 384, 180, 14);
+      bg.fillStyle(COLORS.panel, 0.9);
+      bg.fillRoundedRect(0, 0, partyLayout.width, partyLayout.height, 12);
       bg.lineStyle(
-        this.activeCharacter === id && this.phase === 'player' ? 3 : 2,
+        this.activeCharacter === id && this.phase === 'player' ? 2.5 : 1,
         this.activeCharacter === id && this.phase === 'player' ? COLORS.yellow : COLORS.gold,
-        this.activeCharacter === id && this.phase === 'player' ? 0.98 : 0.52,
+        this.activeCharacter === id && this.phase === 'player' ? 0.96 : 0.42,
       );
-      bg.strokeRoundedRect(0, 0, 384, 180, 14);
+      bg.strokeRoundedRect(0, 0, partyLayout.width, partyLayout.height, 12);
     });
     (['iobrontes', 'kosmelys'] as const).forEach((id) => {
       const layout = GAME_CONFIG.bossHud;
@@ -1016,19 +1140,129 @@ export default class CombatScene extends Phaser.Scene {
         layout.barHeight,
         health,
         MAX_BOSS_HEALTH[id],
-        COLORS.purple,
+        hud.accent,
       );
       hud.healthText.setText(`${health} / ${MAX_BOSS_HEALTH[id]}`);
       hud.label.setColor(health > 0 ? '#f2e5ff' : '#938a98');
+      hud.panel.setAlpha(health > 0 ? 1 : 0.56);
       hud.selected.setText(
         this.phase === 'target-boss' && health > 0
-          ? this.selectedBoss === id ? 'SELECCIONADO · ENTER' : 'OBJETIVO'
+          ? this.selectedBoss === id ? 'OBJETIVO ACTUAL' : 'DISPONIBLE'
           : health <= 0 ? 'DERROTADO' : '',
       );
     });
+    this.updateTurnQueue();
+    this.updateTargetArrow();
     this.armorBreakMark.setVisible(this.state.bosses.iobrontes.armorBreak);
     this.kosmelysArmorBreakMark.setVisible(this.state.bosses.kosmelys.armorBreak);
     this.updateActionMenu();
+  }
+
+  private updateTurnQueue(): void {
+    const layout = GAME_CONFIG.turnQueueHud;
+    const upcoming: Array<CharacterId | BossId> = [];
+    let orderIndex = this.turnIndex;
+    for (let attempt = 0; attempt < GAME_CONFIG.partyOrder.length * 3 && upcoming.length < 6; attempt += 1) {
+      const actor = GAME_CONFIG.partyOrder[orderIndex];
+      const active = actor === 'iobrontes' || actor === 'kosmelys'
+        ? this.state.bosses[actor].health > 0
+        : this.state.party[actor].health > 0;
+      if (active) {
+        upcoming.push(actor);
+      }
+      orderIndex = (orderIndex + 1) % GAME_CONFIG.partyOrder.length;
+    }
+    this.turnQueueSlots.forEach((slot, index) => {
+      const actor = upcoming[index];
+      slot.container.setVisible(actor !== undefined);
+      if (!actor) {
+        return;
+      }
+      slot.portrait.setTexture(`icon_${actor}`);
+      slot.portrait.setDisplaySize(index === 0 ? 52 : 46, index === 0 ? 52 : 46);
+      slot.label.setText(actor.toUpperCase());
+      slot.label.setColor(index === 0 ? '#fff0bd' : '#c5bacb');
+      slot.container.setAlpha(index === 0 ? 1 : 0.62);
+      slot.background.clear();
+      slot.background.fillStyle(index === 0 ? 0x30253e : COLORS.ink, index === 0 ? 0.96 : 0.72);
+      slot.background.fillRoundedRect(0, 0, 122, layout.iconSize, 8);
+      slot.background.lineStyle(index === 0 ? 2 : 1, index === 0 ? COLORS.gold : 0xb7a6bf, index === 0 ? 0.9 : 0.28);
+      slot.background.strokeRoundedRect(0, 0, 122, layout.iconSize, 8);
+    });
+  }
+
+  private updateTargetArrow(): void {
+    const visible = this.phase === 'target-boss' && this.selectedBoss !== null;
+    this.targetArrow.setVisible(visible);
+    if (!visible || !this.selectedBoss) {
+      return;
+    }
+    const target = GAME_CONFIG.characters[this.selectedBoss];
+    this.targetArrow.setPosition(
+      target.x,
+      target.feetY - target.displayHeight - 8,
+    );
+  }
+
+  private createBackButton(layout: typeof GAME_CONFIG.actionHud): Phaser.GameObjects.Container {
+    const width = 190;
+    const height = 54;
+    const background = this.add.graphics();
+    background.fillStyle(0x171326, 0.96);
+    background.fillRoundedRect(0, 0, width, height, 9);
+    background.lineStyle(2, COLORS.gold, 0.78);
+    background.strokeRoundedRect(0, 0, width, height, 9);
+    const label = this.add.text(width / 2, 15, '←  BACK', {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '17px',
+      fontStyle: 'bold',
+      color: '#f3e9d6',
+    }).setOrigin(0.5, 0);
+    const button = this.add.container(layout.x + layout.width - width, layout.y + 8, [background, label])
+      .setSize(width, height)
+      .setDepth(24)
+      .setVisible(false);
+    button.setInteractive(new Phaser.Geom.Rectangle(0, 0, width, height), Phaser.Geom.Rectangle.Contains);
+    button.on('pointerdown', () => this.cancelBossTargetSelection());
+    return button;
+  }
+
+  private handleUiPointer(pointer: Phaser.Input.Pointer): void {
+    if (this.phase === 'target-boss' && !this.cameraTransitioning) {
+      const backBounds = this.backButton.getBounds();
+      if (backBounds.contains(pointer.x, pointer.y)) {
+        this.cancelBossTargetSelection();
+        return;
+      }
+      const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+      (['iobrontes', 'kosmelys'] as const).forEach((boss) => {
+        if (this.getBossSprite(boss).getBounds().contains(worldPoint.x, worldPoint.y)) {
+          this.confirmSelectedBossTarget(boss);
+        }
+      });
+      return;
+    }
+    if (this.phase === 'player' && this.activeCharacter && !this.cameraTransitioning) {
+      const layout = GAME_CONFIG.actionHud;
+      const width = layout.width - 36;
+      const startX = layout.x + 18;
+      const startY = layout.y + 39;
+      const ability = GAME_CONFIG.abilities[this.activeCharacter].find((_, index) =>
+        new Phaser.Geom.Rectangle(startX, startY + 12 + index * 86, width, 76)
+          .contains(pointer.x, pointer.y),
+      );
+      if (ability) {
+        this.performAbility(ability);
+      }
+      return;
+    }
+    if (this.phase === 'player' && this.allyTargetingAbility) {
+      (['dexios', 'furai', 'sahira'] as const).forEach((id) => {
+        if (this.partyCards[id].container.getBounds().contains(pointer.x, pointer.y)) {
+          this.selectAllyTarget(id);
+        }
+      });
+    }
   }
 
 
@@ -1066,10 +1300,22 @@ export default class CombatScene extends Phaser.Scene {
         );
         this.targetText.setText('');
         this.refreshHud();
-        if (turn === 'iobrontes') {
-          this.announceEnemyAttack();
+        const announce = (): void => {
+          if (this.phase !== 'announcing' || this.result) {
+            return;
+          }
+          if (turn === 'iobrontes') {
+            this.announceEnemyAttack();
+          } else {
+            this.announceKosmelysAttack();
+          }
+        };
+        const gap = this.previousTurnWasBoss ? GAME_CONFIG.timing.enemyTurnGapMs : 0;
+        this.previousTurnWasBoss = false;
+        if (gap > 0) {
+          this.time.delayedCall(gap, announce);
         } else {
-          this.announceKosmelysAttack();
+          announce();
         }
         return;
       }
@@ -1086,6 +1332,7 @@ export default class CombatScene extends Phaser.Scene {
       this.targetText.setText('');
       this.setActorFrame(turn, GAME_CONFIG.characters[turn].frames.idle);
       this.refreshHud();
+      this.focusPlayerSelectionCamera(turn);
       return;
     }
     this.finishBattle('defeat');
@@ -1098,6 +1345,8 @@ export default class CombatScene extends Phaser.Scene {
     if (this.activeCharacter) {
       this.advanceDivineRetributionTurn();
     }
+    const finishedActor = GAME_CONFIG.partyOrder[this.turnIndex];
+    this.previousTurnWasBoss = finishedActor === 'iobrontes' || finishedActor === 'kosmelys';
     this.allyTargetingAbility = null;
     this.targetingAbility = null;
     this.selectedBoss = null;
@@ -1272,7 +1521,7 @@ export default class CombatScene extends Phaser.Scene {
     this.defenseOutcome = null;
     this.hasImpacted = false;
     this.warning.setPosition(...this.warningPosition(this.targetCharacter, this.cosmicInitialDirection));
-    this.warningArrow.setText(this.directionArrow(this.cosmicInitialDirection));
+    this.warningArrow.setText(this.directionPrompt(this.cosmicInitialDirection));
     this.warning.setVisible(true).setAlpha(1);
     this.setKosmelysFrame(
       GAME_CONFIG.characters.kosmelys.frames.attack[this.cosmicInitialDirection],
@@ -1281,11 +1530,14 @@ export default class CombatScene extends Phaser.Scene {
     this.targetText.setText(
       `${this.directionControl(this.cosmicInitialDirection)} · DIRECCIÓN INICIAL`,
     );
-    this.time.delayedCall(GAME_CONFIG.timing.cosmicWindUpMs, () => {
+    this.time.delayedCall(
+      GAME_CONFIG.timing.cosmicWindUpMs + GAME_CONFIG.timing.defenseHintLeadMs,
+      () => {
       if (this.phase === 'casting' && !this.result) {
         this.launchCosmicProjectile();
       }
-    });
+      },
+    );
   }
 
   private launchCosmicProjectile(): void {
@@ -1373,7 +1625,7 @@ export default class CombatScene extends Phaser.Scene {
         );
         this.cosmicProjectile.setPosition(redirectedStart.x, redirectedStart.y);
         this.warning.setPosition(...this.warningPosition(this.targetCharacter, finalDirection));
-        this.warningArrow.setText(this.directionArrow(finalDirection));
+        this.warningArrow.setText(this.directionPrompt(finalDirection));
         this.warning.setVisible(true).setAlpha(1);
         this.targetText.setText(
           `${this.directionControl(finalDirection)} · ¡CAMBIÓ! BLOQUEA ESTA DIRECCIÓN`,
@@ -1490,7 +1742,9 @@ export default class CombatScene extends Phaser.Scene {
       : outcome === 'blocked' && targetId !== 'sahira'
         ? GAME_CONFIG.kosmelysAttacks.cosmicBlockedDamage
         : 0;
-    const shielded = outcome !== 'perfect' && consumeShieldHit(this.state, targetId);
+    const shielded = outcome !== 'perfect'
+      && !(targetId === 'sahira' && outcome === 'blocked')
+      && consumeShieldHit(this.state, targetId);
     if (shielded) {
       damage = 0;
     }
@@ -1746,7 +2000,9 @@ export default class CombatScene extends Phaser.Scene {
     const targetId = event.target;
     const target = GAME_CONFIG.characters[targetId];
     const outcome = event.responseOutcome ?? 'failed';
-    const shielded = outcome !== 'perfect' && consumeShieldHit(this.state, targetId);
+    const shielded = outcome !== 'perfect'
+      && !(targetId === 'sahira' && outcome === 'blocked')
+      && consumeShieldHit(this.state, targetId);
     const damage = shielded
       ? 0
       : outcome === 'failed'
@@ -1755,6 +2011,13 @@ export default class CombatScene extends Phaser.Scene {
           ? GAME_CONFIG.kosmelysAttacks.meteorBlockedDamage
           : 0;
     const actualDamage = damagePartyMember(this.state, targetId, damage);
+    if (outcome === 'perfect' || outcome === 'blocked') {
+      this.setActorFrame(
+        targetId,
+        GAME_CONFIG.characters[targetId].frames.defense.up,
+        GAME_CONFIG.timing.spritePoseMs,
+      );
+    }
     if (targetId === 'furai') {
       this.meteorFuraiTargeted = true;
       if (outcome !== 'perfect') {
@@ -1931,11 +2194,12 @@ export default class CombatScene extends Phaser.Scene {
         event.resolved = true;
       }
     });
-    if (
-      this.state.bosses.kosmelys.health > 0
-      && this.state.kosmelysPortalShieldTurnsRemaining === 0
-    ) {
-      this.setKosmelysFrame(GAME_CONFIG.characters.kosmelys.frames.idle);
+    if (this.state.bosses.kosmelys.health > 0) {
+      this.setKosmelysFrame(
+        this.state.kosmelysPortalShieldTurnsRemaining > 0
+          ? GAME_CONFIG.characters.kosmelys.frames.shield
+          : GAME_CONFIG.characters.kosmelys.frames.idle,
+      );
     }
     this.time.delayedCall(GAME_CONFIG.timing.resultDurationMs, () => {
       if (this.phase === 'resolving' && !this.result) {
@@ -2054,8 +2318,9 @@ export default class CombatScene extends Phaser.Scene {
 
   private beginJumpWindow(): void {
     this.phase = 'jump-window';
+    this.spaceKeyBadge.setVisible(true);
     this.jumpWindowStartedAt = this.time.now;
-    this.targetText.setText('¡SALTA!  ·  ESPACIO');
+    this.targetText.setText('PULSA [ SPACE ] · SALTO EN EQUIPO');
     const boss = GAME_CONFIG.characters.iobrontes;
     const party = (['furai', 'dexios', 'sahira'] as const).map(
       (id) => GAME_CONFIG.characters[id],
@@ -2106,6 +2371,7 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     this.phase = 'resolving';
+    this.spaceKeyBadge.setVisible(false);
     this.timingRing.clear();
     this.targetText.setText('');
     if (this.activeBolt) {
@@ -2176,7 +2442,7 @@ export default class CombatScene extends Phaser.Scene {
     this.defenseOutcome = null;
     this.hasImpacted = false;
     this.warning.setPosition(...this.warningPosition(this.targetCharacter, this.attackDirection));
-    this.warningArrow.setText(this.directionArrow(this.attackDirection));
+    this.warningArrow.setText(this.directionPrompt(this.attackDirection));
     this.warning.setVisible(true).setAlpha(1);
     this.tweens.add({
       targets: this.warning,
@@ -2186,11 +2452,17 @@ export default class CombatScene extends Phaser.Scene {
       repeat: 2,
     });
     const bossFrame = GAME_CONFIG.characters.iobrontes.frames.attack[this.attackDirection];
-    this.setBossFrame(bossFrame, WIND_UP_MS + PROJECTILE_TRAVEL_MS + 400);
+    this.setBossFrame(
+      bossFrame,
+      WIND_UP_MS + GAME_CONFIG.timing.defenseHintLeadMs + PROJECTILE_TRAVEL_MS + 400,
+    );
     this.targetText.setText(
       `${this.directionControl(this.attackDirection)}  ·  GOLPE ${this.lightningIndex + 1} / 3`,
     );
-    this.time.delayedCall(WIND_UP_MS, () => this.launchEnemyLightning());
+    this.time.delayedCall(
+      WIND_UP_MS + GAME_CONFIG.timing.defenseHintLeadMs,
+      () => this.launchEnemyLightning(),
+    );
   }
 
   private launchEnemyLightning(): void {
@@ -2301,7 +2573,9 @@ export default class CombatScene extends Phaser.Scene {
     const outcome = this.defenseOutcome ?? 'failed';
     const targetId = this.targetCharacter;
     const damage = damageForDefense(targetId, outcome);
-    const shielded = outcome !== 'perfect' && consumeShieldHit(this.state, targetId);
+    const shielded = outcome !== 'perfect'
+      && !(targetId === 'sahira' && outcome === 'blocked')
+      && consumeShieldHit(this.state, targetId);
     const actualDamage = shielded ? 0 : damagePartyMember(this.state, targetId, damage);
     this.timingRing.clear();
     this.warning.setVisible(false);
@@ -2468,6 +2742,7 @@ export default class CombatScene extends Phaser.Scene {
     const character = this.activeCharacter;
     if (
       this.phase !== 'player'
+      || this.cameraTransitioning
       || !character
       || this.state.party[character].health <= 0
       || !canAfford(this.state.party[character], ability)
@@ -2489,31 +2764,67 @@ export default class CombatScene extends Phaser.Scene {
     this.targetingAbility = ability;
     this.selectedBoss = null;
     this.phase = 'target-boss';
+    this.highlightBossTarget(
+      this.state.bosses.iobrontes.health > 0 ? 'iobrontes' : 'kosmelys',
+    );
+    this.focusBossSelectionCamera();
     this.promptText.setText(`Elige a qué jefe dirigirá ${ability.name}.`);
     this.targetText.setText('SELECCIONA UN JEFE');
     this.refreshHud();
   }
 
-  private chooseBossTarget(boss: BossId): void {
-    if (this.phase !== 'target-boss' || this.state.bosses[boss].health <= 0) {
+  private highlightBossTarget(boss: BossId): void {
+    if (
+      this.phase !== 'target-boss'
+      || this.cameraTransitioning
+      || this.state.bosses[boss].health <= 0
+    ) {
       return;
     }
-    if (this.selectedBoss === boss) {
-      this.confirmBossTarget(boss);
+    if (this.selectedBoss && this.selectedBoss !== boss) {
+      this.getBossSprite(this.selectedBoss).clearTint();
+    }
+    this.selectedBoss = boss;
+    this.getBossSprite(boss).setTint(0xfff1c4);
+    this.updateTargetArrow();
+    (['iobrontes', 'kosmelys'] as const).forEach((id) => {
+      this.bossHud[id].selected.setText(id === boss ? 'OBJETIVO ACTUAL' : 'DISPONIBLE');
+    });
+  }
+
+  private confirmSelectedBossTarget(boss: BossId): void {
+    if (this.cameraTransitioning || this.phase !== 'target-boss') {
+      return;
+    }
+    this.highlightBossTarget(boss);
+    this.confirmBossTarget(boss);
+  }
+
+  private cancelBossTargetSelection(): void {
+    if (this.phase !== 'target-boss' || !this.activeCharacter || this.cameraTransitioning) {
       return;
     }
     if (this.selectedBoss) {
       this.getBossSprite(this.selectedBoss).clearTint();
     }
-    this.selectedBoss = boss;
-    this.getBossSprite(boss).setTint(0xfff1c4);
-    this.targetText.setText(`${GAME_CONFIG.characters[boss].name.toUpperCase()} · ENTER PARA CONFIRMAR`);
+    this.selectedBoss = null;
+    this.targetingAbility = null;
+    this.targetArrow.setVisible(false);
+    this.phase = 'player';
+    this.promptText.setText('Elige una habilidad para continuar la batalla.');
+    this.targetText.setText('');
+    this.focusPlayerSelectionCamera(this.activeCharacter);
     this.refreshHud();
+  }
+
+  private chooseBossTarget(boss: BossId): void {
+    this.confirmSelectedBossTarget(boss);
   }
 
   private confirmBossTarget(boss: BossId): void {
     if (
       this.phase !== 'target-boss'
+      || this.cameraTransitioning
       || this.selectedBoss !== boss
       || this.state.bosses[boss].health <= 0
       || !this.targetingAbility
@@ -2840,7 +3151,14 @@ export default class CombatScene extends Phaser.Scene {
         '#d8b2ff',
       );
     }
-    this.advanceTurn();
+    this.cameraTransitioning = true;
+    this.refreshHud();
+    this.cameras.main.pan(WIDTH / 2, HEIGHT / 2, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+    this.cameras.main.zoomTo(1, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+    this.time.delayedCall(GAME_CONFIG.camera.returnMs, () => {
+      this.cameraTransitioning = false;
+      this.advanceTurn();
+    });
   }
 
   private registerDefense(direction: Direction): void {
@@ -2938,21 +3256,11 @@ export default class CombatScene extends Phaser.Scene {
     }
     if (this.phase === 'target-boss') {
       if (key === 'escape') {
-        this.targetingAbility = null;
-        if (this.selectedBoss) {
-          this.getBossSprite(this.selectedBoss).clearTint();
-        }
-        this.selectedBoss = null;
-        this.phase = 'player';
-        this.promptText.setText('Elige una habilidad para continuar la batalla.');
-        this.targetText.setText('');
-        this.refreshHud();
+        this.cancelBossTargetSelection();
       } else if (key === '1') {
-        this.chooseBossTarget('iobrontes');
+        this.confirmSelectedBossTarget('iobrontes');
       } else if (key === '2') {
-        this.chooseBossTarget('kosmelys');
-      } else if (event.key === 'Enter' && this.selectedBoss) {
-        this.confirmBossTarget(this.selectedBoss);
+        this.confirmSelectedBossTarget('kosmelys');
       }
       return;
     }
@@ -3016,6 +3324,10 @@ export default class CombatScene extends Phaser.Scene {
       case 'up': return '↑';
       case 'down': return '↓';
     }
+  }
+
+  private directionPrompt(direction: Direction): string {
+    return `${this.directionArrow(direction)}\n${this.directionControl(direction).split(' · ')[0]}`;
   }
 
   private warningPosition(
@@ -3138,6 +3450,44 @@ export default class CombatScene extends Phaser.Scene {
       if (this.actorSprites[id].active) {
         this.actorSprites[id].clearTint();
       }
+    });
+  }
+
+  private focusPlayerSelectionCamera(id: CharacterId): void {
+    const character = GAME_CONFIG.characters[id];
+    const centerX = Phaser.Math.Clamp(
+      character.x + 200,
+      WIDTH / (2 * GAME_CONFIG.camera.playerZoom),
+      WIDTH - WIDTH / (2 * GAME_CONFIG.camera.playerZoom),
+    );
+    const centerY = Phaser.Math.Clamp(
+      character.feetY - character.displayHeight * 0.5,
+      HEIGHT / (2 * GAME_CONFIG.camera.playerZoom),
+      HEIGHT - HEIGHT / (2 * GAME_CONFIG.camera.playerZoom),
+    );
+    this.transitionCamera(centerX, centerY, GAME_CONFIG.camera.playerZoom);
+    this.actorSprites[id].setTint(0xfff1c4);
+  }
+
+  private focusBossSelectionCamera(): void {
+    const first = GAME_CONFIG.characters.iobrontes;
+    const second = GAME_CONFIG.characters.kosmelys;
+    const zoom = GAME_CONFIG.camera.bossTargetZoom;
+    this.transitionCamera(
+      (first.x + second.x) / 2,
+      (first.feetY + second.feetY) / 2 - Math.max(first.displayHeight, second.displayHeight) * 0.36,
+      zoom,
+    );
+  }
+
+  private transitionCamera(centerX: number, centerY: number, zoom: number): void {
+    this.cameraTransitioning = true;
+    this.refreshHud();
+    this.cameras.main.pan(centerX, centerY, GAME_CONFIG.camera.selectionMs, 'Sine.easeInOut');
+    this.cameras.main.zoomTo(zoom, GAME_CONFIG.camera.selectionMs, 'Sine.easeInOut');
+    this.time.delayedCall(GAME_CONFIG.camera.selectionMs, () => {
+      this.cameraTransitioning = false;
+      this.refreshHud();
     });
   }
 
