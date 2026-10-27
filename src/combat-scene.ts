@@ -105,8 +105,11 @@ interface BossHud {
   healthText: Phaser.GameObjects.Text;
   panel: Phaser.GameObjects.Graphics;
   label: Phaser.GameObjects.Text;
+  subtitle: Phaser.GameObjects.Text;
   selected: Phaser.GameObjects.Text;
   accent: number;
+  x: number;
+  y: number;
 }
 
 interface MeteorEvent {
@@ -284,6 +287,9 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   update(): void {
+    if (this.phase === 'target-boss') {
+      this.positionBossTargetHud();
+    }
     if (this.phase === 'cosmic-rays') {
       this.updateCosmicRays();
       return;
@@ -806,7 +812,7 @@ export default class CombatScene extends Phaser.Scene {
     const layout = GAME_CONFIG.bossHud;
     const x = layout.x[id];
     const y = layout.y[id];
-    const panel = this.add.graphics().setDepth(20);
+    const panel = this.add.graphics().setDepth(100);
     const accent = id === 'iobrontes' ? COLORS.purple : 0xe9a64e;
     panel.fillStyle(COLORS.panel, 0.94);
     panel.fillRoundedRect(x, y, layout.width, layout.height, 14);
@@ -818,21 +824,21 @@ export default class CombatScene extends Phaser.Scene {
       fontSize: `${layout.titleFontSize}px`,
       fontStyle: 'bold',
       color: '#f2e5ff',
-    }).setDepth(21);
-    this.add.text(x + layout.subtitleX, y + layout.subtitleY, config.title, {
+    }).setDepth(101);
+    const subtitle = this.add.text(x + layout.subtitleX, y + layout.subtitleY, config.title, {
       fontFamily: 'Georgia, serif',
       fontSize: `${layout.subtitleFontSize}px`,
       color: '#c7afd8',
-    }).setDepth(21);
+    }).setDepth(101);
     const selected = this.add.text(x + layout.healthTextX, y + 9, '', {
       fontFamily: 'Arial, sans-serif',
       fontSize: '12px',
       fontStyle: 'bold',
       color: '#fff0a5',
-    }).setOrigin(1, 0).setDepth(22);
-    const healthBar = this.add.graphics().setDepth(22);
+    }).setOrigin(1, 0).setDepth(102);
+    const healthBar = this.add.graphics().setDepth(102);
     const healthText = this.add.text(x + layout.healthTextX, y + layout.healthTextY, '', this.resourceStyle('#e2c1ff'))
-      .setOrigin(1, 0).setDepth(22);
+      .setOrigin(1, 0).setDepth(102);
     panel.setInteractive(
       new Phaser.Geom.Rectangle(x, y, layout.width, layout.height),
       Phaser.Geom.Rectangle.Contains,
@@ -842,7 +848,69 @@ export default class CombatScene extends Phaser.Scene {
         this.chooseBossTarget(id);
       }
     });
-    return { panel, label, selected, healthBar, healthText, accent };
+    return { panel, label, subtitle, selected, healthBar, healthText, accent, x, y };
+  }
+
+  private positionBossTargetHud(): void {
+    const layout = GAME_CONFIG.bossHud;
+    const camera = this.cameras.main;
+    (['iobrontes', 'kosmelys'] as const).forEach((id) => {
+      const character = GAME_CONFIG.characters[id];
+      const screenX = (character.x - camera.worldView.x) * camera.zoom;
+      const screenY = (character.feetY - character.displayHeight - camera.worldView.y) * camera.zoom;
+      const x = Math.round(Phaser.Math.Clamp(
+        screenX - layout.width / 2,
+        16,
+        WIDTH - layout.width - 16,
+      ));
+      const y = Math.round(Phaser.Math.Clamp(
+        screenY - layout.height - 12,
+        16,
+        HEIGHT - layout.height - 16,
+      ));
+      const hud = this.bossHud[id];
+      if (hud.x === x && hud.y === y) {
+        return;
+      }
+      hud.x = x;
+      hud.y = y;
+      hud.panel.clear();
+      hud.panel.fillStyle(COLORS.panel, 0.94);
+      hud.panel.fillRoundedRect(x, y, layout.width, layout.height, 14);
+      hud.panel.lineStyle(2, hud.accent, 0.84);
+      hud.panel.strokeRoundedRect(x, y, layout.width, layout.height, 14);
+      hud.panel.setInteractive(
+        new Phaser.Geom.Rectangle(x, y, layout.width, layout.height),
+        Phaser.Geom.Rectangle.Contains,
+      );
+      hud.label.setPosition(x + layout.labelX, y + layout.labelY);
+      hud.subtitle.setPosition(x + layout.subtitleX, y + layout.subtitleY);
+      hud.selected.setPosition(x + layout.healthTextX, y + 9);
+      hud.healthText.setPosition(x + layout.healthTextX, y + layout.healthTextY);
+      this.updateBar(
+        hud.healthBar,
+        x + layout.barX,
+        y + layout.barY,
+        layout.barWidth,
+        layout.barHeight,
+        this.state.bosses[id].health,
+        MAX_BOSS_HEALTH[id],
+        hud.accent,
+      );
+    });
+  }
+
+  private updateBossHudVisibility(): void {
+    const visible = this.phase !== 'player' && this.phase !== 'action';
+    (['iobrontes', 'kosmelys'] as const).forEach((id) => {
+      const hud = this.bossHud[id];
+      hud.panel.setVisible(visible);
+      hud.label.setVisible(visible);
+      hud.subtitle.setVisible(visible);
+      hud.selected.setVisible(visible);
+      hud.healthBar.setVisible(visible);
+      hud.healthText.setVisible(visible);
+    });
   }
 
   private createIndicators(): void {
@@ -1081,6 +1149,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private refreshHud(): void {
+    this.updateBossHudVisibility();
     const partyLayout = GAME_CONFIG.partyHud;
     const barX = partyLayout.portraitSize + 26 + 104;
     const barWidth = partyLayout.width - barX - 18;
@@ -1127,14 +1196,40 @@ export default class CombatScene extends Phaser.Scene {
       );
       bg.strokeRoundedRect(0, 0, partyLayout.width, partyLayout.height, 12);
     });
+    if (this.phase === 'target-boss') {
+      this.positionBossTargetHud();
+    } else {
+      (['iobrontes', 'kosmelys'] as const).forEach((id) => {
+        const layout = GAME_CONFIG.bossHud;
+        const hud = this.bossHud[id];
+        const x = layout.x[id];
+        const y = layout.y[id];
+        hud.x = x;
+        hud.y = y;
+        hud.panel.clear();
+        hud.panel.fillStyle(COLORS.panel, 0.94);
+        hud.panel.fillRoundedRect(x, y, layout.width, layout.height, 14);
+        hud.panel.lineStyle(2, hud.accent, 0.84);
+        hud.panel.strokeRoundedRect(x, y, layout.width, layout.height, 14);
+        hud.panel.setInteractive(
+          new Phaser.Geom.Rectangle(x, y, layout.width, layout.height),
+          Phaser.Geom.Rectangle.Contains,
+        );
+        hud.label.setPosition(x + layout.labelX, y + layout.labelY);
+        hud.subtitle.setPosition(x + layout.subtitleX, y + layout.subtitleY);
+        hud.selected.setPosition(x + layout.healthTextX, y + 9);
+        hud.healthText.setPosition(x + layout.healthTextX, y + layout.healthTextY);
+      });
+    }
     (['iobrontes', 'kosmelys'] as const).forEach((id) => {
       const layout = GAME_CONFIG.bossHud;
-      const y = layout.y[id];
+      const x = this.bossHud[id].x;
+      const y = this.bossHud[id].y;
       const health = this.state.bosses[id].health;
       const hud = this.bossHud[id];
       this.updateBar(
         hud.healthBar,
-        layout.x[id] + layout.barX,
+        x + layout.barX,
         y + layout.barY,
         layout.barWidth,
         layout.barHeight,
@@ -1145,6 +1240,7 @@ export default class CombatScene extends Phaser.Scene {
       hud.healthText.setText(`${health} / ${MAX_BOSS_HEALTH[id]}`);
       hud.label.setColor(health > 0 ? '#f2e5ff' : '#938a98');
       hud.panel.setAlpha(health > 0 ? 1 : 0.56);
+      this.getBossSprite(id).setAlpha(health > 0 ? 1 : 0.18);
       hud.selected.setText(
         this.phase === 'target-boss' && health > 0
           ? this.selectedBoss === id ? 'OBJETIVO ACTUAL' : 'DISPONIBLE'
@@ -1179,15 +1275,15 @@ export default class CombatScene extends Phaser.Scene {
         return;
       }
       slot.portrait.setTexture(`icon_${actor}`);
-      slot.portrait.setDisplaySize(index === 0 ? 52 : 46, index === 0 ? 52 : 46);
+      slot.portrait.setDisplaySize(index === 0 ? 56 : 50, index === 0 ? 56 : 50);
       slot.label.setText(actor.toUpperCase());
       slot.label.setColor(index === 0 ? '#fff0bd' : '#c5bacb');
       slot.container.setAlpha(index === 0 ? 1 : 0.62);
       slot.background.clear();
       slot.background.fillStyle(index === 0 ? 0x30253e : COLORS.ink, index === 0 ? 0.96 : 0.72);
-      slot.background.fillRoundedRect(0, 0, 122, layout.iconSize, 8);
+      slot.background.fillRoundedRect(0, 0, 145, layout.iconSize, 8);
       slot.background.lineStyle(index === 0 ? 2 : 1, index === 0 ? COLORS.gold : 0xb7a6bf, index === 0 ? 0.9 : 0.28);
-      slot.background.strokeRoundedRect(0, 0, 122, layout.iconSize, 8);
+      slot.background.strokeRoundedRect(0, 0, 145, layout.iconSize, 8);
     });
   }
 
@@ -2258,25 +2354,48 @@ export default class CombatScene extends Phaser.Scene {
   private resolveIobrontesDamage(
     amount: number,
     attacker: CharacterId,
-  ): { damage: number; retaliationDamage: number } {
+  ): { damage: number; retaliationDamage: number; retaliationShielded: boolean } {
     const damage = damageIobrontes(this.state, amount);
     if (damage <= 0 || this.state.divineRetributionTurnsRemaining <= 0) {
-      return { damage, retaliationDamage: 0 };
+      return { damage, retaliationDamage: 0, retaliationShielded: false };
     }
     this.state.divineRetributionTurnsRemaining = 0;
-    const retaliationDamage = damagePartyMember(
-      this.state,
-      attacker,
-      GAME_CONFIG.enemyAttacks.divineRetributionDamage,
-    );
-    return { damage, retaliationDamage };
+    const retaliationShielded = consumeShieldHit(this.state, attacker);
+    const retaliationDamage = retaliationShielded
+      ? 0
+      : damagePartyMember(
+        this.state,
+        attacker,
+        GAME_CONFIG.enemyAttacks.divineRetributionDamage,
+      );
+    return { damage, retaliationDamage, retaliationShielded };
   }
 
-  private showDivineRetaliation(attacker: CharacterId, damage: number): void {
-    if (damage <= 0) {
+  private showDivineRetaliation(
+    attacker: CharacterId,
+    damage: number,
+    shielded = false,
+  ): void {
+    if (damage <= 0 && !shielded) {
       return;
     }
     const character = GAME_CONFIG.characters[attacker];
+    if (shielded) {
+      this.createImpact(
+        character.x,
+        character.feetY - character.displayHeight * 0.52,
+        COLORS.green,
+        1.1,
+      );
+      this.showFloatingText(
+        'ESCUDO HIPOPÓTAMO',
+        character.x,
+        character.feetY - character.displayHeight * 0.7,
+        '#a8ffbd',
+      );
+      this.promptText.setText(`${character.name} bloquea la represalia con el Escudo Hipopótamo.`);
+      return;
+    }
     this.setActorFrame(attacker, character.frames.hit, 650);
     this.createImpact(
       character.x,
@@ -2581,6 +2700,7 @@ export default class CombatScene extends Phaser.Scene {
     this.warning.setVisible(false);
     this.soundscape.play(outcome === 'perfect' ? 'perfect_block' : 'impact');
     let retaliationDamage = 0;
+    let retaliationShielded = false;
 
     if (outcome === 'perfect') {
       this.perfectParries += 1;
@@ -2596,6 +2716,7 @@ export default class CombatScene extends Phaser.Scene {
       if (targetId === 'dexios') {
         const bossDamage = this.resolveIobrontesDamage(PERFECT_PARRY_DAMAGE, targetId);
         retaliationDamage = bossDamage.retaliationDamage;
+        retaliationShielded = bossDamage.retaliationShielded;
         this.createImpact(
           GAME_CONFIG.characters.iobrontes.x,
           GAME_CONFIG.characters.iobrontes.feetY - 310,
@@ -2655,7 +2776,7 @@ export default class CombatScene extends Phaser.Scene {
         '#ffb7a9',
       );
     }
-    this.showDivineRetaliation(targetId, retaliationDamage);
+    this.showDivineRetaliation(targetId, retaliationDamage, retaliationShielded);
     this.refreshHud();
     if (this.finishIfBattleEnded()) {
       return;
@@ -2707,7 +2828,11 @@ export default class CombatScene extends Phaser.Scene {
           1.05,
         );
         this.setBossFrame('iobrontes_herido', 500);
-        this.showDivineRetaliation('furai', bossDamage.retaliationDamage);
+        this.showDivineRetaliation(
+          'furai',
+          bossDamage.retaliationDamage,
+          bossDamage.retaliationShielded,
+        );
         this.refreshHud();
         if (this.finishIfBattleEnded()) {
           return;
@@ -2840,6 +2965,14 @@ export default class CombatScene extends Phaser.Scene {
     this.getBossSprite(boss).clearTint();
     this.selectedBoss = null;
     this.phase = 'action';
+    this.returnCameraToArena(() => this.executeBossTargetedAbility(boss, ability, character));
+  }
+
+  private executeBossTargetedAbility(
+    boss: BossId,
+    ability: Ability,
+    character: CharacterId,
+  ): void {
     spendCost(this.state.party[character], ability);
     this.portalRedirectTarget = null;
     if (
@@ -2886,6 +3019,18 @@ export default class CombatScene extends Phaser.Scene {
     this.soundscape.play(ability.sound);
     this.refreshHud();
     this.performAbilityHit(character, ability, 0, empowered);
+  }
+
+  private returnCameraToArena(onComplete: () => void): void {
+    this.cameraTransitioning = true;
+    this.refreshHud();
+    this.cameras.main.pan(WIDTH / 2, HEIGHT / 2, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+    this.cameras.main.zoomTo(1, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+    this.time.delayedCall(GAME_CONFIG.camera.returnMs, () => {
+      this.cameraTransitioning = false;
+      this.refreshHud();
+      onComplete();
+    });
   }
 
   private showPortalRedirection(target: CharacterId): void {
@@ -2953,6 +3098,7 @@ export default class CombatScene extends Phaser.Scene {
         const targetConfig = GAME_CONFIG.characters[boss];
         let resolvedDamage: number;
         let retaliationDamage = 0;
+        let retaliationShielded = false;
         let redirectedShielded = false;
         if (this.portalRedirectTarget) {
           redirectedShielded = consumeShieldHit(this.state, this.portalRedirectTarget);
@@ -2963,6 +3109,7 @@ export default class CombatScene extends Phaser.Scene {
           const result = this.resolveIobrontesDamage(damage, character);
           resolvedDamage = result.damage;
           retaliationDamage = result.retaliationDamage;
+          retaliationShielded = result.retaliationShielded;
         } else {
           resolvedDamage = damageBoss(this.state, boss, damage);
         }
@@ -3004,7 +3151,7 @@ export default class CombatScene extends Phaser.Scene {
             '#a8ffbd',
           );
         }
-        this.showDivineRetaliation(character, retaliationDamage);
+        this.showDivineRetaliation(character, retaliationDamage, retaliationShielded);
         this.refreshHud();
         if (this.finishIfBattleEnded()) {
           return;
@@ -3071,24 +3218,26 @@ export default class CombatScene extends Phaser.Scene {
     this.phase = 'action';
     this.allyTargetingAbility = null;
     spendCost(this.state.party.sahira, ability);
-    this.setActorFrame('sahira', 'sahira_cura', 850);
-    const restored = healPartyMember(this.state, target);
-    this.soundscape.play(ability.sound);
-    this.createImpact(
-      GAME_CONFIG.characters[target].x,
-      GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight * 0.6,
-      COLORS.teal,
-      1.35,
-    );
-    this.showFloatingText(
-      `+${restored} VIDA`,
-      GAME_CONFIG.characters[target].x,
-      GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight - 12,
-      '#a8ffdc',
-    );
-    this.promptText.setText(`${GAME_CONFIG.characters[target].name} recupera toda su salud.`);
-    this.refreshHud();
-    this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+    this.returnCameraToArena(() => {
+      this.setActorFrame('sahira', 'sahira_cura', 850);
+      const restored = healPartyMember(this.state, target);
+      this.soundscape.play(ability.sound);
+      this.createImpact(
+        GAME_CONFIG.characters[target].x,
+        GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight * 0.6,
+        COLORS.teal,
+        1.35,
+      );
+      this.showFloatingText(
+        `+${restored} VIDA`,
+        GAME_CONFIG.characters[target].x,
+        GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight - 12,
+        '#a8ffdc',
+      );
+      this.promptText.setText(`${GAME_CONFIG.characters[target].name} recupera toda su salud.`);
+      this.refreshHud();
+      this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+    });
   }
 
   private selectAllyTarget(target: CharacterId): void {
@@ -3117,18 +3266,20 @@ export default class CombatScene extends Phaser.Scene {
     this.phase = 'action';
     this.allyTargetingAbility = null;
     spendCost(this.state.party.sahira, ability);
-    this.state.party[target].shieldHits = 2;
-    this.setActorFrame('sahira', 'sahira_cura', 850);
-    this.soundscape.play(ability.sound);
-    this.showFloatingText(
-      'ESCUDO HIPOPÓTAMO · 2 GOLPES',
-      GAME_CONFIG.characters[target].x,
-      GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight * 0.7,
-      '#a8ffbd',
-    );
-    this.promptText.setText(`${GAME_CONFIG.characters[target].name} queda protegido de sus dos próximos ataques.`);
-    this.refreshHud();
-    this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+    this.returnCameraToArena(() => {
+      this.state.party[target].shieldHits = 2;
+      this.setActorFrame('sahira', 'sahira_cura', 850);
+      this.soundscape.play(ability.sound);
+      this.showFloatingText(
+        'ESCUDO HIPOPÓTAMO · 2 GOLPES',
+        GAME_CONFIG.characters[target].x,
+        GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight * 0.7,
+        '#a8ffbd',
+      );
+      this.promptText.setText(`${GAME_CONFIG.characters[target].name} queda protegido de sus dos próximos ataques.`);
+      this.refreshHud();
+      this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+    });
   }
 
   private finishPlayerAction(): void {
@@ -3455,16 +3606,8 @@ export default class CombatScene extends Phaser.Scene {
 
   private focusPlayerSelectionCamera(id: CharacterId): void {
     const character = GAME_CONFIG.characters[id];
-    const centerX = Phaser.Math.Clamp(
-      character.x + 200,
-      WIDTH / (2 * GAME_CONFIG.camera.playerZoom),
-      WIDTH - WIDTH / (2 * GAME_CONFIG.camera.playerZoom),
-    );
-    const centerY = Phaser.Math.Clamp(
-      character.feetY - character.displayHeight * 0.5,
-      HEIGHT / (2 * GAME_CONFIG.camera.playerZoom),
-      HEIGHT - HEIGHT / (2 * GAME_CONFIG.camera.playerZoom),
-    );
+    const centerX = character.x;
+    const centerY = character.feetY - character.displayHeight * 0.5;
     this.transitionCamera(centerX, centerY, GAME_CONFIG.camera.playerZoom);
     this.actorSprites[id].setTint(0xfff1c4);
   }
