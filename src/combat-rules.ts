@@ -1,12 +1,13 @@
-import { BossId, CharacterId, Direction, GAME_CONFIG } from './game-config';
+import { BossId, CharacterId, Direction, GAME_CONFIG, HazelForm } from './game-config';
 
 export type DefenseOutcome = 'perfect' | 'blocked' | 'failed';
 export type CombatResult = 'victory' | 'defeat';
-export type Resource = 'mana' | 'chaos';
+export type Resource = 'mana' | 'spirit' | 'chaos';
 
 export interface CharacterStatus {
   health: number;
   mana: number;
+  spirit: number;
   chaos: number;
   shieldHits: number;
 }
@@ -14,6 +15,11 @@ export interface CharacterStatus {
 export interface CombatState {
   party: Record<CharacterId, CharacterStatus>;
   bosses: Record<BossId, { health: number; armorBreak: boolean }>;
+  sahiraAbilityUses: {
+    healing: number;
+    shield: number;
+  };
+  hazelForm: HazelForm;
   kosmelysPortalShieldTurnsRemaining: number;
   divineRetributionTurnsRemaining: number;
 }
@@ -27,14 +33,18 @@ export const MAX_HEALTH: Record<CharacterId, number> = {
   dexios: GAME_CONFIG.characters.dexios.health,
   furai: GAME_CONFIG.characters.furai.health,
   sahira: GAME_CONFIG.characters.sahira.health,
+  hazel: GAME_CONFIG.characters.hazel.health,
 };
 
 export const MAX_MANA: Record<CharacterId, number> = {
   dexios: GAME_CONFIG.characters.dexios.mana,
-  furai: GAME_CONFIG.characters.furai.mana,
-  sahira: GAME_CONFIG.characters.sahira.mana,
+  furai: 0,
+  sahira: 0,
+  hazel: 0,
 };
 
+export const MAX_SPIRIT = GAME_CONFIG.characters.furai.spirit;
+export const SAHIRA_ABILITY_USE_LIMITS = { healing: 2, shield: 10 } as const;
 export const MAX_CHAOS = 100;
 export const MAX_IOBRONTES_HEALTH = GAME_CONFIG.characters.iobrontes.health;
 export const MAX_KOSMELYS_HEALTH = GAME_CONFIG.characters.kosmelys.health;
@@ -57,17 +67,56 @@ export const DEFENSE_WINDOW_END_MS =
 
 export const createCombatState = (): CombatState => ({
   party: {
-    dexios: { health: MAX_HEALTH.dexios, mana: MAX_MANA.dexios, chaos: 0, shieldHits: 0 },
-    furai: { health: MAX_HEALTH.furai, mana: MAX_MANA.furai, chaos: 0, shieldHits: 0 },
-    sahira: { health: MAX_HEALTH.sahira, mana: MAX_MANA.sahira, chaos: 0, shieldHits: 0 },
+    dexios: { health: MAX_HEALTH.dexios, mana: MAX_MANA.dexios, spirit: 0, chaos: 0, shieldHits: 0 },
+    furai: { health: MAX_HEALTH.furai, mana: 0, spirit: 0, chaos: 0, shieldHits: 0 },
+    sahira: { health: MAX_HEALTH.sahira, mana: 0, spirit: 0, chaos: 0, shieldHits: 0 },
+    hazel: { health: MAX_HEALTH.hazel, mana: 0, spirit: 0, chaos: 0, shieldHits: 0 },
   },
   bosses: {
     iobrontes: { health: MAX_IOBRONTES_HEALTH, armorBreak: false },
     kosmelys: { health: MAX_KOSMELYS_HEALTH, armorBreak: false },
   },
+  sahiraAbilityUses: {
+    healing: SAHIRA_ABILITY_USE_LIMITS.healing,
+    shield: SAHIRA_ABILITY_USE_LIMITS.shield,
+  },
+  hazelForm: 'ignis',
   kosmelysPortalShieldTurnsRemaining: 0,
   divineRetributionTurnsRemaining: 0,
 });
+
+export const canUseAbility = (
+  state: CombatState,
+  character: CharacterId,
+  ability: ResourceCost & { id: string },
+): boolean => {
+  if (!canAfford(state.party[character], ability)) {
+    return false;
+  }
+  if (ability.id === 'hippopotamus-healing') {
+    return state.sahiraAbilityUses.healing > 0;
+  }
+  if (ability.id === 'hippopotamus-shield') {
+    return state.sahiraAbilityUses.shield > 0;
+  }
+  return true;
+};
+
+export const consumeSahiraAbilityUse = (
+  state: CombatState,
+  abilityId: 'hippopotamus-healing' | 'hippopotamus-shield',
+): boolean => {
+  const ability = abilityId === 'hippopotamus-healing' ? 'healing' : 'shield';
+  if (state.sahiraAbilityUses[ability] <= 0) {
+    return false;
+  }
+  state.sahiraAbilityUses[ability] -= 1;
+  return true;
+};
+
+export const gainFuraiSpirit = (state: CombatState, amount: number): void => {
+  state.party.furai.spirit = Math.min(MAX_SPIRIT, state.party.furai.spirit + amount);
+};
 
 export const canAfford = (status: CharacterStatus, action: ResourceCost): boolean => {
   if (!action.resource) {
@@ -94,6 +143,19 @@ export const damageBoss = (
   const damage = Math.min(state.bosses[boss].health, Math.max(0, amount));
   state.bosses[boss].health -= damage;
   return damage;
+};
+
+export const damageBossWithArmorBreak = (
+  state: CombatState,
+  boss: BossId,
+  amount: number,
+): { damage: number; empowered: boolean } => {
+  const empowered = state.bosses[boss].armorBreak && amount > 0;
+  const damage = damageBoss(state, boss, amount * (empowered ? 2 : 1));
+  if (empowered && damage > 0) {
+    state.bosses[boss].armorBreak = false;
+  }
+  return { damage, empowered: empowered && damage > 0 };
 };
 
 export const damagePartyMember = (
@@ -160,6 +222,9 @@ export const damageForDefense = (
     return 0;
   }
   if (outcome === 'blocked') {
+    if (character === 'hazel') {
+      return ENEMY_ATTACK_DAMAGE;
+    }
     return character === 'sahira' ? 0 : IMPERFECT_BLOCK_DAMAGE;
   }
   return ENEMY_ATTACK_DAMAGE;

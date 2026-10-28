@@ -53,12 +53,66 @@ import furaiIcon from '../assets/furai/furai_icono.png';
 import sahiraIcon from '../assets/sahira/sahira_icono.png';
 import iobrontesIcon from '../assets/iobrontes/iobrontes_icono.png';
 import kosmelysIcon from '../assets/kosmelys/kosmelys_icono.png';
+import hazelFireIdle from '../assets/hazel/hazel__fuego_base.png';
+import hazelFireUp from '../assets/hazel/hazel__fuego_arriba.png';
+import hazelFireDown from '../assets/hazel/hazel__fuego_abajo.png';
+import hazelFireRight from '../assets/hazel/hazel__fuego_derecha.png';
+import hazelFireLeft from '../assets/hazel/hazel__fuego_izquierda.png';
+import hazelFireJump from '../assets/hazel/hazel__fuego_salto.png';
+import hazelFireHurt from '../assets/hazel/hazel_fuego_herida.png';
+import hazelFireAttack from '../assets/hazel/hazel_fuego_ataque_dance.png';
+import hazelIceIdle from '../assets/hazel/hazel_hielo_base.png';
+import hazelIceUp from '../assets/hazel/hazel_hielo_arriba.png';
+import hazelIceDown from '../assets/hazel/hazel_hielo_abajo.png';
+import hazelIceRight from '../assets/hazel/hazel_hielo_derecha.png';
+import hazelIceLeft from '../assets/hazel/hazel_hielo_izquierda.png';
+import hazelIceJump from '../assets/hazel/hazelo_hielo_salto.png';
+import hazelIceHurt from '../assets/hazel/hazel_hielo_herida.png';
+import hazelIceAttack from '../assets/hazel/hazel_hielo_ataque_shards.png';
+import hazelShift from '../assets/hazel/hazel_cambio.png';
+import hazelFireIcon from '../assets/hazel/hazel_fuego_icono.png';
+import hazelIceIcon from '../assets/hazel/hazel_hielo_icono.png';
+import fireImpact from '../assets/hazel/fuego.png';
+import weakFireImpact from '../assets/hazel/fuego_debil.png';
+import iceImpact from '../assets/hazel/hielo.png';
+import weakIceImpact from '../assets/hazel/hielo_debil.png';
 import iobrontesCover from '../assets/iobrontes/iobrontes_portada.png';
 import kosmelysCover from '../assets/kosmelys/kosmelys_portada.png';
 
-export type CharacterId = 'dexios' | 'furai' | 'sahira';
+export const GAME_FONT_FAMILY = 'Archeologicaps';
+export const PLAYABLE_CHARACTERS = ['furai', 'dexios', 'sahira', 'hazel'] as const;
+export type CharacterId = typeof PLAYABLE_CHARACTERS[number];
 export type BossId = 'iobrontes' | 'kosmelys';
 export type Direction = 'left' | 'right' | 'up' | 'down';
+export type HazelForm = 'ignis' | 'glacio';
+
+const hazelIgnisFrames = {
+  idle: 'hazel_fuego_base',
+  attack: 'hazel_fuego_dance',
+  shift: 'hazel_cambio',
+  hit: 'hazel_fuego_herida',
+  jump: 'hazel_fuego_salto',
+  defense: {
+    left: 'hazel_fuego_izquierda',
+    right: 'hazel_fuego_derecha',
+    up: 'hazel_fuego_arriba',
+    down: 'hazel_fuego_abajo',
+  },
+} as const;
+
+const hazelGlacioFrames = {
+  idle: 'hazel_hielo_base',
+  attack: 'hazel_hielo_shards',
+  shift: 'hazel_cambio',
+  hit: 'hazel_hielo_herida',
+  jump: 'hazel_hielo_salto',
+  defense: {
+    left: 'hazel_hielo_izquierda',
+    right: 'hazel_hielo_derecha',
+    up: 'hazel_hielo_arriba',
+    down: 'hazel_hielo_abajo',
+  },
+} as const;
 
 export const IMAGE_ASSETS = {
   arena,
@@ -67,6 +121,29 @@ export const IMAGE_ASSETS = {
   cosmic_effect: cosmicEffect,
   portal_effect: portalEffect,
   meteor_effect: meteorEffect,
+  hazel_fuego_base: hazelFireIdle,
+  hazel_fuego_ataque_dance: hazelFireAttack,
+  hazel_fuego_dance: hazelFireAttack,
+  hazel_cambio: hazelShift,
+  hazel_fuego_herida: hazelFireHurt,
+  hazel_fuego_salto: hazelFireJump,
+  hazel_fuego_arriba: hazelFireUp,
+  hazel_fuego_abajo: hazelFireDown,
+  hazel_fuego_derecha: hazelFireRight,
+  hazel_fuego_izquierda: hazelFireLeft,
+  hazel_hielo_base: hazelIceIdle,
+  hazel_hielo_ataque_shards: hazelIceAttack,
+  hazel_hielo_shards: hazelIceAttack,
+  hazel_hielo_herida: hazelIceHurt,
+  hazel_hielo_salto: hazelIceJump,
+  hazel_hielo_arriba: hazelIceUp,
+  hazel_hielo_abajo: hazelIceDown,
+  hazel_hielo_derecha: hazelIceRight,
+  hazel_hielo_izquierda: hazelIceLeft,
+  fuego: fireImpact,
+  fuego_debil: weakFireImpact,
+  hielo: iceImpact,
+  hielo_debil: weakIceImpact,
   dexios_abajo: dexiosDown,
   dexios_arriba: dexiosUp,
   dexios_ataque: dexiosAttack,
@@ -117,6 +194,8 @@ export const ICON_ASSETS = {
   dexios: dexiosIcon,
   furai: furaiIcon,
   sahira: sahiraIcon,
+  hazel: hazelFireIcon,
+  hazel_glacio: hazelIceIcon,
   iobrontes: iobrontesIcon,
   kosmelys: kosmelysIcon,
 } as const;
@@ -166,16 +245,18 @@ export const GAME_CONFIG = {
     kosmelysBreathingMs: 1750,
     kosmelysBreathingPixels: 4,
   },
-  partyOrder: ['furai', 'iobrontes', 'kosmelys', 'dexios', 'iobrontes', 'kosmelys', 'sahira', 'iobrontes', 'kosmelys'] as const,
+  partyOrder: ['furai', 'iobrontes', 'kosmelys', 'dexios', 'iobrontes', 'kosmelys', 'sahira', 'hazel', 'iobrontes', 'kosmelys'] as const,
+  hazelTurnPlacement: 'after-sahira (provisional)' as const,
   characters: {
     furai: {
       name: 'Furai',
       x: 255,
       feetY: 855,
       displayHeight: 500,
+      nameLabelX: 255,
       depth: 4,
       health: 80,
-      mana: 150,
+      spirit: 100,
       chaos: 0,
       frames: {
         idle: 'furai_base',
@@ -192,6 +273,7 @@ export const GAME_CONFIG = {
       x: 625,
       feetY: 900,
       displayHeight: 550,
+      nameLabelX: 625,
       depth: 5,
       health: 100,
       mana: 100,
@@ -211,9 +293,9 @@ export const GAME_CONFIG = {
       x: 995,
       feetY: 935,
       displayHeight: 580,
+      nameLabelX: 930,
       depth: 6,
       health: 125,
-      mana: 80,
       chaos: 0,
       frames: {
         idle: 'sahira_base',
@@ -224,12 +306,28 @@ export const GAME_CONFIG = {
         defense: { left: 'sahira_izquierda', right: 'sahira_derecha', up: 'sahira_arriba', down: 'sahira_abajo' },
       },
     },
+    hazel: {
+      name: 'Hazel Lancaster',
+      x: 1100,
+      feetY: 930,
+      displayHeight: 580,
+      nameLabelX: 1150,
+      depth: 7,
+      health: 80,
+      chaos: 0,
+      frames: hazelIgnisFrames,
+      forms: {
+        ignis: hazelIgnisFrames,
+        glacio: hazelGlacioFrames,
+      },
+    },
     iobrontes: {
       name: 'Iobrontes',
       title: 'God of Thunder · Tenth Heir of Zeus',
       x: 1240,
       feetY: 785,
       displayHeight: 535,
+      nameLabelX: 1240,
       depth: 2,
       health: 550,
       frames: {
@@ -246,6 +344,7 @@ export const GAME_CONFIG = {
       x: 1710,
       feetY: 785,
       displayHeight: 535,
+      nameLabelX: 1710,
       shadowWidth: 290,
       shadowHeight: 34,
       depth: 3,
@@ -311,7 +410,7 @@ export const GAME_CONFIG = {
     healthTextY: 61,
   },
   turnQueueHud: { x: 26, y: 110, iconSize: 60, gap: 8 },
-  partyHud: { x: 1520, y: 660, width: 385, height: 104, gap: 10, portraitSize: 68 },
+  partyHud: { x: 1520, y: 632, width: 385, height: 92, gap: 8, portraitSize: 68 },
   actionHud: { x: 320, y: 375, width: 440, height: 330 },
   bossTargetUi: {
     firstButtonX: 10,
@@ -336,16 +435,29 @@ export const GAME_CONFIG = {
     ],
     furai: [
       { id: 'tiger-spear', name: 'Tiger Spear', detail: '15 de daño', frame: 'furai_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xf3bf66, sound: 'furai' },
-      { id: 'tiger-fang', name: 'Tiger Fang', detail: '2 impactos · 15 de daño', frame: 'furai_tigre', damage: 15, hits: 2, resource: 'mana', cost: 20, selfDamage: 0, color: 0xdca7ff, sound: 'tigre' },
-      { id: 'armor-break', name: 'Armor Break', detail: 'Duplica el siguiente golpe', frame: 'furai_romper', damage: 0, hits: 0, resource: 'mana', cost: 20, selfDamage: 0, color: 0xc77cff, sound: 'tigre' },
+      { id: 'tiger-fang', name: 'Tiger Fang', detail: '2 impactos · 20 de daño', frame: 'furai_tigre', damage: 20, hits: 2, resource: 'spirit', cost: 20, selfDamage: 0, color: 0xdca7ff, sound: 'tigre' },
+      { id: 'armor-break', name: 'Armor Break', detail: 'Duplica el siguiente golpe', frame: 'furai_romper', damage: 0, hits: 0, resource: 'spirit', cost: 25, selfDamage: 0, color: 0xc77cff, sound: 'tigre' },
     ],
     sahira: [
       { id: 'jackal-strike', name: 'Jackal Strike', detail: '15 de daño', frame: 'sahira_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x65e5bd, sound: 'sahira' },
-      { id: 'hippopotamus-healing', name: 'Hippopotamus Healing', detail: 'Restaura toda la salud', frame: 'sahira_cura', damage: 0, hits: 0, resource: 'mana', cost: 40, selfDamage: 0, color: 0x63f0c0, sound: 'cura' },
+      { id: 'hippopotamus-healing', name: 'Hippopotamus Healing', detail: 'Restaura toda la salud', frame: 'sahira_cura', damage: 0, hits: 0, resource: null, cost: 0, selfDamage: 0, color: 0x63f0c0, sound: 'cura' },
       { id: 'hippopotamus-shield', name: 'Hippopotamus Shield', detail: 'Protege de los siguientes 2 ataques', frame: 'sahira_cura', damage: 0, hits: 0, resource: null, cost: 0, selfDamage: 0, color: 0x68d391, sound: 'cura' },
     ],
+    hazel: {
+      ignis: [
+        { id: 'flame-dance', name: 'Flame Dance', detail: '30 de daño a cada jefe vivo', frame: 'hazel_fuego_dance', damage: 30, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xff783d, sound: 'flame' },
+        { id: 'glacio-shift', name: 'Glacio Shift', detail: '10 de daño · cambia a Glacio', frame: 'hazel_cambio', damage: 10, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x8dd7ff, sound: 'shard' },
+      ],
+      glacio: [
+        { id: 'figure-shards', name: 'Figure Shards', detail: '60 de daño', frame: 'hazel_hielo_shards', damage: 60, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x76bdff, sound: 'shard' },
+        { id: 'ignis-shift', name: 'Ignis Shift', detail: '5 de daño a cada jefe vivo', frame: 'hazel_cambio', damage: 5, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xff783d, sound: 'flame' },
+      ],
+    },
   },
   audio: { master: 0.72, music: 0.36, effects: 0.58 },
 } as const;
 
-export type AbilityDefinition = typeof GAME_CONFIG.abilities[CharacterId][number];
+export type AbilityDefinition =
+  | (typeof GAME_CONFIG.abilities)[Exclude<CharacterId, 'hazel'>][number]
+  | (typeof GAME_CONFIG.abilities.hazel.ignis)[number]
+  | (typeof GAME_CONFIG.abilities.hazel.glacio)[number];

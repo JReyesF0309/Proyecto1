@@ -15,6 +15,9 @@ import sahiraSoundUrl from '../assets/sfx/sahira.mp3';
 import tigerSoundUrl from '../assets/sfx/tigre.mp3';
 import portalTeleportSoundUrl from '../assets/sfx/teleport_ataque.mp3';
 import thunderSoundUrl from '../assets/sfx/trueno.mp3';
+import flameSoundUrl from '../assets/sfx/flame.mp3';
+import shardSoundUrl from '../assets/sfx/shard.mp3';
+import shiftSoundUrl from '../assets/sfx/shift.mp3';
 
 type AssetSoundEffect =
   | 'dexios'
@@ -29,7 +32,10 @@ type AssetSoundEffect =
   | 'ataque_cosmico'
   | 'abrir_portal'
   | 'teleport_ataque'
-  | 'meteor_fall';
+  | 'meteor_fall'
+  | 'flame'
+  | 'shard'
+  | 'shift';
 type SoundEffect = 'lightning' | 'impact' | 'physical' | 'magic' | 'heal' | AssetSoundEffect;
 type MusicTrack = 'battle-thunder' | 'battle-cosmic' | 'victory';
 
@@ -87,6 +93,9 @@ export default class Soundscape {
       abrir_portal: new Audio(portalOpenSoundUrl),
       teleport_ataque: new Audio(portalTeleportSoundUrl),
       meteor_fall: new Audio(meteorFallSoundUrl),
+      flame: new Audio(flameSoundUrl),
+      shard: new Audio(shardSoundUrl),
+      shift: new Audio(shiftSoundUrl),
     };
     Object.values(this.soundEffects).forEach((effect) => {
       effect.preload = 'auto';
@@ -160,6 +169,9 @@ export default class Soundscape {
       || effect === 'abrir_portal'
       || effect === 'teleport_ataque'
       || effect === 'meteor_fall'
+      || effect === 'flame'
+      || effect === 'shard'
+      || effect === 'shift'
     ) {
       this.playAssetSound(effect);
     } else if (effect === 'lightning') {

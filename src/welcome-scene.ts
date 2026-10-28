@@ -1,17 +1,20 @@
 import Phaser from 'phaser';
-import { COVER_ASSETS, GAME_CONFIG } from './game-config';
+import { COVER_ASSETS, GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
 import stripBlackMattes from './strip-black-matte';
+import welcomeMusicUrl from '../assets/music/start.mp3';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
 const WHITE = '#fffaf0';
 const GOLD = 0xe7bd65;
-const FONT = '"Palatino Linotype", "Book Antiqua", Georgia, serif';
+const FONT = GAME_FONT_FAMILY;
+const WELCOME_FONT_SIZE = '27px';
 
 export default class WelcomeScene extends Phaser.Scene {
   private readonly onEnter = (): void => {
     this.startCombat();
   };
+  private welcomeMusic?: Phaser.Sound.BaseSound;
 
   constructor() {
     super({ key: 'escena_bienvenida' });
@@ -20,9 +23,15 @@ export default class WelcomeScene extends Phaser.Scene {
   preload(): void {
     this.load.image('iobrontes_portada', COVER_ASSETS.iobrontes);
     this.load.image('kosmelys_portada', COVER_ASSETS.kosmelys);
+    this.load.audio('welcome-music', welcomeMusicUrl);
   }
 
   create(): void {
+    this.welcomeMusic = this.sound.add('welcome-music', {
+      loop: true,
+      volume: GAME_CONFIG.audio.music,
+    });
+    this.welcomeMusic.play();
     stripBlackMattes(this.textures, ['iobrontes_portada', 'kosmelys_portada']);
     this.createBackground();
     this.createPortraits();
@@ -35,6 +44,7 @@ export default class WelcomeScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ENTER', this.onEnter, this);
       this.input.off('pointerdown', this.onEnter, this);
+      this.welcomeMusic?.stop();
     });
   }
 
@@ -70,7 +80,7 @@ export default class WelcomeScene extends Phaser.Scene {
   private createWelcomeText(): void {
     this.add.text(WIDTH / 2, 48, 'LA DEXÍADA', {
       fontFamily: FONT,
-      fontSize: '51px',
+      fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
       letterSpacing: 9,
       color: WHITE,
@@ -81,7 +91,7 @@ export default class WelcomeScene extends Phaser.Scene {
 
     this.add.text(WIDTH / 2, 103, 'CHAPTER XXIX  ·  THE COSMIC RAY', {
       fontFamily: FONT,
-      fontSize: '25px',
+      fontSize: WELCOME_FONT_SIZE,
       letterSpacing: 5,
       color: WHITE,
       align: 'center',
@@ -93,7 +103,7 @@ export default class WelcomeScene extends Phaser.Scene {
       'Welcome, warrior, to a turn-based RPG with real-time defense.\nRespond to each attack according to its direction.',
       {
         fontFamily: FONT,
-        fontSize: '27px',
+        fontSize: WELCOME_FONT_SIZE,
         color: WHITE,
         align: 'center',
         lineSpacing: 12,
@@ -103,7 +113,7 @@ export default class WelcomeScene extends Phaser.Scene {
 
     this.add.text(WIDTH / 2, 293, 'DEFEND IN THE DIRECTION OF THE ATTACK', {
       fontFamily: FONT,
-      fontSize: '20px',
+      fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
       letterSpacing: 3,
       color: WHITE,
@@ -111,25 +121,25 @@ export default class WelcomeScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(2);
 
     this.add.text(
-      WIDTH / 2 + 150,
-      430,
-      'Use it when an attack targets\nthe entire party.',
+      WIDTH / 2,
+      484,
+      'Use it when an attack targets the entire party.',
       {
         fontFamily: FONT,
-        fontSize: '21px',
+        fontSize: WELCOME_FONT_SIZE,
         color: WHITE,
-        align: 'left',
-        lineSpacing: 8,
+        align: 'center',
       },
-    ).setOrigin(0, 0.5).setDepth(2);
+    ).setOrigin(0.5).setDepth(2);
+    this.createTargetSelectionInstructions(WIDTH / 2, 520);
 
     this.add.text(
       WIDTH / 2,
-      533,
+      568,
       'A shrinking circle reveals the timing.\nBlock normally, or strike at the perfect moment.',
       {
         fontFamily: FONT,
-        fontSize: '23px',
+        fontSize: WELCOME_FONT_SIZE,
         color: WHITE,
         align: 'center',
         lineSpacing: 10,
@@ -143,7 +153,7 @@ export default class WelcomeScene extends Phaser.Scene {
       'Face two formidable bosses with four heroes.\nEach hero has a distinct strategy and mechanics',
       {
         fontFamily: FONT,
-        fontSize: '23px',
+        fontSize: WELCOME_FONT_SIZE,
         color: WHITE,
         align: 'center',
         lineSpacing: 10,
@@ -153,7 +163,7 @@ export default class WelcomeScene extends Phaser.Scene {
 
     this.add.text(WIDTH / 2, 855, 'MAY THE GODS GUIDE YOU, WARRIOR', {
       fontFamily: FONT,
-      fontSize: '21px',
+      fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
       letterSpacing: 4,
       color: WHITE,
@@ -191,12 +201,54 @@ export default class WelcomeScene extends Phaser.Scene {
       .setDepth(2);
     this.add.text(centerX, spaceY, 'SPACE BAR', {
       fontFamily: FONT,
-      fontSize: '19px',
+      fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
       letterSpacing: 5,
       color: '#f5d47d',
       align: 'center',
     }).setOrigin(0.5).setDepth(3);
+  }
+
+  private createTargetSelectionInstructions(centerX: number, y: number): void {
+    const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontFamily: FONT,
+      fontSize: WELCOME_FONT_SIZE,
+      color: WHITE,
+    };
+    const gap = 5;
+    const parts: Array<{ type: 'text' | 'key'; value: string }> = [
+      { type: 'text', value: 'You can choose between attacks and objectives with ' },
+      { type: 'key', value: '1' },
+      { type: 'text', value: ', ' },
+      { type: 'key', value: '2' },
+      { type: 'text', value: ' or ' },
+      { type: 'key', value: '3' },
+      { type: 'text', value: ' or with the mouse.' },
+    ];
+    const textParts = parts.map((part) => part.type === 'text'
+      ? this.add.text(0, y, part.value, textStyle).setOrigin(0, 0.5).setDepth(2)
+      : null);
+    const keyWidth = 40;
+    const keyHeight = 40;
+    const totalWidth = parts.reduce((width, part, index) => (
+      width
+      + (part.type === 'key' ? keyWidth : textParts[index]!.width)
+      + (index < parts.length - 1 ? gap : 0)
+    ), 0);
+    let x = centerX - totalWidth / 2;
+    parts.forEach((part, index) => {
+      if (part.type === 'key') {
+        this.createKeycap(part.value, x + keyWidth / 2, y, keyWidth, keyHeight);
+        x += keyWidth;
+      } else {
+        const text = textParts[index]!;
+        text.setX(x);
+        x += text.width;
+      }
+      if (index < parts.length - 1) {
+        x += gap;
+      }
+    });
   }
 
   private createKeycap(
@@ -216,7 +268,7 @@ export default class WelcomeScene extends Phaser.Scene {
       .setDepth(2);
     this.add.text(x, y, label, {
       fontFamily: FONT,
-      fontSize: '30px',
+      fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
       color: '#f5d47d',
       align: 'center',
@@ -226,7 +278,7 @@ export default class WelcomeScene extends Phaser.Scene {
   private createContinuePrompt(): void {
     this.add.text(WIDTH / 2, 1017, 'PRESS ENTER OR CLICK TO BEGIN', {
       fontFamily: FONT,
-      fontSize: '18px',
+      fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
       letterSpacing: 4,
       color: WHITE,
