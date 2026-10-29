@@ -297,7 +297,7 @@ export const GAME_CONFIG = {
     kosmelysBreathingMs: 1750,
     kosmelysBreathingPixels: 4,
   },
-  partyOrder: ['furai', 'iobrontes', 'kosmelys', 'dexios', 'iobrontes', 'kosmelys', 'sahira', 'hazel', 'iobrontes', 'kosmelys'] as const,
+  partyOrder: ['furai', 'iobrontes', 'kosmelys', 'dexios', 'iobrontes', 'kosmelys', 'sahira', 'iobrontes', 'kosmelys', 'hazel', 'iobrontes', 'kosmelys'] as const,
   hazelTurnPlacement: 'after-sahira (provisional)' as const,
   characters: {
     furai: {

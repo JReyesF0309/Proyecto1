@@ -1317,7 +1317,9 @@ export default class CombatScene extends Phaser.Scene {
       if (!actor) {
         return;
       }
-      slot.portrait.setTexture(`icon_${actor}`);
+      slot.portrait.setTexture(
+        actor === 'hazel' && this.state.hazelForm === 'glacio' ? 'icon_hazel_glacio' : `icon_${actor}`,
+      );
       slot.portrait.setDisplaySize(index === 0 ? 56 : 50, index === 0 ? 56 : 50);
       slot.label.setText(actor.toUpperCase());
       slot.label.setColor(index === 0 ? '#fff0bd' : '#c5bacb');
