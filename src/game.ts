@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import CombatScene from './combat-scene';
+import HazelTestScene from './hazel-test-scene';
 import { GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
 import WelcomeScene from './welcome-scene';
 
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: false,
     roundPixels: false,
   },
-  scene: [WelcomeScene, CombatScene],
+  scene: [WelcomeScene, CombatScene, HazelTestScene],
 };
 
 await document.fonts.load(`16px "${GAME_FONT_FAMILY}"`);

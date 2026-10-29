@@ -3466,4 +3466,486 @@ After implementing these corrections, verify the following:
 14. Both boss Health bars remain visible and update during player actions, including each hit in a multi-hit attack.
 15. Healing, shielding, resource calculations, turn order, defensive timing, boss behavior, and existing damage rules remain unchanged.
 
-The battlefield coordinates and target visible heights are stored in `GAME_CONFIG`. Sprite sizing uses each frame's non-transparent pixel bounds, preserves its aspect ratio, and anchors the visible feet to the configured ground position.
+Combat sprites for Dexios, Furai, Sahira, Hazel, Iobrontes, and Kosmelys are generated as transparent 1536 × 1536 PNGs in `assets/normalized/`; the original artwork remains untouched. Run `.\scripts\normalize-character-sprites.ps1` to reproduce them. Normalized frames share the configured 1320 ground baseline and reference visible height in `GAME_CONFIG`, so Phaser uses one character scale without rescanning alpha bounds at runtime. The party spacing follows `bocetos/boceto_combate.jpeg`; compact numeric HUD values use a readable UI font, while decorative text retains Archeologicaps. Per-frame exceptions live in `GAME_CONFIG.sprite.frameScale` (Dexios and Hazel Ignis/Glacio defense frames at 50% or 110%). Hazel's attack frames are `hazel_fuego_dance` and `hazel_hielo_shards`, held for `GAME_CONFIG.timing.hazelAttackPoseMs` before returning to idle. Pressing H on the welcome scene opens `escena_pruebahazel` (`src/hazel-test-scene.ts`), a sandbox with Hazel's forms, abilities, targeting, jump, and free W/A/S/D dodge poses against two refilling boss dummies.
+
+# LA DEXÍADA — CHARACTER SPRITE NORMALIZATION AND UI FIXES
+
+## IMPORTANT INSTRUCTIONS
+
+The current Phaser combat prototype is functional. All existing gameplay mechanics must remain unchanged.
+
+Your task is to correct the visual issues affecting character proportions, sprite consistency, battlefield positioning, and text readability.
+
+**Do not rebuild the game from scratch.**
+
+Do not modify:
+- Combat mechanics or damage calculations.
+- Character abilities or resource costs.
+- Boss behavior or attack probabilities.
+- Turn order.
+- Defensive timing windows.
+- Music or sound effects.
+- Existing gameplay functionality.
+
+Work only on the visual corrections described below.
+
+Before modifying files, inspect the current sprite loading, scaling, positioning, rendering, and UI systems.
+
+Make a backup or use version control so the original assets and implementation can be restored if necessary.
+
+---
+
+# 1. NORMALIZE CHARACTER SPRITES TO 1536 × 1536
+
+The current game suffers from inconsistent character scaling because the supplied sprites have different canvas dimensions, transparent margins, and visible character bounds.
+
+Normalize the major combat character frames using a consistent transparent canvas measuring:
+
+**1536 × 1536 pixels**
+
+This applies to:
+- Dexios
+- Furai
+- Sahira
+- Hazel  — Ignis and Glacio
+- Iobrontes
+- Kosmelys
+
+## 1.1. Image Processing
+
+For each character sprite:
+
+1. Load the original PNG.
+2. Detect its visible nontransparent content.
+3. Determine the appropriate character bounds.
+4. Scale the visible character proportionally to a consistent reference size for that character.
+5. Preserve the original aspect ratio.
+6. Position the artwork inside a transparent 1536 × 1536 canvas.
+7. Maintain consistent alignment between frames belonging to the same character.
+8. Export the normalized sprite as a new PNG.
+
+Do not stretch, deform, crop, or distort the original artwork.
+
+Do not automatically enlarge every character to fill the entire canvas.
+
+## 1.2. Preserve Original Assets
+
+Do not overwrite or delete the original PNG files.
+
+Store normalized sprites in separate directories, such as:
+
+`assets/normalized/dexios/`
+
+`assets/normalized/furai/`
+
+`assets/normalized/sahira/`
+
+`assets/normalized/hazel/`
+
+`assets/normalized/iobrontes/`
+
+`assets/normalized/kosmelys/`
+
+Preserve the existing filenames so they can be associated with the correct animation states.
+
+Update the asset manifest to reference normalized sprites.
+
+Do not change unrelated assets, such as projectile effects, attack illustrations, UI icons, backgrounds, or music.
+
+## 1.3. Consistent Character Scaling
+
+Every frame belonging to the same character must maintain a consistent apparent anatomical size.
+
+For example, Hazel must not become larger or smaller when switching between:
+
+- Ignis idle.
+- Glacio idle.
+- Directional defenses.
+- Attacks.
+- Transformations.
+- Damaged frames.
+- Jump frames.
+
+Use the standing idle sprite as the primary reference for each character's body proportions.
+
+For extended poses, attacks, and jumps, preserve their intended movement and silhouette rather than forcing their visible bounds to match the idle frame.
+
+If a pose requires more space, adjust its internal offset without changing the character's anatomical scale.
+
+## 1.4. Ground Alignment
+
+For standing animations, align the character's feet to a consistent internal baseline.
+
+Use a configurable reference such as:
+
+`groundBaselineY = 1320`
+
+within the 1536 × 1536 canvas.
+
+This value is a starting reference and may be adjusted.
+
+Jumping animations must preserve their intended vertical displacement relative to the character's normal ground position.
+
+Do not artificially place the feet of a jumping character on the ground.
+
+The character's game-world ground anchor must remain stable during animation changes.
+
+## 1.5. Phaser Scaling
+
+After normalization:
+
+- Use one primary scale configuration per character.
+- Preserve a consistent ground origin.
+- Use configurable frame-specific offsets only when necessary.
+- Do not automatically assume that all 1536 × 1536 images must have the same displayed size.
+- Do not apply a second alpha-bounds normalization that reverses the normalization performed on the images.
+
+All normalizing and scaling operations must be deterministic and reproducible.
+
+Avoid expensive image processing during gameplay. Prepare normalized sprites as assets before runtime.
+
+---
+
+# 2. CORRECT THE BATTLEFIELD FORMATION
+
+The current battlefield contains an important positioning issue:
+
+**Hazel Lancaster overlaps Sahira.**
+
+This must be corrected.
+
+## 2.1. Authoritative Reference
+
+Use the existing file:
+
+`boceto_combate.jpeg`
+
+as the primary reference for character positions, relative sizes, camera perspective, and battlefield composition.
+
+Inspect this image before changing any positions.
+
+The current game must follow the reference rather than inventing a new formation.
+
+If the reference cannot be found, report that instead of guessing.
+
+## 2.2. Hazel and Sahira
+
+Hazel and Sahira must have separate, clearly readable silhouettes.
+
+Correct:
+
+- Horizontal position.
+- Vertical position.
+- Ground anchoring.
+- Character scale.
+- Sprite draw depth.
+- Associated character name labels.
+
+Hazel must not visually cover Sahira's body or make her difficult to distinguish.
+
+Preserve the overall party formation and perspective established by `boceto_combate.jpeg`.
+
+## 2.3. Perspective
+
+The game must preserve its foreground/background depth.
+
+Characters closer to the camera may appear larger.
+
+Characters farther away may appear smaller.
+
+However, this scaling must be consistent with the supplied composition reference.
+
+Do not make characters unnaturally large or small simply to compensate for transparent PNG margins.
+
+## 2.4. Camera
+
+Preserve the current cinematic camera system.
+
+Do not change its gameplay behavior.
+
+Ensure the corrected character positions remain visually appropriate during:
+
+- Normal battlefield view.
+- Ability selection.
+- Enemy targeting.
+- Defensive sequences.
+- Attack animations.
+
+Character name labels must not overlap one another.
+
+---
+
+# 3. FIX HAZEL'S ELEMENTAL ANIMATION BUG
+
+Hazel currently displays an Ignis sprite for a fraction of a second when performing a defensive action in Glacio mode.
+
+This must be corrected.
+
+Her current elemental form must determine the sprite used from the very first frame.
+
+## 3.1. Required Behavior
+
+When Hazel is in Glacio mode, all defensive, jumping, damaged, and idle states must use Glacio sprites.
+
+When Hazel is in Ignis mode, those states must use Ignis sprites.
+
+The game must never temporarily display the opposite form.
+
+## 3.2. Technical Correction
+
+Inspect the animation state machine and eliminate any hard-coded fallback to Ignis.
+
+Use Hazel's current elemental mode as the authoritative state.
+
+Ensure that:
+
+- The correct frame is selected before the animation becomes visible.
+- Previous animation callbacks cannot restore an outdated elemental sprite.
+- Returning to idle always uses the current form.
+- Jumping and taking damage do not reset the elemental mode.
+- The transformation updates the animation state and HUD consistently.
+
+Preserve Hazel's existing defensive rules and elemental abilities.
+
+---
+
+# 4. FIX NUMERICAL TEXT RENDERING
+
+The current interface displays many numeric values using glyphs that resemble Roman numerals or decorative symbols.
+
+This makes the gameplay information difficult to understand.
+
+All game values must be displayed using standard readable digits:
+
+**0 1 2 3 4 5 6 7 8 9**
+
+## 4.1. Font Policy
+
+Continue using the supplied font:
+
+`Archeologicaps.ttf`
+
+for decorative and thematic text, including:
+
+- Character names.
+- Boss names.
+- Titles.
+- Attack names.
+- Turn announcements.
+- Status labels.
+- Main menu headings.
+
+However, use a clear, readable interface font for numerical values and very small text.
+
+This applies to:
+
+- Health numbers.
+- Mana numbers.
+- Chaos numbers.
+- Spirit numbers.
+- Damage numbers.
+- Ability costs.
+- Boss Health values.
+- Small ability descriptions.
+
+Do not use Roman numeral conversion or substitute decorative glyphs for numeric values.
+
+If the font itself contains stylized numeral glyphs, use a different font for numeric data.
+
+## 4.2. Layout
+
+After applying the fonts:
+
+- Adjust text sizes.
+- Correct letter spacing.
+- Remove clipping.
+- Align values inside their corresponding panels.
+- Avoid overlapping text.
+- Ensure values remain readable during camera movement.
+
+Dynamic numbers must continue updating normally.
+
+---
+
+# 5. ADDITIONAL HUD CORRECTIONS
+
+## 5.1. Furai
+
+The name of Furai's resource must be displayed exactly as:
+
+**ESPÍRITU**
+
+Remove longer variations such as "Energía espiritual".
+
+Preserve the existing resource values and mechanics.
+
+## 5.2. Hazel
+
+Hazel's elemental status indicator must be:
+
+- Larger.
+- Horizontally centered.
+- Easy to read.
+- Clearly separated from her Health bar.
+
+Display:
+
+**IGNIS** in orange.
+
+**GLACIO** in light blue.
+
+The indicator and character portrait must update immediately after transformation.
+
+Hazel must not have a Mana bar.
+
+## 5.3. Sahira's Ally Selection Menu
+
+When Sahira uses Hippopotamus Healing or Hippopotamus Shield, the ally selection panel must show:
+
+1. Furai
+2. Dexios
+3. Sahira
+4. Hazel Lancaster
+
+Arrange all four options vertically.
+
+Ensure every option fits completely inside the panel.
+
+The fourth option must not overflow its container.
+
+Use consistent spacing, widths, heights, and typography.
+
+Preserve keyboard and mouse selection.
+
+## 5.4. Boss Health Bars
+
+Iobrontes's and Kosmelys's Health bars must remain visible during all player actions, including:
+
+- Ability selection.
+- Target selection.
+- Offensive timing.
+- Attack animations.
+- Damage resolution.
+- Multi-hit sequences.
+- Elemental transformations.
+
+Keep both Health bars in a persistent screen-space HUD layer.
+
+Do not hide them during cinematic attacks or camera transitions.
+
+They must update after each damage event.
+
+---
+
+# 6. HAZEL AND ARMOR BREAK
+
+Hazel's offensive abilities must correctly consume Furai's Armor Break mark when damaging the marked boss.
+
+Apply the existing first-hit-only rule to multi-hit attacks.
+
+Expected damage:
+
+| Ability | Normal | Armor Break |
+|---|---|---|
+| Flame Dance | 30 per enemy | 60 to marked enemy |
+| Figure Shards | 60 | 120 |
+| Glacio Shift | 10 | 20 |
+| Ignis Shift | 5 per enemy | 10 to marked enemy |
+
+For area attacks, the damage multiplier applies only to the marked boss.
+
+The mark must only disappear when an eligible damaging ability successfully applies its amplified damage.
+
+If an attack fails its offensive timing or is redirected without damaging the marked boss, the mark remains active.
+
+Do not change the existing Armor Break balance or duration.
+
+---
+
+# 7. PERFORMANCE AND WORKFLOW REQUIREMENTS
+
+The previous large correction task caused prolonged execution and build problems.
+
+Avoid repeating this issue.
+
+Follow a controlled workflow:
+
+1. Inspect the affected files and existing architecture.
+2. Record the current working state using version control or a backup.
+3. Normalize the character sprites as a separate preparation stage.
+4. Verify the normalized assets visually before using them.
+5. Update character scaling and positioning.
+6. Fix text rendering and HUD layouts.
+7. Fix Hazel's animation and Armor Break integration.
+8. Run one build after each completed stage.
+9. Stop if a build fails and identify the exact error before continuing.
+
+Do not repeatedly rerun the same failing build without making a relevant correction.
+
+Do not modify unrelated systems.
+
+Do not generate new character artwork.
+
+Preserve the original visual designs supplied by the user.
+
+If sprite normalization creates excessive memory usage or rendering problems, do not force all normalized images to load at once. Report the issue and use a more efficient asset-loading approach while preserving the visual requirements.
+
+---
+
+# 8. FINAL VALIDATION
+
+Verify all of the following:
+
+1. All character frames use consistent 1536 × 1536 transparent canvases where applicable.
+2. Original assets are preserved.
+3. Normalized sprites are loaded correctly by Phaser.
+4. Character proportions are stable across animations.
+5. No character visually jumps in position due to inconsistent sprite margins.
+6. Hazel and Sahira no longer overlap.
+7. Battlefield positions follow `boceto_combate.jpeg`.
+8. Hazel uses the correct Glacio or Ignis defensive sprite immediately.
+9. Health, Mana, Chaos, Spirit, damage, and cost numbers are readable.
+10. Archeologicaps remains applied to decorative text.
+11. Furai's resource label reads ESPÍRITU.
+12. Hazel's elemental status is larger and centered.
+13. Sahira's ally selection menu contains four correctly arranged options.
+14. Both boss Health bars remain visible during player attacks.
+15. Hazel can consume Armor Break correctly.
+16. All existing gameplay mechanics remain functional.
+17. The existing turn order remains unchanged.
+18. The game runs successfully in the browser.
+19. The production build succeeds without errors.
+
+---
+
+# 9. UPDATE DESIGN.md
+
+Update the existing `DESIGN.md` to describe:
+
+- The new sprite normalization standard.
+- Character ground anchoring.
+- Visible-bounds-based scaling.
+- Battlefield positions based on `boceto_combate.jpeg`.
+- Hazel's corrected animation behavior.
+- The revised typography policy.
+- The corrected HUD layouts.
+- Persistent boss Health bars.
+- Hazel's Armor Break compatibility.
+
+Integrate these corrections into the corresponding existing sections.
+
+Do not append another duplicated specification at the end of the document.
+
+---
+
+# FINAL REQUIREMENT
+
+The existing game is playable.
+
+**Your goal is to improve its visual consistency and usability without breaking its combat systems.**
+
+Preserve the game's existing functionality.
+
+After each completed stage, report what was changed and whether the build succeeded.
+
+If a stage cannot be completed safely, stop and explain the blocker instead of continuing with potentially destructive modifications.

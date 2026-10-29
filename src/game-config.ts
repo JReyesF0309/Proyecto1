@@ -4,72 +4,72 @@ import tigerMark from '../assets/effects/tiger-mark.png';
 import cosmicEffect from '../assets/effects/cosmico.png';
 import portalEffect from '../assets/effects/portal.png';
 import meteorEffect from '../assets/effects/meteoro.png';
-import dexiosDown from '../assets/dexios/dexios_abajo.png';
-import dexiosUp from '../assets/dexios/dexios_arriba.png';
-import dexiosAttack from '../assets/dexios/dexios_ataque.png';
-import dexiosBase from '../assets/dexios/dexios_base.png';
-import dexiosWhite from '../assets/dexios/dexios_blanco.png';
-import dexiosRight from '../assets/dexios/dexios_derecha.png';
-import dexiosHit from '../assets/dexios/dexios_herido.png';
-import dexiosLeft from '../assets/dexios/dexios_izquierda.png';
-import dexiosJump from '../assets/dexios/dexios_salto.png';
-import dexiosRed from '../assets/dexios/dexios_rojo.png';
-import furaiDown from '../assets/furai/furai_abajo.png';
-import furaiUp from '../assets/furai/furai_arriba.png';
-import furaiAttack from '../assets/furai/furai_ataque.png';
-import furaiBase from '../assets/furai/furai_base.png';
-import furaiRight from '../assets/furai/furai_derecha.png';
-import furaiHit from '../assets/furai/furai_herido.png';
-import furaiLeft from '../assets/furai/furai_izquierda.png';
-import furaiJump from '../assets/furai/furai_salto.png';
-import furaiBreak from '../assets/furai/furai_romper.png';
-import furaiTiger from '../assets/furai/furai_tigre.png';
-import iobrontesArmor from '../assets/iobrontes/iobrontes_armadura.png';
-import iobrontesDown from '../assets/iobrontes/iobrontes_abajo.png';
-import iobrontesUp from '../assets/iobrontes/iobrontes_arriba.png';
-import iobrontesBase from '../assets/iobrontes/iobrontes_base.png';
-import iobrontesRight from '../assets/iobrontes/iobrontes_derecha.png';
-import iobrontesHit from '../assets/iobrontes/iobrontes_herido.png';
-import iobrontesLeft from '../assets/iobrontes/iobrontes_izquierda.png';
-import iobrontesWatchThunder from '../assets/iobrontes/iobrontes_wtt.png';
-import kosmelysBase from '../assets/kosmelys/kosmelys_base.png';
-import kosmelysRight from '../assets/kosmelys/kosmelys_derecha.png';
-import kosmelysLeft from '../assets/kosmelys/kosmelys_izquierda.png';
-import kosmelysUp from '../assets/kosmelys/kosmelys_arriba.png';
-import kosmelysShield from '../assets/kosmelys/kosmelys_escudo.png';
-import kosmelysMeteorRain from '../assets/kosmelys/kosmelys_mr.png';
-import kosmelysHit from '../assets/kosmelys/kosmelys_herida.png';
-import sahiraDown from '../assets/sahira/sahira_abajo.png';
-import sahiraUp from '../assets/sahira/sahira_arriba.png';
-import sahiraAttack from '../assets/sahira/sahira_ataque.png';
-import sahiraBase from '../assets/sahira/sahira_base.png';
-import sahiraRight from '../assets/sahira/sahira_derecha.png';
-import sahiraHit from '../assets/sahira/sahira_herida.png';
-import sahiraLeft from '../assets/sahira/sahira_izquierda.png';
-import sahiraHeal from '../assets/sahira/sahira_cura.png';
-import sahiraJump from '../assets/sahira/sahira_salto.png';
+import dexiosDown from '../assets/normalized/dexios/dexios_abajo.png';
+import dexiosUp from '../assets/normalized/dexios/dexios_arriba.png';
+import dexiosAttack from '../assets/normalized/dexios/dexios_ataque.png';
+import dexiosBase from '../assets/normalized/dexios/dexios_base.png';
+import dexiosWhite from '../assets/normalized/dexios/dexios_blanco.png';
+import dexiosRight from '../assets/normalized/dexios/dexios_derecha.png';
+import dexiosHit from '../assets/normalized/dexios/dexios_herido.png';
+import dexiosLeft from '../assets/normalized/dexios/dexios_izquierda.png';
+import dexiosJump from '../assets/normalized/dexios/dexios_salto.png';
+import dexiosRed from '../assets/normalized/dexios/dexios_rojo.png';
+import furaiDown from '../assets/normalized/furai/furai_abajo.png';
+import furaiUp from '../assets/normalized/furai/furai_arriba.png';
+import furaiAttack from '../assets/normalized/furai/furai_ataque.png';
+import furaiBase from '../assets/normalized/furai/furai_base.png';
+import furaiRight from '../assets/normalized/furai/furai_derecha.png';
+import furaiHit from '../assets/normalized/furai/furai_herido.png';
+import furaiLeft from '../assets/normalized/furai/furai_izquierda.png';
+import furaiJump from '../assets/normalized/furai/furai_salto.png';
+import furaiBreak from '../assets/normalized/furai/furai_romper.png';
+import furaiTiger from '../assets/normalized/furai/furai_tigre.png';
+import iobrontesArmor from '../assets/normalized/iobrontes/iobrontes_armadura.png';
+import iobrontesDown from '../assets/normalized/iobrontes/iobrontes_abajo.png';
+import iobrontesUp from '../assets/normalized/iobrontes/iobrontes_arriba.png';
+import iobrontesBase from '../assets/normalized/iobrontes/iobrontes_base.png';
+import iobrontesRight from '../assets/normalized/iobrontes/iobrontes_derecha.png';
+import iobrontesHit from '../assets/normalized/iobrontes/iobrontes_herido.png';
+import iobrontesLeft from '../assets/normalized/iobrontes/iobrontes_izquierda.png';
+import iobrontesWatchThunder from '../assets/normalized/iobrontes/iobrontes_wtt.png';
+import kosmelysBase from '../assets/normalized/kosmelys/kosmelys_base.png';
+import kosmelysRight from '../assets/normalized/kosmelys/kosmelys_derecha.png';
+import kosmelysLeft from '../assets/normalized/kosmelys/kosmelys_izquierda.png';
+import kosmelysUp from '../assets/normalized/kosmelys/kosmelys_arriba.png';
+import kosmelysShield from '../assets/normalized/kosmelys/kosmelys_escudo.png';
+import kosmelysMeteorRain from '../assets/normalized/kosmelys/kosmelys_mr.png';
+import kosmelysHit from '../assets/normalized/kosmelys/kosmelys_herida.png';
+import sahiraDown from '../assets/normalized/sahira/sahira_abajo.png';
+import sahiraUp from '../assets/normalized/sahira/sahira_arriba.png';
+import sahiraAttack from '../assets/normalized/sahira/sahira_ataque.png';
+import sahiraBase from '../assets/normalized/sahira/sahira_base.png';
+import sahiraRight from '../assets/normalized/sahira/sahira_derecha.png';
+import sahiraHit from '../assets/normalized/sahira/sahira_herida.png';
+import sahiraLeft from '../assets/normalized/sahira/sahira_izquierda.png';
+import sahiraHeal from '../assets/normalized/sahira/sahira_cura.png';
+import sahiraJump from '../assets/normalized/sahira/sahira_salto.png';
 import dexiosIcon from '../assets/dexios/dexios_icono.png';
 import furaiIcon from '../assets/furai/furai_icono.png';
 import sahiraIcon from '../assets/sahira/sahira_icono.png';
 import iobrontesIcon from '../assets/iobrontes/iobrontes_icono.png';
 import kosmelysIcon from '../assets/kosmelys/kosmelys_icono.png';
-import hazelFireIdle from '../assets/hazel/hazel__fuego_base.png';
-import hazelFireUp from '../assets/hazel/hazel__fuego_arriba.png';
-import hazelFireDown from '../assets/hazel/hazel__fuego_abajo.png';
-import hazelFireRight from '../assets/hazel/hazel__fuego_derecha.png';
-import hazelFireLeft from '../assets/hazel/hazel__fuego_izquierda.png';
-import hazelFireJump from '../assets/hazel/hazel__fuego_salto.png';
-import hazelFireHurt from '../assets/hazel/hazel_fuego_herida.png';
-import hazelFireAttack from '../assets/hazel/hazel_fuego_ataque_dance.png';
-import hazelIceIdle from '../assets/hazel/hazel_hielo_base.png';
-import hazelIceUp from '../assets/hazel/hazel_hielo_arriba.png';
-import hazelIceDown from '../assets/hazel/hazel_hielo_abajo.png';
-import hazelIceRight from '../assets/hazel/hazel_hielo_derecha.png';
-import hazelIceLeft from '../assets/hazel/hazel_hielo_izquierda.png';
-import hazelIceJump from '../assets/hazel/hazelo_hielo_salto.png';
-import hazelIceHurt from '../assets/hazel/hazel_hielo_herida.png';
-import hazelIceAttack from '../assets/hazel/hazel_hielo_ataque_shards.png';
-import hazelShift from '../assets/hazel/hazel_cambio.png';
+import hazelFireIdle from '../assets/normalized/hazel/hazel__fuego_base.png';
+import hazelFireUp from '../assets/normalized/hazel/hazel__fuego_arriba.png';
+import hazelFireDown from '../assets/normalized/hazel/hazel__fuego_abajo.png';
+import hazelFireRight from '../assets/normalized/hazel/hazel__fuego_derecha.png';
+import hazelFireLeft from '../assets/normalized/hazel/hazel__fuego_izquierda.png';
+import hazelFireJump from '../assets/normalized/hazel/hazel__fuego_salto.png';
+import hazelFireHurt from '../assets/normalized/hazel/hazel_fuego_herida.png';
+import hazelFireAttack from '../assets/normalized/hazel/hazel_fuego_dance.png';
+import hazelIceIdle from '../assets/normalized/hazel/hazel_hielo_base.png';
+import hazelIceUp from '../assets/normalized/hazel/hazel_hielo_arriba.png';
+import hazelIceDown from '../assets/normalized/hazel/hazel_hielo_abajo.png';
+import hazelIceRight from '../assets/normalized/hazel/hazel_hielo_derecha.png';
+import hazelIceLeft from '../assets/normalized/hazel/hazel_hielo_izquierda.png';
+import hazelIceJump from '../assets/normalized/hazel/hazelo_hielo_salto.png';
+import hazelIceHurt from '../assets/normalized/hazel/hazel_hielo_herida.png';
+import hazelIceAttack from '../assets/normalized/hazel/hazel_hielo_shards.png';
+import hazelShift from '../assets/normalized/hazel/hazel_cambio.png';
 import hazelFireIcon from '../assets/hazel/hazel_fuego_icono.png';
 import hazelIceIcon from '../assets/hazel/hazel_hielo_icono.png';
 import fireImpact from '../assets/hazel/fuego.png';
@@ -80,6 +80,24 @@ import iobrontesCover from '../assets/iobrontes/iobrontes_portada.png';
 import kosmelysCover from '../assets/kosmelys/kosmelys_portada.png';
 
 export const GAME_FONT_FAMILY = 'Archeologicaps';
+export const UI_FONT_FAMILY = 'Arial';
+export const NORMALIZED_SPRITE_KEYS = [
+  'dexios_abajo', 'dexios_arriba', 'dexios_ataque', 'dexios_base', 'dexios_blanco',
+  'dexios_derecha', 'dexios_herido', 'dexios_izquierda', 'dexios_salto', 'dexios_rojo',
+  'furai_abajo', 'furai_arriba', 'furai_ataque', 'furai_base', 'furai_derecha',
+  'furai_herido', 'furai_izquierda', 'furai_salto', 'furai_romper', 'furai_tigre',
+  'sahira_abajo', 'sahira_arriba', 'sahira_ataque', 'sahira_base', 'sahira_derecha',
+  'sahira_herida', 'sahira_izquierda', 'sahira_cura', 'sahira_salto',
+  'hazel_fuego_base', 'hazel_fuego_dance', 'hazel_cambio',
+  'hazel_fuego_herida', 'hazel_fuego_salto', 'hazel_fuego_arriba', 'hazel_fuego_abajo', 'hazel_fuego_derecha',
+  'hazel_fuego_izquierda',   'hazel_hielo_base', 'hazel_hielo_shards',
+  'hazel_hielo_herida', 'hazel_hielo_salto', 'hazel_hielo_arriba', 'hazel_hielo_abajo',
+  'hazel_hielo_derecha', 'hazel_hielo_izquierda', 'iobrontes_armadura',
+  'iobrontes_abajo', 'iobrontes_arriba', 'iobrontes_base', 'iobrontes_derecha',
+  'iobrontes_herido', 'iobrontes_izquierda', 'iobrontes_wtt', 'kosmelys_base',
+  'kosmelys_derecha', 'kosmelys_izquierda', 'kosmelys_arriba', 'kosmelys_escudo',
+  'kosmelys_mr', 'kosmelys_herida',
+] as const;
 export const PLAYABLE_CHARACTERS = ['furai', 'dexios', 'sahira', 'hazel'] as const;
 export type CharacterId = typeof PLAYABLE_CHARACTERS[number];
 export type BossId = 'iobrontes' | 'kosmelys';
@@ -122,7 +140,6 @@ export const IMAGE_ASSETS = {
   portal_effect: portalEffect,
   meteor_effect: meteorEffect,
   hazel_fuego_base: hazelFireIdle,
-  hazel_fuego_ataque_dance: hazelFireAttack,
   hazel_fuego_dance: hazelFireAttack,
   hazel_cambio: hazelShift,
   hazel_fuego_herida: hazelFireHurt,
@@ -132,7 +149,6 @@ export const IMAGE_ASSETS = {
   hazel_fuego_derecha: hazelFireRight,
   hazel_fuego_izquierda: hazelFireLeft,
   hazel_hielo_base: hazelIceIdle,
-  hazel_hielo_ataque_shards: hazelIceAttack,
   hazel_hielo_shards: hazelIceAttack,
   hazel_hielo_herida: hazelIceHurt,
   hazel_hielo_salto: hazelIceJump,
@@ -207,6 +223,22 @@ export const COVER_ASSETS = {
 
 export const GAME_CONFIG = {
   canvas: { width: 1920, height: 1080 },
+  sprite: {
+    canvasSize: 1536,
+    groundBaselineY: 1320,
+    referenceVisibleHeight: 1120,
+    frameScale: {
+      dexios_abajo: 0.5,
+      hazel_fuego_arriba: 0.65,
+      hazel_fuego_abajo: 0.65,
+      hazel_fuego_salto: 0.65,
+      hazel_hielo_arriba: 0.65,
+      hazel_hielo_abajo: 1.1,
+      hazel_hielo_derecha: 1.1,
+      hazel_hielo_salto: 0.8,
+      hazel_hielo_izquierda: 0.95,
+    } as Readonly<Record<string, number>>,
+  },
   camera: {
     targetZoom: 1.08,
     playerZoom: 1.6,
@@ -230,6 +262,7 @@ export const GAME_CONFIG = {
     jumpWindowMs: 300,
     jumpPoseMs: 700,
     attackHitIntervalMs: 260,
+    hazelAttackPoseMs: 700,
     attackRecoveryMs: 500,
     spritePoseMs: 650,
     cosmicPerfectParryWindowMs: 100,
@@ -251,8 +284,8 @@ export const GAME_CONFIG = {
     furai: {
       name: 'Furai',
       x: 255,
-      feetY: 855,
-      displayHeight: 500,
+      feetY: 820,
+      displayHeight: 480,
       nameLabelX: 255,
       depth: 4,
       health: 80,
@@ -272,7 +305,7 @@ export const GAME_CONFIG = {
       name: 'Dexios',
       x: 625,
       feetY: 900,
-      displayHeight: 550,
+      displayHeight: 520,
       nameLabelX: 625,
       depth: 5,
       health: 100,
@@ -290,10 +323,10 @@ export const GAME_CONFIG = {
     },
     sahira: {
       name: 'Sahira',
-      x: 995,
-      feetY: 935,
-      displayHeight: 580,
-      nameLabelX: 930,
+      x: 1000,
+      feetY: 975,
+      displayHeight: 555,
+      nameLabelX: 1000,
       depth: 6,
       health: 125,
       chaos: 0,
@@ -308,10 +341,10 @@ export const GAME_CONFIG = {
     },
     hazel: {
       name: 'Hazel Lancaster',
-      x: 1100,
-      feetY: 930,
-      displayHeight: 580,
-      nameLabelX: 1150,
+      x: 1375,
+      feetY: 1020,
+      displayHeight: 560,
+      nameLabelX: 1375,
       depth: 7,
       health: 80,
       chaos: 0,

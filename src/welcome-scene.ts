@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { COVER_ASSETS, GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
+import { COVER_ASSETS, GAME_CONFIG, GAME_FONT_FAMILY, UI_FONT_FAMILY } from './game-config';
 import stripBlackMattes from './strip-black-matte';
 import welcomeMusicUrl from '../assets/music/start.mp3';
 
@@ -13,6 +13,9 @@ const WELCOME_FONT_SIZE = '27px';
 export default class WelcomeScene extends Phaser.Scene {
   private readonly onEnter = (): void => {
     this.startCombat();
+  };
+  private readonly onHazelTest = (): void => {
+    this.scene.start('escena_pruebahazel');
   };
   private welcomeMusic?: Phaser.Sound.BaseSound;
 
@@ -40,9 +43,11 @@ export default class WelcomeScene extends Phaser.Scene {
     this.createContinuePrompt();
 
     this.input.keyboard?.on('keydown-ENTER', this.onEnter, this);
+    this.input.keyboard?.on('keydown-H', this.onHazelTest, this);
     this.input.on('pointerdown', this.onEnter, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ENTER', this.onEnter, this);
+      this.input.keyboard?.off('keydown-H', this.onHazelTest, this);
       this.input.off('pointerdown', this.onEnter, this);
       this.welcomeMusic?.stop();
     });
@@ -267,7 +272,7 @@ export default class WelcomeScene extends Phaser.Scene {
       .strokeRoundedRect(x - width / 2, y - height / 2, width, height, 10)
       .setDepth(2);
     this.add.text(x, y, label, {
-      fontFamily: FONT,
+      fontFamily: /^\d$/.test(label) ? UI_FONT_FAMILY : FONT,
       fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
       color: '#f5d47d',

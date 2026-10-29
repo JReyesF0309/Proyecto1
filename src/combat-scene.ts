@@ -7,7 +7,9 @@ import {
   GAME_FONT_FAMILY,
   ICON_ASSETS,
   IMAGE_ASSETS,
+  NORMALIZED_SPRITE_KEYS,
   PLAYABLE_CHARACTERS,
+  UI_FONT_FAMILY,
 } from './game-config';
 import type { HazelForm } from './game-config';
 import Soundscape from './soundscape';
@@ -46,6 +48,7 @@ import stripBlackMattes from './strip-black-matte';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
+const NORMALIZED_SPRITE_KEY_SET: ReadonlySet<string> = new Set(NORMALIZED_SPRITE_KEYS);
 const COLORS = {
   ink: 0x100e1b,
   panel: 0x171528,
@@ -80,6 +83,7 @@ type Ability =
   | (typeof GAME_CONFIG.abilities.hazel.ignis)[number]
   | (typeof GAME_CONFIG.abilities.hazel.glacio)[number];
 const PARTY_UI_ORDER = ['dexios', 'furai', 'sahira', 'hazel'] as const;
+const ALLY_TARGET_ORDER = ['furai', 'dexios', 'sahira', 'hazel'] as const;
 
 interface ActorFrames {
   idle: string;
@@ -87,13 +91,6 @@ interface ActorFrames {
   hit: string;
   jump: string;
   defense: Record<Direction, string>;
-}
-
-interface VisibleBounds {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
 }
 
 interface PartyCard {
@@ -176,7 +173,6 @@ export default class CombatScene extends Phaser.Scene {
   private actorNames!: Record<CharacterId, Phaser.GameObjects.Text>;
   private missingLabels!: Record<CharacterId, Phaser.GameObjects.Text>;
   private frameGeneration: Record<CharacterId, number> = { dexios: 0, furai: 0, sahira: 0, hazel: 0 };
-  private readonly visibleBounds = new Map<string, VisibleBounds>();
   private boss!: Phaser.GameObjects.Sprite;
   private kosmelysBoss!: Phaser.GameObjects.Sprite;
   private bossFrameGeneration = 0;
@@ -291,7 +287,9 @@ export default class CombatScene extends Phaser.Scene {
     this.soundscape = new Soundscape();
     stripBlackMattes(
       this.textures,
-      Object.keys(IMAGE_ASSETS).filter((key) => key !== 'arena'),
+      Object.keys(IMAGE_ASSETS).filter((key) =>
+        key !== 'arena' && !NORMALIZED_SPRITE_KEY_SET.has(key),
+      ),
     );
     this.createArena();
     this.createCharacters();
@@ -576,59 +574,20 @@ export default class CombatScene extends Phaser.Scene {
     height: number,
   ): void {
     if (!this.textures.exists(frame)) {
-      return;
+      throw new Error(`No se pudo cargar el fotograma ${frame}`);
     }
     const source = this.textures.get(frame).getSourceImage();
     if (!(source instanceof HTMLImageElement) && !(source instanceof HTMLCanvasElement)) {
       throw new Error(`No se pudo medir el fotograma ${frame}`);
     }
-    let bounds = this.visibleBounds.get(frame);
-    if (!bounds) {
-      const canvas = source instanceof HTMLCanvasElement
-        ? source
-        : Object.assign(document.createElement('canvas'), {
-          width: source.width,
-          height: source.height,
-        });
-      if (canvas !== source) {
-        const context = canvas.getContext('2d');
-        if (!context) {
-          throw new Error(`No se pudo medir el fotograma ${frame}`);
-        }
-        context.drawImage(source, 0, 0);
-      }
-      const context = canvas.getContext('2d', { willReadFrequently: true });
-      if (!context) {
-        throw new Error(`No se pudo medir el fotograma ${frame}`);
-      }
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-      bounds = {
-        left: canvas.width,
-        top: canvas.height,
-        right: -1,
-        bottom: -1,
-      };
-      for (let y = 0; y < canvas.height; y += 1) {
-        for (let x = 0; x < canvas.width; x += 1) {
-          if (pixels.data[(y * canvas.width + x) * 4 + 3] <= 8) {
-            continue;
-          }
-          bounds.left = Math.min(bounds.left, x);
-          bounds.top = Math.min(bounds.top, y);
-          bounds.right = Math.max(bounds.right, x + 1);
-          bounds.bottom = Math.max(bounds.bottom, y + 1);
-        }
-      }
-      if (bounds.right <= bounds.left || bounds.bottom <= bounds.top) {
-        throw new Error(`El fotograma ${frame} no contiene píxeles visibles`);
-      }
-      this.visibleBounds.set(frame, bounds);
+    const normalization = GAME_CONFIG.sprite;
+    if (source.width !== normalization.canvasSize || source.height !== normalization.canvasSize) {
+      throw new Error(`El fotograma ${frame} no está normalizado a ${normalization.canvasSize} × ${normalization.canvasSize}`);
     }
-    const visibleHeight = bounds.bottom - bounds.top;
-    const scale = height / visibleHeight;
+    const scale = height * (normalization.frameScale[frame] ?? 1) / normalization.referenceVisibleHeight;
     sprite
-      .setOrigin((bounds.left + bounds.right) / (2 * source.width), bounds.bottom / source.height)
-      .setDisplaySize(source.width * scale, source.height * scale);
+      .setOrigin(0.5, normalization.groundBaselineY / normalization.canvasSize)
+      .setDisplaySize(normalization.canvasSize * scale, normalization.canvasSize * scale);
   }
 
   private createHud(): void {
@@ -650,7 +609,7 @@ export default class CombatScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5).setDepth(24).setVisible(false);
     this.promptText = this.add.text(176, 143, '', {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '15px',
       color: '#e9dff1',
       stroke: '#171326',
@@ -694,7 +653,7 @@ export default class CombatScene extends Phaser.Scene {
     const actionLayout = GAME_CONFIG.actionHud;
     this.actionPanel = this.add.graphics().setDepth(20);
     this.targetText = this.add.text(actionLayout.x + actionLayout.width / 2, actionLayout.y - 28, '', {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '15px',
       fontStyle: 'bold',
       color: '#fff4d2',
@@ -853,6 +812,12 @@ export default class CombatScene extends Phaser.Scene {
     return GAME_CONFIG.characters[id].frames;
   }
 
+  private changeHazelForm(form: HazelForm): void {
+    this.state.hazelForm = form;
+    this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+    this.refreshHud();
+  }
+
   private createBossHud(id: BossId): BossHud {
     const layout = GAME_CONFIG.bossHud;
     const x = layout.x[id];
@@ -876,7 +841,7 @@ export default class CombatScene extends Phaser.Scene {
       color: '#c7afd8',
     }).setDepth(101);
     const selected = this.add.text(x + layout.healthTextX, y + 9, '', {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '12px',
       fontStyle: 'bold',
       color: '#fff0a5',
@@ -988,7 +953,13 @@ export default class CombatScene extends Phaser.Scene {
     background.fillRoundedRect(0, 0, width, 76, 8);
     background.lineStyle(2, color, 0.52);
     background.strokeRoundedRect(0, 0, width, 76, 8);
-    const name = this.add.text(15, 10, `${index + 1}   ${ability.name.toUpperCase()}`, {
+    const number = this.add.text(15, 10, `${index + 1}`, {
+      fontFamily: UI_FONT_FAMILY,
+      fontSize: '15px',
+      fontStyle: 'bold',
+      color: '#f3e9d6',
+    });
+    const name = this.add.text(42, 10, ability.name.toUpperCase(), {
       fontFamily: GAME_FONT_FAMILY,
       fontSize: '15px',
       fontStyle: 'bold',
@@ -1009,14 +980,14 @@ export default class CombatScene extends Phaser.Scene {
           ? `  ·  USOS ${this.state.sahiraAbilityUses.shield}/${SAHIRA_ABILITY_USE_LIMITS.shield}`
           : '';
     const detail = this.add.text(15, 42, `${ability.detail}  ·  ${costLabel}${usesLabel}`, {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '12px',
       color: '#d0c2dc',
     });
     const available = this.activeCharacter !== null
       && canUseAbility(this.state, this.activeCharacter, ability)
       && !this.cameraTransitioning;
-    const button = this.add.container(0, y, [background, name, detail])
+    const button = this.add.container(0, y, [background, number, name, detail])
       .setSize(width, 76)
       .setAlpha(available && this.phase === 'player' ? 1 : 0.42);
     button.setInteractive(
@@ -1081,7 +1052,9 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     if (this.phase === 'target-boss' && this.targetingAbility) {
-      this.targetText.setText('1 · IÓBRONTĒS     2 · KOSMELYS     ESC · BACK');
+      this.targetText
+        .setFontFamily(UI_FONT_FAMILY)
+        .setText('1 · IÓBRONTĒS     2 · KOSMELYS     ESC · BACK');
       return;
     }
     if (this.allyTargetingAbility) {
@@ -1099,7 +1072,7 @@ export default class CombatScene extends Phaser.Scene {
           color: shieldTargeting ? '#baffcb' : '#c8ffe9',
         },
       ));
-      PARTY_UI_ORDER.forEach((id, index) => {
+      ALLY_TARGET_ORDER.forEach((id, index) => {
         const health = this.state.party[id].health;
         this.createTargetButton(id, index, health > 0);
       });
@@ -1148,7 +1121,7 @@ export default class CombatScene extends Phaser.Scene {
       39,
       `${this.state.bosses[id].health} / ${MAX_BOSS_HEALTH[id]} HP`,
       {
-        fontFamily: GAME_FONT_FAMILY,
+        fontFamily: UI_FONT_FAMILY,
         fontSize: '13px',
         color: '#d0c2dc',
         align: 'center',
@@ -1172,7 +1145,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private createTargetButton(id: CharacterId, index: number, available: boolean): void {
     const layout = GAME_CONFIG.actionHud;
-    const count = PARTY_UI_ORDER.length;
+    const count = ALLY_TARGET_ORDER.length;
     const gap = 8;
     const top = 34;
     const availableHeight = layout.height - top - 51;
@@ -1186,7 +1159,7 @@ export default class CombatScene extends Phaser.Scene {
     background.lineStyle(2, available ? COLORS.teal : COLORS.red, 0.7);
     background.strokeRoundedRect(0, 0, width, height, 8);
     const label = this.add.text(width / 2, height / 2, `${index + 1}  ${GAME_CONFIG.characters[id].name.toUpperCase()}`, {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '17px',
       fontStyle: 'bold',
       color: available ? '#e7fff7' : '#918698',
@@ -1247,7 +1220,7 @@ export default class CombatScene extends Phaser.Scene {
       }
       const targetLabel = this.allyTargetingAbility
         ? status.health > 0
-          ? `Pulsa el panel o la tecla ${PARTY_UI_ORDER.indexOf(id) + 1} para elegir`
+          ? `Pulsa el panel o la tecla ${ALLY_TARGET_ORDER.indexOf(id) + 1} para elegir`
           : this.allyTargetingAbility === 'hippopotamus-shield'
             ? 'No se puede proteger'
             : 'No se puede reanimar'
@@ -1435,7 +1408,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private resourceStyle(color: string): Phaser.Types.GameObjects.Text.TextStyle {
     return {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '14px',
       fontStyle: 'bold',
       color,
@@ -2577,9 +2550,27 @@ export default class CombatScene extends Phaser.Scene {
           this.getActorFrames(id).jump,
           GAME_CONFIG.timing.jumpPoseMs,
         );
+        if (id === 'hazel') {
+          this.liftHazelJump();
+        }
       }
     });
     this.targetText.setText('¡SALTO!');
+  }
+
+  private liftHazelJump(): void {
+    const sprite = this.actorSprites.hazel;
+    const config = GAME_CONFIG.characters.hazel;
+    const jumpFrame = this.getActorFrames('hazel').jump;
+    const scale = GAME_CONFIG.sprite.frameScale[jumpFrame] ?? 1;
+    this.tweens.add({
+      targets: sprite,
+      y: config.feetY - config.displayHeight * scale * 0.5,
+      duration: GAME_CONFIG.timing.jumpPoseMs / 2,
+      ease: 'Sine.easeOut',
+      yoyo: true,
+      onComplete: () => sprite.setY(config.feetY),
+    });
   }
 
   private resolveWatchTheThunder(): void {
@@ -3152,9 +3143,7 @@ export default class CombatScene extends Phaser.Scene {
         if (this.phase !== 'action' || this.result) {
           return;
         }
-        this.state.hazelForm = 'glacio';
-        this.refreshHud();
-        this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+        this.changeHazelForm('glacio');
         this.soundscape.play('shard');
         this.launchHazelProjectile('hielo_debil', boss, () => {
           this.resolveHazelHit(boss, ability.damage, 'hielo_debil');
@@ -3188,9 +3177,7 @@ export default class CombatScene extends Phaser.Scene {
         if (this.phase !== 'action' || this.result) {
           return;
         }
-        this.state.hazelForm = 'ignis';
-        this.refreshHud();
-        this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+        this.changeHazelForm('ignis');
         this.releaseHazelAreaAttack(ability);
       });
       return;
@@ -3300,12 +3287,22 @@ export default class CombatScene extends Phaser.Scene {
     if (this.finishIfBattleEnded()) {
       return;
     }
-    this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
-    this.finishAbility('hazel', ability);
+    const attackFrame = this.getActorFrames('hazel').attack;
+    if (ability.frame !== attackFrame) {
+      this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+      this.finishAbility('hazel', ability);
+      return;
+    }
+    this.time.delayedCall(GAME_CONFIG.timing.hazelAttackPoseMs, () => {
+      if (this.phase !== 'action' || this.result) {
+        return;
+      }
+      this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+      this.finishAbility('hazel', ability);
+    });
   }
 
-  private launchHazelProjectile(
-    effect: string,
+  private launchHazelProjectile(    effect: string,
     boss: BossId,
     onImpact: () => void,
   ): void {
@@ -3785,7 +3782,7 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     if (this.allyTargetingAbility) {
-      const target = PARTY_UI_ORDER[Number(key) - 1];
+      const target = ALLY_TARGET_ORDER[Number(key) - 1];
       if (target) {
         this.selectAllyTarget(target);
       }
@@ -4027,7 +4024,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private showFloatingText(text: string, x: number, y: number, color: string): void {
     const label = this.add.text(x, y, text, {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '25px',
       fontStyle: 'bold',
       color,
@@ -4068,7 +4065,7 @@ export default class CombatScene extends Phaser.Scene {
     ).setDepth(character.depth + 10);
     const emblem = this.add.image(0, 0, 'hippo_mark').setDisplaySize(96, 96);
     const counter = this.add.text(40, -42, '2', {
-      fontFamily: GAME_FONT_FAMILY,
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '20px',
       fontStyle: 'bold',
       color: '#ffffff',
