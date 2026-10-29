@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import CombatScene from './combat-scene';
+import SelectScene from './select-scene';
 import HazelTestScene from './hazel-test-scene';
 import SahiraTestScene from './sahira-test-scene';
 import DexiosTestScene from './dexios-test-scene';
@@ -22,7 +23,7 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: false,
     roundPixels: false,
   },
-  scene: [WelcomeScene, CombatScene, HazelTestScene, SahiraTestScene, DexiosTestScene, FuraiTestScene],
+  scene: [WelcomeScene, SelectScene, CombatScene, HazelTestScene, SahiraTestScene, DexiosTestScene, FuraiTestScene],
 };
 
 await document.fonts.load(`16px "${GAME_FONT_FAMILY}"`);

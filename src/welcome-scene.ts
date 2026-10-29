@@ -12,19 +12,7 @@ const WELCOME_FONT_SIZE = '27px';
 
 export default class WelcomeScene extends Phaser.Scene {
   private readonly onEnter = (): void => {
-    this.startCombat();
-  };
-  private readonly onHazelTest = (): void => {
-    this.scene.start('escena_pruebahazel');
-  };
-  private readonly onSahiraTest = (): void => {
-    this.scene.start('escena_sahira_prueba');
-  };
-  private readonly onDexiosTest = (): void => {
-    this.scene.start('escena_dexios_prueba');
-  };
-  private readonly onFuraiTest = (): void => {
-    this.scene.start('escena_furai_prueba');
+    this.openSelect();
   };
   private welcomeMusic?: Phaser.Sound.BaseSound;
 
@@ -52,17 +40,9 @@ export default class WelcomeScene extends Phaser.Scene {
     this.createContinuePrompt();
 
     this.input.keyboard?.on('keydown-ENTER', this.onEnter, this);
-    this.input.keyboard?.on('keydown-H', this.onHazelTest, this);
-    this.input.keyboard?.on('keydown-S', this.onSahiraTest, this);
-    this.input.keyboard?.on('keydown-D', this.onDexiosTest, this);
-    this.input.keyboard?.on('keydown-F', this.onFuraiTest, this);
     this.input.on('pointerdown', this.onEnter, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ENTER', this.onEnter, this);
-      this.input.keyboard?.off('keydown-H', this.onHazelTest, this);
-      this.input.keyboard?.off('keydown-S', this.onSahiraTest, this);
-      this.input.keyboard?.off('keydown-D', this.onDexiosTest, this);
-      this.input.keyboard?.off('keydown-F', this.onFuraiTest, this);
       this.input.off('pointerdown', this.onEnter, this);
       this.welcomeMusic?.stop();
     });
@@ -310,7 +290,7 @@ export default class WelcomeScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(2);
   }
 
-  private startCombat(): void {
-    this.scene.start('escena_combate_dificil');
+  private openSelect(): void {
+    this.scene.start('escena_select');
   }
 }

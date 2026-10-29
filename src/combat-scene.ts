@@ -815,7 +815,7 @@ export default class CombatScene extends Phaser.Scene {
       'K · Ataque aleatorio de Kosmelys',
       ...(specialKey ? [specialKey] : []),
       'R · Reiniciar',
-      'ESC · Volver a la bienvenida',
+      'ESC · Volver a la selección',
       'La vida de todos se recupera automáticamente',
     ];
     this.add.text(26, 20, lines.join('\n'), {
@@ -4011,7 +4011,7 @@ export default class CombatScene extends Phaser.Scene {
     }
     if (this.practiceId) {
       if (key === 'escape' || event.code === 'Escape') {
-        this.scene.start('escena_bienvenida');
+        this.scene.start('escena_select');
         return;
       }
       if (key === 'r') {
