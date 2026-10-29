@@ -4,16 +4,23 @@ import {
   CharacterId,
   Direction,
   GAME_CONFIG,
+  GAME_FONT_FAMILY,
   ICON_ASSETS,
   IMAGE_ASSETS,
+  NORMALIZED_SPRITE_KEYS,
+  PLAYABLE_CHARACTERS,
+  UI_FONT_FAMILY,
 } from './game-config';
+import type { HazelForm } from './game-config';
 import Soundscape from './soundscape';
 import {
-  canAfford,
+  canUseAbility,
   CombatResult,
   CombatState,
+  consumeSahiraAbilityUse,
   createCombatState,
   damageBoss,
+  damageBossWithArmorBreak,
   damageForDefense,
   damageIobrontes,
   damagePartyMember,
@@ -22,14 +29,17 @@ import {
   DEFENSE_WINDOW_END_MS,
   DEFENSE_WINDOW_START_MS,
   getBattleResult,
+  gainFuraiSpirit,
   healPartyMember,
   MAX_CHAOS,
   MAX_HEALTH,
   MAX_BOSS_HEALTH,
   MAX_MANA,
+  MAX_SPIRIT,
   PERFECT_PARRY_DAMAGE,
   PERFECT_PARRY_WINDOW_START_MS,
   resolveDefense,
+  SAHIRA_ABILITY_USE_LIMITS,
   spendCost,
   WIND_UP_MS,
   PROJECTILE_TRAVEL_MS,
@@ -38,6 +48,7 @@ import stripBlackMattes from './strip-black-matte';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
+const NORMALIZED_SPRITE_KEY_SET: ReadonlySet<string> = new Set(NORMALIZED_SPRITE_KEYS);
 const COLORS = {
   ink: 0x100e1b,
   panel: 0x171528,
@@ -67,7 +78,20 @@ type CombatPhase =
   | 'jump-window'
   | 'resolving'
   | 'ended';
-type Ability = (typeof GAME_CONFIG.abilities)[CharacterId][number];
+type Ability =
+  | (typeof GAME_CONFIG.abilities)[Exclude<CharacterId, 'hazel'>][number]
+  | (typeof GAME_CONFIG.abilities.hazel.ignis)[number]
+  | (typeof GAME_CONFIG.abilities.hazel.glacio)[number];
+const PARTY_UI_ORDER = ['dexios', 'furai', 'sahira', 'hazel'] as const;
+const ALLY_TARGET_ORDER = ['furai', 'dexios', 'sahira', 'hazel'] as const;
+
+interface ActorFrames {
+  idle: string;
+  attack: string;
+  hit: string;
+  jump: string;
+  defense: Record<Direction, string>;
+}
 
 interface PartyCard {
   container: Phaser.GameObjects.Container;
@@ -148,7 +172,7 @@ export default class CombatScene extends Phaser.Scene {
   private breathingTweens!: Record<CharacterId, Phaser.Tweens.Tween>;
   private actorNames!: Record<CharacterId, Phaser.GameObjects.Text>;
   private missingLabels!: Record<CharacterId, Phaser.GameObjects.Text>;
-  private frameGeneration: Record<CharacterId, number> = { dexios: 0, furai: 0, sahira: 0 };
+  private frameGeneration: Record<CharacterId, number> = { dexios: 0, furai: 0, sahira: 0, hazel: 0 };
   private boss!: Phaser.GameObjects.Sprite;
   private kosmelysBoss!: Phaser.GameObjects.Sprite;
   private bossFrameGeneration = 0;
@@ -171,13 +195,17 @@ export default class CombatScene extends Phaser.Scene {
   private portalEffects: Phaser.GameObjects.Image[] = [];
   private soundscape!: Soundscape;
   private uiCamera!: Phaser.Cameras.Scene2D.Camera;
+  private overlayCamera!: Phaser.Cameras.Scene2D.Camera;
   private audioText!: Phaser.GameObjects.Text;
   private actionPanel!: Phaser.GameObjects.Graphics;
   private targetArrow!: Phaser.GameObjects.Text;
+  private enemyTargetArrows!: Phaser.GameObjects.Graphics;
   private backButton!: Phaser.GameObjects.Container;
   private spaceKeyBadge!: Phaser.GameObjects.Container;
+  private sahiraSpaceHint?: Phaser.GameObjects.Text;
   private cameraTransitioning = false;
   private previousTurnWasBoss = false;
+  private readonly hazelEffectObjects: Phaser.GameObjects.Image[] = [];
   private lastTurnActor: CharacterId | BossId | null = null;
   private activeBolt?: Phaser.GameObjects.Graphics;
   private attackDirection: Direction | null = null;
@@ -262,7 +290,9 @@ export default class CombatScene extends Phaser.Scene {
     this.soundscape = new Soundscape();
     stripBlackMattes(
       this.textures,
-      Object.keys(IMAGE_ASSETS).filter((key) => key !== 'arena'),
+      Object.keys(IMAGE_ASSETS).filter((key) =>
+        key !== 'arena' && !NORMALIZED_SPRITE_KEY_SET.has(key),
+      ),
     );
     this.createArena();
     this.createCharacters();
@@ -275,11 +305,15 @@ export default class CombatScene extends Phaser.Scene {
     this.uiCamera = this.cameras.add(0, 0, WIDTH, HEIGHT);
     this.cameras.main.ignore(hudObjects);
     this.uiCamera.ignore(battlefieldObjects);
+    this.overlayCamera = this.cameras.add(0, 0, WIDTH, HEIGHT);
+    this.overlayCamera.ignore([...battlefieldObjects, ...hudObjects]);
+    this.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, this.ignoreInOverlay, this);
 
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
     this.input.on('pointerdown', this.startAudio, this);
     this.input.on('pointerdown', this.handleUiPointer, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, this.ignoreInOverlay, this);
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
       this.input.off('pointerdown', this.startAudio, this);
       this.input.off('pointerdown', this.handleUiPointer, this);
@@ -287,10 +321,12 @@ export default class CombatScene extends Phaser.Scene {
     });
 
     this.refreshHud();
+    this.startAudio();
     this.startTurn();
   }
 
   update(): void {
+    this.updateEnemyTargetArrows();
     if (this.phase === 'target-boss') {
       this.positionBossTargetHud();
     }
@@ -312,18 +348,11 @@ export default class CombatScene extends Phaser.Scene {
       const elapsed = this.time.now - this.jumpWindowStartedAt;
       const progress = Phaser.Math.Clamp(elapsed / GAME_CONFIG.timing.jumpWindowMs, 0, 1);
       this.timingRing.clear();
-      this.timingRing.lineStyle(8, 0xffffff, 0.95);
-      (['furai', 'dexios', 'sahira'] as const).forEach((id) => {
+      PLAYABLE_CHARACTERS.forEach((id) => {
         if (this.state.party[id].health <= 0) {
           return;
         }
-        const character = GAME_CONFIG.characters[id];
-        this.timingRing.strokeEllipse(
-          character.x,
-          character.feetY - character.displayHeight * 0.53,
-          Phaser.Math.Linear(character.displayHeight * 0.78, 118, progress),
-          Phaser.Math.Linear(character.displayHeight * 1.02, 175, progress),
-        );
+        this.drawTimingRing(this.timingRing, id, progress, false);
       });
       return;
     }
@@ -336,19 +365,8 @@ export default class CombatScene extends Phaser.Scene {
     const inDefenseWindow = elapsed >= DEFENSE_WINDOW_START_MS && elapsed <= DEFENSE_WINDOW_END_MS;
     const isPerfectWindow =
       elapsed >= PERFECT_PARRY_WINDOW_START_MS && elapsed <= DEFENSE_WINDOW_END_MS;
-    const ringColor = isPerfectWindow ? 0xffffff : inDefenseWindow ? COLORS.yellow : 0xbdb6cf;
     const target = GAME_CONFIG.characters[this.targetCharacter];
-    const width = Phaser.Math.Linear(target.displayHeight * 0.78, 118, progress);
-    const height = Phaser.Math.Linear(target.displayHeight * 1.02, 175, progress);
-    this.timingRing.clear();
-    this.timingRing.lineStyle(isPerfectWindow ? 8 : 5, ringColor, isPerfectWindow ? 1 : 0.8);
-    this.timingRing.strokeEllipse(
-      target.x,
-      target.feetY - target.displayHeight * 0.53,
-      width,
-      height,
-    );
-    this.timingRing.setAlpha(isPerfectWindow ? 0.8 + Math.sin(this.time.now / 45) * 0.2 : 1);
+    this.drawTimingRing(this.timingRing, this.targetCharacter, progress);
 
     if (!this.responseDirection) {
       const timingLabel = isPerfectWindow
@@ -365,6 +383,78 @@ export default class CombatScene extends Phaser.Scene {
     }
   }
 
+  private ignoreInOverlay(object: Phaser.GameObjects.GameObject): void {
+    this.overlayCamera?.ignore(object);
+  }
+
+  // Muestra el objeto solo en la cámara superpuesta, por encima de la interfaz.
+  private promoteToOverlay<T extends Phaser.GameObjects.GameObject>(object: T): T {
+    this.cameras.main.ignore(object);
+    this.uiCamera.ignore(object);
+    object.cameraFilter &= ~this.overlayCamera.id;
+    return object;
+  }
+
+  private updateEnemyTargetArrows(): void {
+    const main = this.cameras.main;
+    this.overlayCamera.setZoom(main.zoom).setScroll(main.scrollX, main.scrollY);
+    const arrows = this.enemyTargetArrows;
+    arrows.clear();
+    const targets = new Set<CharacterId>();
+    if (this.phase === 'meteor-rain') {
+      this.meteorEvents.forEach((event) => {
+        if (!event.resolved) {
+          targets.add(event.target);
+        }
+      });
+    } else if (
+      this.targetCharacter
+      && (this.phase === 'casting' || this.phase === 'windup'
+        || this.phase === 'projectile' || this.phase === 'cosmic-rays')
+    ) {
+      targets.add(this.targetCharacter);
+    }
+    const bob = Math.sin(this.time.now / 140) * 8;
+    targets.forEach((id) => {
+      const character = GAME_CONFIG.characters[id];
+      const x = character.x;
+      const tipY = character.feetY - character.displayHeight - 8 + bob;
+      arrows.fillStyle(0x9dffb0, 1);
+      arrows.lineStyle(5, 0x171326, 1);
+      arrows.beginPath();
+      arrows.moveTo(x - 24, tipY - 40);
+      arrows.lineTo(x + 24, tipY - 40);
+      arrows.lineTo(x, tipY);
+      arrows.closePath();
+      arrows.fillPath();
+      arrows.strokePath();
+    });
+  }
+
+  private drawTimingRing(
+    graphics: Phaser.GameObjects.Graphics,
+    id: CharacterId,
+    progress: number,
+    clear = true,
+  ): void {
+    if (clear) {
+      graphics.clear();
+    }
+    // Sahira siempre bloquea, así que solo necesita la dirección.
+    if (id === 'sahira' || progress >= 1) {
+      return;
+    }
+    const character = GAME_CONFIG.characters[id];
+    const remaining = 1 - Math.max(0, progress);
+    graphics.lineStyle(6, 0xffffff, 0.95);
+    graphics.strokeEllipse(
+      character.x,
+      character.feetY - character.displayHeight * 0.53,
+      character.displayHeight * 0.78 * remaining,
+      character.displayHeight * 1.02 * remaining,
+    );
+  }
+
   private createArena(): void {
     this.add.image(WIDTH / 2, HEIGHT / 2, 'arena').setDisplaySize(WIDTH, HEIGHT);
     this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT, 0x171323, 0.14);
@@ -377,26 +467,31 @@ export default class CombatScene extends Phaser.Scene {
       furai: this.createPartySprite('furai'),
       dexios: this.createPartySprite('dexios'),
       sahira: this.createPartySprite('sahira'),
+      hazel: this.createPartySprite('hazel'),
     };
     this.shieldMarks = {
       furai: this.createShieldMark('furai'),
       dexios: this.createShieldMark('dexios'),
       sahira: this.createShieldMark('sahira'),
+      hazel: this.createShieldMark('hazel'),
     };
     this.breathingTweens = {
       furai: this.createBreathingTween('furai'),
       dexios: this.createBreathingTween('dexios'),
       sahira: this.createBreathingTween('sahira'),
+      hazel: this.createBreathingTween('hazel'),
     };
     this.actorNames = {
       furai: this.createNameLabel('furai'),
       dexios: this.createNameLabel('dexios'),
       sahira: this.createNameLabel('sahira'),
+      hazel: this.createNameLabel('hazel'),
     };
     this.missingLabels = {
       furai: this.createMissingLabel('furai'),
       dexios: this.createMissingLabel('dexios'),
       sahira: this.createMissingLabel('sahira'),
+      hazel: this.createMissingLabel('hazel'),
     };
 
     const boss = GAME_CONFIG.characters.iobrontes;
@@ -438,13 +533,14 @@ export default class CombatScene extends Phaser.Scene {
       });
     });
     this.targetArrow = this.add.text(0, 0, '▼', {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '38px',
       fontStyle: 'bold',
       color: '#f4d276',
       stroke: '#171326',
       strokeThickness: 6,
     }).setOrigin(0.5, 1).setDepth(18).setVisible(false);
+    this.enemyTargetArrows = this.add.graphics().setDepth(19);
     this.missingBossLabels = {
       iobrontes: this.createMissingBossLabel('iobrontes'),
       kosmelys: this.createMissingBossLabel('kosmelys'),
@@ -496,8 +592,8 @@ export default class CombatScene extends Phaser.Scene {
 
   private createNameLabel(id: CharacterId): Phaser.GameObjects.Text {
     const character = GAME_CONFIG.characters[id];
-    const label = this.add.text(character.x, character.feetY + 4, character.name.toUpperCase(), {
-      fontFamily: 'Georgia, serif',
+    const label = this.add.text(character.nameLabelX, character.feetY + 4, character.name.toUpperCase(), {
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '17px',
       fontStyle: 'bold',
       color: '#f2d9a1',
@@ -510,7 +606,7 @@ export default class CombatScene extends Phaser.Scene {
   private createMissingLabel(id: CharacterId): Phaser.GameObjects.Text {
     const character = GAME_CONFIG.characters[id];
     return this.add.text(character.x, character.feetY - character.displayHeight - 18, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '14px',
       fontStyle: 'bold',
       color: '#fff1c1',
@@ -526,7 +622,7 @@ export default class CombatScene extends Phaser.Scene {
     boss.feetY - boss.displayHeight - 16,
     '',
     {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '13px',
       fontStyle: 'bold',
       color: '#fff1c1',
@@ -542,15 +638,25 @@ export default class CombatScene extends Phaser.Scene {
     height: number,
   ): void {
     if (!this.textures.exists(frame)) {
-      return;
+      throw new Error(`No se pudo cargar el fotograma ${frame}`);
     }
     const source = this.textures.get(frame).getSourceImage();
-    sprite.setDisplaySize(source.width * (height / source.height), height);
+    if (!(source instanceof HTMLImageElement) && !(source instanceof HTMLCanvasElement)) {
+      throw new Error(`No se pudo medir el fotograma ${frame}`);
+    }
+    const normalization = GAME_CONFIG.sprite;
+    if (source.width !== normalization.canvasSize || source.height !== normalization.canvasSize) {
+      throw new Error(`El fotograma ${frame} no está normalizado a ${normalization.canvasSize} × ${normalization.canvasSize}`);
+    }
+    const scale = height * (normalization.frameScale[frame] ?? 1) / normalization.referenceVisibleHeight;
+    sprite
+      .setOrigin(0.5, normalization.groundBaselineY / normalization.canvasSize)
+      .setDisplaySize(normalization.canvasSize * scale, normalization.canvasSize * scale);
   }
 
   private createHud(): void {
     this.turnText = this.add.text(176, 112, '', {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '22px',
       fontStyle: 'bold',
       color: '#f3e3c0',
@@ -558,16 +664,16 @@ export default class CombatScene extends Phaser.Scene {
       strokeThickness: 5,
     }).setOrigin(0, 0).setDepth(21);
     this.attackAnnouncement = this.add.text(WIDTH / 2, HEIGHT / 2, '', {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '28px',
       fontStyle: 'bold',
-      color: '#ffffff',
+      color: '#9dffb0',
       stroke: '#171326',
       strokeThickness: 6,
       align: 'center',
     }).setOrigin(0.5).setDepth(24).setVisible(false);
     this.promptText = this.add.text(176, 143, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '15px',
       color: '#e9dff1',
       stroke: '#171326',
@@ -588,7 +694,7 @@ export default class CombatScene extends Phaser.Scene {
       const portrait = this.add.image(queueLayout.iconSize / 2 + 5, queueLayout.iconSize / 2, 'icon_furai')
         .setDisplaySize(queueLayout.iconSize - 8, queueLayout.iconSize - 8);
       const label = this.add.text(queueLayout.iconSize + 15, queueLayout.iconSize / 2, '', {
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: GAME_FONT_FAMILY,
         fontSize: '11px',
         fontStyle: 'bold',
         color: '#e8deeb',
@@ -602,32 +708,16 @@ export default class CombatScene extends Phaser.Scene {
       dexios: this.createPartyCard('dexios', partyLayout.x),
       furai: this.createPartyCard('furai', partyLayout.x),
       sahira: this.createPartyCard('sahira', partyLayout.x),
+      hazel: this.createPartyCard('hazel', partyLayout.x),
     };
-    (['dexios', 'furai', 'sahira'] as const).forEach((id, index) => {
+    PARTY_UI_ORDER.forEach((id, index) => {
       this.partyCards[id].container.setY(partyLayout.y + index * (partyLayout.height + partyLayout.gap));
     });
-    const reserve = this.add.container(partyLayout.x, partyLayout.y + 3 * (partyLayout.height + partyLayout.gap))
-      .setDepth(20);
-    const reserveFrame = this.add.graphics();
-    reserveFrame.fillStyle(COLORS.ink, 0.42);
-    reserveFrame.fillRoundedRect(0, 0, partyLayout.width, 56, 10);
-    reserveFrame.lineStyle(1, COLORS.gold, 0.3);
-    reserveFrame.strokeRoundedRect(0, 0, partyLayout.width, 56, 10);
-    reserve.add([
-      reserveFrame,
-      this.add.text(18, 19, '＋', { fontFamily: 'Arial, sans-serif', fontSize: '19px', color: '#b7a9c2' }),
-      this.add.text(52, 21, 'ESPACIO DE COMPAÑERO', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '11px',
-        fontStyle: 'bold',
-        color: '#9e93a6',
-      }),
-    ]);
 
     const actionLayout = GAME_CONFIG.actionHud;
     this.actionPanel = this.add.graphics().setDepth(20);
     this.targetText = this.add.text(actionLayout.x + actionLayout.width / 2, actionLayout.y - 28, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '15px',
       fontStyle: 'bold',
       color: '#fff4d2',
@@ -643,7 +733,7 @@ export default class CombatScene extends Phaser.Scene {
     this.spaceKeyBadge = this.add.container((WIDTH - 154) / 2, HEIGHT - 82, [
       spaceKeyFrame,
       this.add.text(77, 9, 'SPACE', {
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: GAME_FONT_FAMILY,
         fontSize: '17px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -654,14 +744,14 @@ export default class CombatScene extends Phaser.Scene {
     this.backButton = this.createBackButton(actionLayout);
 
     this.add.text(28, HEIGHT - 25, 'M · AUDIO    R · REINICIAR', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '11px',
       color: '#e1d4e7',
       stroke: '#171326',
       strokeThickness: 3,
     }).setDepth(20);
     this.audioText = this.add.text(1876, 1062, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '14px',
       fontStyle: 'bold',
       color: '#f1d99e',
@@ -675,7 +765,7 @@ export default class CombatScene extends Phaser.Scene {
     this.updateAudioLabel();
 
     this.resultText = this.add.text(WIDTH / 2, 500, '', {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '45px',
       fontStyle: 'bold',
       color: '#ffffff',
@@ -696,30 +786,49 @@ export default class CombatScene extends Phaser.Scene {
     const portrait = this.add.image(layout.portraitSize / 2 + 10, layout.height / 2, `icon_${id}`);
     portrait.setDisplaySize(layout.portraitSize, layout.portraitSize);
     const name = this.add.text(layout.portraitSize + 26, 7, GAME_CONFIG.characters[id].name.toUpperCase(), {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '17px',
       fontStyle: 'bold',
       color: '#f3e3c0',
     });
     const turn = this.add.text(layout.width - 12, 9, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '10px',
       fontStyle: 'bold',
       color: '#ffe187',
     }).setOrigin(1, 0);
     const textX = layout.portraitSize + 26;
-    const barX = textX + 104;
+    const barX = textX + (id === 'furai' ? 132 : id === 'hazel' ? 86 : 104);
     const barWidth = layout.width - barX - 18;
     const health = this.add.text(textX, 29, '', this.resourceStyle('#a9efbd'));
+    const mana = this.add.text(textX, 49, '', this.resourceStyle(
+      id === 'furai' ? '#ffffff' : id === 'hazel' ? '#ff9a4f' : '#a4ddff',
+    ));
+    if (id === 'furai' || id === 'hazel') {
+      mana.setFontSize(11);
+    }
+    if (id === 'hazel') {
+      mana
+        .setPosition((textX + layout.width - 18) / 2, 62)
+        .setOrigin(0.5)
+        .setAlign('center')
+        .setFontSize(18);
+    }
     const healthBar = this.add.graphics();
-    const mana = this.add.text(textX, 49, '', this.resourceStyle('#a4ddff'));
     const manaBar = this.add.graphics();
+    if (id === 'sahira' || id === 'hazel') {
+      mana.setVisible(false);
+      manaBar.setVisible(false);
+    }
+    if (id === 'hazel') {
+      mana.setVisible(true);
+    }
     const chaos = id === 'dexios'
       ? this.add.text(textX, 69, '', this.resourceStyle('#ffb1b1'))
       : undefined;
     const chaosBar = id === 'dexios' ? this.add.graphics() : undefined;
     const selection = this.add.text(17, 164, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '11px',
       fontStyle: 'bold',
       color: '#d1c4dc',
@@ -751,6 +860,28 @@ export default class CombatScene extends Phaser.Scene {
     };
   }
 
+  private getAbilities(id: CharacterId): readonly Ability[] {
+    if (id === 'hazel') {
+      return this.state.hazelForm === 'ignis'
+        ? GAME_CONFIG.abilities.hazel.ignis
+        : GAME_CONFIG.abilities.hazel.glacio;
+    }
+    return GAME_CONFIG.abilities[id];
+  }
+
+  private getActorFrames(id: CharacterId): ActorFrames {
+    if (id === 'hazel') {
+      return GAME_CONFIG.characters.hazel.forms[this.state.hazelForm];
+    }
+    return GAME_CONFIG.characters[id].frames;
+  }
+
+  private changeHazelForm(form: HazelForm): void {
+    this.state.hazelForm = form;
+    this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+    this.refreshHud();
+  }
+
   private createBossHud(id: BossId): BossHud {
     const layout = GAME_CONFIG.bossHud;
     const x = layout.x[id];
@@ -763,18 +894,18 @@ export default class CombatScene extends Phaser.Scene {
     panel.strokeRoundedRect(x, y, layout.width, layout.height, 14);
     const config = GAME_CONFIG.characters[id];
     const label = this.add.text(x + layout.labelX, y + layout.labelY, config.name.toUpperCase(), {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: `${layout.titleFontSize}px`,
       fontStyle: 'bold',
       color: '#f2e5ff',
     }).setDepth(101);
     const subtitle = this.add.text(x + layout.subtitleX, y + layout.subtitleY, config.title, {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: `${layout.subtitleFontSize}px`,
       color: '#c7afd8',
     }).setDepth(101);
     const selected = this.add.text(x + layout.healthTextX, y + 9, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '12px',
       fontStyle: 'bold',
       color: '#fff0a5',
@@ -844,7 +975,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private updateBossHudVisibility(): void {
-    const visible = this.phase !== 'player' && this.phase !== 'action';
+    const visible = this.phase !== 'ended';
     (['iobrontes', 'kosmelys'] as const).forEach((id) => {
       const hud = this.bossHud[id];
       hud.panel.setVisible(visible);
@@ -865,7 +996,7 @@ export default class CombatScene extends Phaser.Scene {
     badge.lineStyle(4, COLORS.violet, 0.95);
     badge.strokeRoundedRect(-66, -43, 132, 86, 15);
     this.warningArrow = this.add.text(0, 0, '', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '30px',
       fontStyle: 'bold',
       color: '#f1d9ff',
@@ -886,26 +1017,41 @@ export default class CombatScene extends Phaser.Scene {
     background.fillRoundedRect(0, 0, width, 76, 8);
     background.lineStyle(2, color, 0.52);
     background.strokeRoundedRect(0, 0, width, 76, 8);
-    const name = this.add.text(15, 10, `${index + 1}   ${ability.name.toUpperCase()}`, {
-      fontFamily: 'Arial, sans-serif',
+    const number = this.add.text(15, 10, `${index + 1}`, {
+      fontFamily: UI_FONT_FAMILY,
+      fontSize: '15px',
+      fontStyle: 'bold',
+      color: '#f3e9d6',
+    });
+    const name = this.add.text(42, 10, ability.name.toUpperCase(), {
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '15px',
       fontStyle: 'bold',
       color: '#f3e9d6',
     });
     const costLabel = ability.resource === 'mana'
       ? `${ability.cost} MANÁ`
-      : ability.resource === 'chaos'
-        ? `${ability.cost} CAOS`
-        : 'GRATIS';
-    const detail = this.add.text(15, 42, `${ability.detail}  ·  ${costLabel}`, {
-      fontFamily: 'Arial, sans-serif',
+      : ability.resource === 'spirit'
+        ? `${ability.cost} ESPÍRITU`
+        : ability.resource === 'chaos'
+          ? `${ability.cost} CAOS`
+          : 'GRATIS';
+    const usesLabel = ability.id === 'jackal-strike'
+      ? '  ·  SIN LÍMITE'
+      : ability.id === 'hippopotamus-healing'
+        ? `  ·  USOS ${this.state.sahiraAbilityUses.healing}/${SAHIRA_ABILITY_USE_LIMITS.healing}`
+        : ability.id === 'hippopotamus-shield'
+          ? `  ·  USOS ${this.state.sahiraAbilityUses.shield}/${SAHIRA_ABILITY_USE_LIMITS.shield}`
+          : '';
+    const detail = this.add.text(15, 42, `${ability.detail}  ·  ${costLabel}${usesLabel}`, {
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '12px',
       color: '#d0c2dc',
     });
     const available = this.activeCharacter !== null
-      && canAfford(this.state.party[this.activeCharacter], ability)
+      && canUseAbility(this.state, this.activeCharacter, ability)
       && !this.cameraTransitioning;
-    const button = this.add.container(0, y, [background, name, detail])
+    const button = this.add.container(0, y, [background, number, name, detail])
       .setSize(width, 76)
       .setAlpha(available && this.phase === 'player' ? 1 : 0.42);
     button.setInteractive(
@@ -970,7 +1116,9 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     if (this.phase === 'target-boss' && this.targetingAbility) {
-      this.targetText.setText('1 · IÓBRONTĒS     2 · KOSMELYS     ESC · BACK');
+      this.targetText
+        .setFontFamily(UI_FONT_FAMILY)
+        .setText('1 · IÓBRONTĒS     2 · KOSMELYS     ESC · BACK');
       return;
     }
     if (this.allyTargetingAbility) {
@@ -982,13 +1130,13 @@ export default class CombatScene extends Phaser.Scene {
           ? 'ELIGE UN ALIADO CON VIDA PARA PROTEGERLO'
           : 'ELIGE UN ALIADO CON VIDA PARA RESTAURARLO',
         {
-          fontFamily: 'Arial, sans-serif',
+          fontFamily: GAME_FONT_FAMILY,
           fontSize: '12px',
           fontStyle: 'bold',
           color: shieldTargeting ? '#baffcb' : '#c8ffe9',
         },
       ));
-      (['dexios', 'furai', 'sahira'] as const).forEach((id, index) => {
+      ALLY_TARGET_ORDER.forEach((id, index) => {
         const health = this.state.party[id].health;
         this.createTargetButton(id, index, health > 0);
       });
@@ -996,13 +1144,13 @@ export default class CombatScene extends Phaser.Scene {
     }
 
     if (this.phase === 'player' && this.activeCharacter) {
-      GAME_CONFIG.abilities[this.activeCharacter].forEach((ability, index) => {
+      this.getAbilities(this.activeCharacter).forEach((ability, index) => {
         this.createActionButton(ability, index);
       });
       return;
     }
     this.actionContent.add(this.add.text(12, 12, 'ESPERANDO...', {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '18px',
       fontStyle: 'bold',
       color: '#d4c5e4',
@@ -1025,7 +1173,7 @@ export default class CombatScene extends Phaser.Scene {
       11,
       `${index + 1}  ${GAME_CONFIG.characters[id].name.toUpperCase()}`,
       {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '17px',
       fontStyle: 'bold',
       color: alive ? '#f3e9d6' : '#918698',
@@ -1037,7 +1185,7 @@ export default class CombatScene extends Phaser.Scene {
       39,
       `${this.state.bosses[id].health} / ${MAX_BOSS_HEALTH[id]} HP`,
       {
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: UI_FONT_FAMILY,
         fontSize: '13px',
         color: '#d0c2dc',
         align: 'center',
@@ -1060,27 +1208,32 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private createTargetButton(id: CharacterId, index: number, available: boolean): void {
-    const x = 4 + index * 132;
-    const width = 124;
-    const y = 38;
+    const layout = GAME_CONFIG.actionHud;
+    const count = ALLY_TARGET_ORDER.length;
+    const gap = 8;
+    const top = 34;
+    const availableHeight = layout.height - top - 51;
+    const height = Math.min(62, (availableHeight - gap * (count - 1)) / count);
+    const width = layout.width - 36;
+    const x = 0;
+    const y = top + index * (height + gap);
     const background = this.add.graphics();
     background.fillStyle(COLORS.panelLight, 1);
-    background.fillRoundedRect(0, 0, width, 62, 8);
+    background.fillRoundedRect(0, 0, width, height, 8);
     background.lineStyle(2, available ? COLORS.teal : COLORS.red, 0.7);
-    background.strokeRoundedRect(0, 0, width, 62, 8);
-    const label = this.add.text(width / 2, 20, `${index + 1}  ${GAME_CONFIG.characters[id].name.toUpperCase()}`, {
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '11px',
+    background.strokeRoundedRect(0, 0, width, height, 8);
+    const label = this.add.text(width / 2, height / 2, `${index + 1}  ${GAME_CONFIG.characters[id].name.toUpperCase()}`, {
+      fontFamily: UI_FONT_FAMILY,
+      fontSize: '17px',
       fontStyle: 'bold',
       color: available ? '#e7fff7' : '#918698',
       align: 'center',
-      wordWrap: { width: width - 10 },
-    }).setOrigin(0.5, 0);
+    }).setOrigin(0.5);
     const button = this.add.container(x, y, [background, label])
-      .setSize(width, 62)
+      .setSize(width, height)
       .setAlpha(available ? 1 : 0.45);
     button.setInteractive(
-      new Phaser.Geom.Rectangle(0, 0, width, 62),
+      new Phaser.Geom.Rectangle(0, 0, width, height),
       Phaser.Geom.Rectangle.Contains,
     );
     button.on('pointerdown', () => {
@@ -1094,15 +1247,21 @@ export default class CombatScene extends Phaser.Scene {
   private refreshHud(): void {
     this.updateBossHudVisibility();
     const partyLayout = GAME_CONFIG.partyHud;
-    const barX = partyLayout.portraitSize + 26 + 104;
-    const barWidth = partyLayout.width - barX - 18;
-    (['dexios', 'furai', 'sahira'] as const).forEach((id) => {
+    PLAYABLE_CHARACTERS.forEach((id) => {
       const status = this.state.party[id];
       const card = this.partyCards[id];
+      const barX = partyLayout.portraitSize + 26
+        + (id === 'furai' ? 132 : id === 'hazel' ? 86 : 104);
+      const barWidth = partyLayout.width - barX - 18;
       const maximumHealth = MAX_HEALTH[id];
-      const maximumMana = MAX_MANA[id];
       const incapacitated = status.health <= 0;
       card.name.setColor(incapacitated ? '#938a98' : '#f3e3c0');
+      if (id === 'hazel') {
+        const ignis = this.state.hazelForm === 'ignis';
+        card.portrait.setTexture(ignis ? 'icon_hazel' : 'icon_hazel_glacio');
+        card.mana.setText(ignis ? 'IGNIS' : 'GLACIO');
+        card.mana.setColor(ignis ? '#ff9a4f' : '#8dd7ff');
+      }
       card.turn.setText(this.activeCharacter === id && this.phase === 'player'
         ? 'TU TURNO'
         : this.targetCharacter === id && this.phase !== 'player'
@@ -1111,16 +1270,21 @@ export default class CombatScene extends Phaser.Scene {
       card.container.setAlpha(incapacitated ? 0.48 : 1);
       card.portrait.setAlpha(incapacitated ? 0.38 : 1);
       this.updateBar(card.healthBar, barX, 33, barWidth, 7, status.health, maximumHealth, COLORS.green);
-      this.updateBar(card.manaBar, barX, 53, barWidth, 7, status.mana, maximumMana, COLORS.blue);
       card.health.setText(`VIDA  ${status.health} / ${maximumHealth}`);
-      card.mana.setText(`MANÁ  ${status.mana} / ${maximumMana}`);
+      if (id === 'dexios') {
+        this.updateBar(card.manaBar, barX, 53, barWidth, 7, status.mana, MAX_MANA.dexios, COLORS.blue);
+        card.mana.setText(`MANÁ  ${status.mana} / ${MAX_MANA.dexios}`);
+      } else if (id === 'furai') {
+        this.updateBar(card.manaBar, barX, 53, barWidth, 7, status.spirit, MAX_SPIRIT, 0xffffff);
+        card.mana.setText(`ESPÍRITU  ${status.spirit} / ${MAX_SPIRIT}`);
+      }
       if (id === 'dexios' && card.chaos && card.chaosBar) {
         this.updateBar(card.chaosBar, barX, 73, barWidth, 7, status.chaos, MAX_CHAOS, COLORS.red);
         card.chaos.setText(`CAOS  ${status.chaos} / ${MAX_CHAOS}`);
       }
       const targetLabel = this.allyTargetingAbility
         ? status.health > 0
-          ? `Pulsa el panel o la tecla ${(['dexios', 'furai', 'sahira'] as const).indexOf(id) + 1} para elegir`
+          ? `Pulsa el panel o la tecla ${ALLY_TARGET_ORDER.indexOf(id) + 1} para elegir`
           : this.allyTargetingAbility === 'hippopotamus-shield'
             ? 'No se puede proteger'
             : 'No se puede reanimar'
@@ -1217,7 +1381,9 @@ export default class CombatScene extends Phaser.Scene {
       if (!actor) {
         return;
       }
-      slot.portrait.setTexture(`icon_${actor}`);
+      slot.portrait.setTexture(
+        actor === 'hazel' && this.state.hazelForm === 'glacio' ? 'icon_hazel_glacio' : `icon_${actor}`,
+      );
       slot.portrait.setDisplaySize(index === 0 ? 56 : 50, index === 0 ? 56 : 50);
       slot.label.setText(actor.toUpperCase());
       slot.label.setColor(index === 0 ? '#fff0bd' : '#c5bacb');
@@ -1237,10 +1403,15 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     const target = GAME_CONFIG.characters[this.selectedBoss];
-    this.targetArrow.setPosition(
-      target.x,
-      target.feetY - target.displayHeight - 8,
-    );
+    const left = this.selectedBoss === 'iobrontes';
+    const offset = target.displayHeight * 0.3;
+    this.targetArrow
+      .setText(left ? '▶' : '◀')
+      .setOrigin(0.5, 0.5)
+      .setPosition(
+        target.x + (left ? -offset : offset),
+        target.feetY - target.displayHeight * 0.55,
+      );
   }
 
   private createBackButton(layout: typeof GAME_CONFIG.actionHud): Phaser.GameObjects.Container {
@@ -1252,7 +1423,7 @@ export default class CombatScene extends Phaser.Scene {
     background.lineStyle(2, COLORS.gold, 0.78);
     background.strokeRoundedRect(0, 0, width, height, 9);
     const label = this.add.text(width / 2, 15, '←  BACK', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '17px',
       fontStyle: 'bold',
       color: '#f3e9d6',
@@ -1286,7 +1457,7 @@ export default class CombatScene extends Phaser.Scene {
       const width = layout.width - 36;
       const startX = layout.x + 18;
       const startY = layout.y + 39;
-      const ability = GAME_CONFIG.abilities[this.activeCharacter].find((_, index) =>
+      const ability = this.getAbilities(this.activeCharacter).find((_, index) =>
         new Phaser.Geom.Rectangle(startX, startY + 12 + index * 86, width, 76)
           .contains(pointer.x, pointer.y),
       );
@@ -1296,7 +1467,7 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     if (this.phase === 'player' && this.allyTargetingAbility) {
-      (['dexios', 'furai', 'sahira'] as const).forEach((id) => {
+      PLAYABLE_CHARACTERS.forEach((id) => {
         if (this.partyCards[id].container.getBounds().contains(pointer.x, pointer.y)) {
           this.selectAllyTarget(id);
         }
@@ -1308,7 +1479,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private resourceStyle(color: string): Phaser.Types.GameObjects.Text.TextStyle {
     return {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '14px',
       fontStyle: 'bold',
       color,
@@ -1369,7 +1540,7 @@ export default class CombatScene extends Phaser.Scene {
       this.turnText.setText(`${GAME_CONFIG.characters[turn].name.toUpperCase()} · TU TURNO`);
       this.promptText.setText('Elige una habilidad para continuar la batalla.');
       this.targetText.setText('');
-      this.setActorFrame(turn, GAME_CONFIG.characters[turn].frames.idle);
+      this.setActorFrame(turn, this.getActorFrames(turn).idle);
       this.refreshHud();
       this.focusPlayerSelectionCamera(turn);
       return;
@@ -1397,7 +1568,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private startEnemyChain(): void {
-    const eligible = (['furai', 'dexios', 'sahira'] as const)
+    const eligible = PLAYABLE_CHARACTERS
       .filter((id) => this.state.party[id].health > 0);
     if (eligible.length === 0) {
       this.finishBattle('defeat');
@@ -1518,7 +1689,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private startCosmicRays(): void {
-    const eligible = (['furai', 'dexios', 'sahira'] as const)
+    const eligible = PLAYABLE_CHARACTERS
       .filter((id) => this.state.party[id].health > 0);
     if (eligible.length === 0) {
       this.finishBattle('defeat');
@@ -1631,7 +1802,7 @@ export default class CombatScene extends Phaser.Scene {
         source.height * GAME_CONFIG.kosmelysAttacks.cosmicProjectileScale,
       )
       .setDepth(12);
-    this.uiCamera.ignore(this.cosmicProjectile);
+    this.promoteToOverlay(this.cosmicProjectile);
     const initialVector = midpoint.clone().subtract(start);
     this.cosmicProjectile.setRotation(Math.atan2(initialVector.y, initialVector.x));
     const halfDuration = this.cosmicMidpointMs;
@@ -1727,14 +1898,7 @@ export default class CombatScene extends Phaser.Scene {
       0,
       1,
     );
-    this.timingRing.clear();
-    this.timingRing.lineStyle(perfect ? 8 : 5, perfect ? 0xffffff : COLORS.violet, 0.9);
-    this.timingRing.strokeEllipse(
-      target.x,
-      target.feetY - target.displayHeight * 0.53,
-      Phaser.Math.Linear(target.displayHeight * 0.78, 118, progress),
-      Phaser.Math.Linear(target.displayHeight * 1.02, 175, progress),
-    );
+    this.drawTimingRing(this.timingRing, this.targetCharacter, progress);
     if (this.responseDirection === null) {
       this.targetText.setText(
         perfect
@@ -1776,7 +1940,7 @@ export default class CombatScene extends Phaser.Scene {
         : elapsed !== null && elapsed >= this.cosmicPerfectWindowStartsAtMs
           ? 'perfect'
           : 'blocked';
-    let damage = outcome === 'failed'
+    let damage = outcome === 'failed' || (outcome === 'blocked' && targetId === 'hazel')
       ? GAME_CONFIG.kosmelysAttacks.cosmicRaysDamage
       : outcome === 'blocked' && targetId !== 'sahira'
         ? GAME_CONFIG.kosmelysAttacks.cosmicBlockedDamage
@@ -1809,10 +1973,15 @@ export default class CombatScene extends Phaser.Scene {
       }
       this.soundscape.play('perfect_block');
     } else if (outcome === 'blocked') {
-      this.showFloatingText('BLOCK', target.x, target.feetY - target.displayHeight - 12, '#ffd65c');
+      if (targetId === 'hazel') {
+        this.setActorFrame(targetId, this.getActorFrames(targetId).hit, 550);
+        this.showFloatingText(`-${actualDamage}`, target.x, target.feetY - target.displayHeight - 12, '#ffb7a9');
+      } else {
+        this.showFloatingText('BLOCK', target.x, target.feetY - target.displayHeight - 12, '#ffd65c');
+      }
       this.soundscape.play('impact');
     } else {
-      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.hit, 550);
+      this.setActorFrame(targetId, this.getActorFrames(targetId).hit, 550);
       this.showFloatingText(`-${actualDamage}`, target.x, target.feetY - target.displayHeight - 12, '#ffb7a9');
       this.soundscape.play('impact');
     }
@@ -1828,7 +1997,9 @@ export default class CombatScene extends Phaser.Scene {
       outcome === 'perfect'
         ? 'Parada perfecta: el rayo cósmico queda desviado.'
         : outcome === 'blocked'
-          ? `Bloqueo: ${actualDamage} de daño.`
+          ? targetId === 'hazel'
+            ? `La defensa de Hazel no detiene el rayo: ${actualDamage} de daño.`
+            : `Bloqueo: ${actualDamage} de daño.`
           : `El rayo cósmico impacta: ${actualDamage} de daño.`,
     );
     this.warning.setVisible(false);
@@ -1841,7 +2012,7 @@ export default class CombatScene extends Phaser.Scene {
       if (this.phase !== 'resolving' || this.result) {
         return;
       }
-      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.idle);
+      this.setActorFrame(targetId, this.getActorFrames(targetId).idle);
       this.cosmicProjectileIndex += 1;
       this.targetCharacter = null;
       if (this.state.bosses.kosmelys.health <= 0) {
@@ -1886,7 +2057,7 @@ export default class CombatScene extends Phaser.Scene {
     const travelMs = followUp ? timing.meteorFollowUpTravelMs : timing.meteorTravelMs;
     const impactAtMs = preparationMs + travelMs;
     const defenseOpensAtMs = impactAtMs - timing.meteorDefenseOpensBeforeImpactMs;
-    const eligible = (['furai', 'dexios', 'sahira'] as const)
+    const eligible = PLAYABLE_CHARACTERS
       .filter((character) => this.state.party[character].health > 0);
     if (eligible.length === 0) {
       this.finishBattle('defeat');
@@ -1909,7 +2080,7 @@ export default class CombatScene extends Phaser.Scene {
       config.feetY - config.displayHeight - 36,
       `M${id} · W`,
       {
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: GAME_FONT_FAMILY,
         fontSize: '18px',
         fontStyle: 'bold',
         color: '#fff0a5',
@@ -1918,7 +2089,8 @@ export default class CombatScene extends Phaser.Scene {
       },
     ).setOrigin(0.5).setDepth(17);
     const ring = this.add.graphics().setDepth(10);
-    this.uiCamera.ignore([sprite, warning, ring]);
+    this.uiCamera.ignore([warning, ring]);
+    this.promoteToOverlay(sprite);
     this.meteorEvents.push({
       id,
       attackId:
@@ -1971,7 +2143,9 @@ export default class CombatScene extends Phaser.Scene {
         event.warning.setText(
           event.responseOutcome === 'perfect'
             ? `M${event.id} · ¡PERFECTO!`
-            : `M${event.id} · ¡CUBIERTO!`,
+            : event.target === 'hazel'
+              ? `M${event.id} · DAÑO COMPLETO`
+              : `M${event.id} · ¡CUBIERTO!`,
         ).setColor(event.responseOutcome === 'perfect' ? '#ffffff' : '#a8ffbd');
       }
       const activeWindow = elapsed >= event.defenseOpensAtMs
@@ -1981,16 +2155,14 @@ export default class CombatScene extends Phaser.Scene {
         && elapsed >= event.normalBlockEndsAtMs;
       event.ring.clear();
       if (activeWindow) {
-        event.ring.lineStyle(perfectWindow ? 8 : 5, perfectWindow ? 0xffffff : 0xffd65c, 0.9);
-        event.ring.strokeEllipse(
-          target.x,
-          target.feetY - target.displayHeight * 0.53,
-          target.displayHeight * (0.78 - progress * 0.28),
-          target.displayHeight * (1.02 - progress * 0.38),
-        );
+        const ringProgress = (elapsed - event.defenseOpensAtMs)
+          / (event.preparationMs + event.travelMs - event.defenseOpensAtMs);
+        this.drawTimingRing(event.ring, event.target, ringProgress);
         this.targetText.setText(
           event.target === 'sahira'
             ? 'SAHIRA · W PARA CUBRIRSE'
+            : event.target === 'hazel'
+              ? perfectWindow ? 'HAZEL · SOLO LA PARADA PERFECTA EVITA EL DAÑO' : 'HAZEL · PREPARA UNA PARADA PERFECTA'
             : perfectWindow
               ? '¡PARADA PERFECTA! · W'
               : 'CUBRIR NORMAL · W',
@@ -2046,14 +2218,16 @@ export default class CombatScene extends Phaser.Scene {
       ? 0
       : outcome === 'failed'
         ? GAME_CONFIG.kosmelysAttacks.meteorRainDamage
-        : outcome === 'blocked' && targetId !== 'sahira'
+        : outcome === 'blocked' && targetId === 'hazel'
+          ? GAME_CONFIG.kosmelysAttacks.meteorRainDamage
+          : outcome === 'blocked' && targetId !== 'sahira'
           ? GAME_CONFIG.kosmelysAttacks.meteorBlockedDamage
           : 0;
     const actualDamage = damagePartyMember(this.state, targetId, damage);
     if (outcome === 'perfect' || outcome === 'blocked') {
       this.setActorFrame(
         targetId,
-        GAME_CONFIG.characters[targetId].frames.defense.up,
+        this.getActorFrames(targetId).defense.up,
         GAME_CONFIG.timing.spritePoseMs,
       );
     }
@@ -2076,7 +2250,7 @@ export default class CombatScene extends Phaser.Scene {
         target.feetY - target.displayHeight * 0.72,
         '#ffb7a9',
       );
-      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.hit, 550);
+      this.setActorFrame(targetId, this.getActorFrames(targetId).hit, 550);
       this.soundscape.play('impact');
     } else if (outcome === 'perfect') {
       this.showFloatingText(
@@ -2118,7 +2292,9 @@ export default class CombatScene extends Phaser.Scene {
       }
     } else if (outcome === 'blocked' || shielded) {
       this.showFloatingText(
-        shielded ? 'ESCUDO HIPOPÓTAMO' : 'BLOCK',
+        shielded
+          ? 'ESCUDO HIPOPÓTAMO'
+          : targetId === 'hazel' ? 'DEFENSA INEFICAZ' : 'BLOCK',
         target.x,
         target.feetY - target.displayHeight * 0.72,
         shielded ? '#a8ffbd' : '#ffd65c',
@@ -2187,6 +2363,9 @@ export default class CombatScene extends Phaser.Scene {
         'kosmelys',
         damage,
       );
+      if (counterDamage > 0) {
+        gainFuraiSpirit(this.state, 30);
+      }
       this.setKosmelysFrame(kosmelys.frames.hit, GAME_CONFIG.timing.spritePoseMs);
       this.createImpact(
         kosmelys.x,
@@ -2297,10 +2476,19 @@ export default class CombatScene extends Phaser.Scene {
   private resolveIobrontesDamage(
     amount: number,
     attacker: CharacterId,
-  ): { damage: number; retaliationDamage: number; retaliationShielded: boolean } {
-    const damage = damageIobrontes(this.state, amount);
+    consumeArmorBreak = false,
+  ): {
+    damage: number;
+    retaliationDamage: number;
+    retaliationShielded: boolean;
+    empowered: boolean;
+  } {
+    const result = consumeArmorBreak
+      ? damageBossWithArmorBreak(this.state, 'iobrontes', amount)
+      : { damage: damageIobrontes(this.state, amount), empowered: false };
+    const { damage, empowered } = result;
     if (damage <= 0 || this.state.divineRetributionTurnsRemaining <= 0) {
-      return { damage, retaliationDamage: 0, retaliationShielded: false };
+      return { damage, retaliationDamage: 0, retaliationShielded: false, empowered };
     }
     this.state.divineRetributionTurnsRemaining = 0;
     const retaliationShielded = consumeShieldHit(this.state, attacker);
@@ -2311,7 +2499,7 @@ export default class CombatScene extends Phaser.Scene {
         attacker,
         GAME_CONFIG.enemyAttacks.divineRetributionDamage,
       );
-    return { damage, retaliationDamage, retaliationShielded };
+    return { damage, retaliationDamage, retaliationShielded, empowered };
   }
 
   private showDivineRetaliation(
@@ -2339,7 +2527,7 @@ export default class CombatScene extends Phaser.Scene {
       this.promptText.setText(`${character.name} bloquea la represalia con el Escudo Hipopótamo.`);
       return;
     }
-    this.setActorFrame(attacker, character.frames.hit, 650);
+    this.setActorFrame(attacker, this.getActorFrames(attacker).hit, 650);
     this.createImpact(
       character.x,
       character.feetY - character.displayHeight * 0.52,
@@ -2381,10 +2569,27 @@ export default class CombatScene extends Phaser.Scene {
   private beginJumpWindow(): void {
     this.phase = 'jump-window';
     this.spaceKeyBadge.setVisible(true);
+    if (this.state.party.sahira.health > 0) {
+      const sahira = GAME_CONFIG.characters.sahira;
+      this.sahiraSpaceHint = this.add.text(
+        sahira.x,
+        sahira.feetY - sahira.displayHeight - 20,
+        'SPACE',
+        {
+          fontFamily: GAME_FONT_FAMILY,
+          fontSize: '24px',
+          fontStyle: 'bold',
+          color: '#f5d47d',
+          backgroundColor: '#352719',
+          padding: { x: 14, y: 8 },
+        },
+      ).setOrigin(0.5).setDepth(17);
+      this.uiCamera.ignore(this.sahiraSpaceHint);
+    }
     this.jumpWindowStartedAt = this.time.now;
     this.targetText.setText('PULSA [ SPACE ] · SALTO EN EQUIPO');
     const boss = GAME_CONFIG.characters.iobrontes;
-    const party = (['furai', 'dexios', 'sahira'] as const).map(
+    const party = PLAYABLE_CHARACTERS.map(
       (id) => GAME_CONFIG.characters[id],
     );
     const beamY = party.reduce(
@@ -2416,16 +2621,41 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     this.partyJumped = true;
-    (['furai', 'dexios', 'sahira'] as const).forEach((id) => {
+    PLAYABLE_CHARACTERS.forEach((id) => {
       if (this.state.party[id].health > 0) {
         this.setActorFrame(
           id,
-          GAME_CONFIG.characters[id].frames.jump,
+          this.getActorFrames(id).jump,
           GAME_CONFIG.timing.jumpPoseMs,
         );
+        this.liftJump(id);
       }
     });
     this.targetText.setText('¡SALTO!');
+  }
+
+  private liftJump(id: CharacterId): void {
+    const sprite = this.actorSprites[id];
+    const config = GAME_CONFIG.characters[id];
+    const scale = GAME_CONFIG.sprite.frameScale[this.getActorFrames(id).jump] ?? 1;
+    const { startLift, peakLift } = GAME_CONFIG.sprite.jump;
+    const height = config.displayHeight * scale;
+    const half = GAME_CONFIG.timing.jumpPoseMs / 2;
+    sprite.setY(config.feetY - height * startLift);
+    this.tweens.add({
+      targets: sprite,
+      y: config.feetY - height * peakLift,
+      duration: half,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: sprite,
+          y: config.feetY,
+          duration: half,
+          ease: 'Sine.easeIn',
+        });
+      },
+    });
   }
 
   private resolveWatchTheThunder(): void {
@@ -2434,6 +2664,8 @@ export default class CombatScene extends Phaser.Scene {
     }
     this.phase = 'resolving';
     this.spaceKeyBadge.setVisible(false);
+    this.sahiraSpaceHint?.destroy();
+    this.sahiraSpaceHint = undefined;
     this.timingRing.clear();
     this.targetText.setText('');
     if (this.activeBolt) {
@@ -2441,7 +2673,7 @@ export default class CombatScene extends Phaser.Scene {
       this.activeBolt.destroy();
       this.activeBolt = undefined;
     }
-    (['furai', 'dexios', 'sahira'] as const).forEach((id) => {
+    PLAYABLE_CHARACTERS.forEach((id) => {
       if (this.state.party[id].health <= 0) {
         return;
       }
@@ -2462,7 +2694,7 @@ export default class CombatScene extends Phaser.Scene {
         id,
         GAME_CONFIG.enemyAttacks.watchTheThunderDamage,
       );
-      this.setActorFrame(id, GAME_CONFIG.characters[id].frames.hit, 650);
+      this.setActorFrame(id, this.getActorFrames(id).hit, 650);
       this.showFloatingText(`-${damage}`, character.x, y - 20, '#ffb7a9');
       this.createImpact(character.x, y, COLORS.purple, 1.1);
     });
@@ -2480,9 +2712,9 @@ export default class CombatScene extends Phaser.Scene {
       if (this.phase !== 'resolving' || this.result) {
         return;
       }
-      (['furai', 'dexios', 'sahira'] as const).forEach((id) => {
+      PLAYABLE_CHARACTERS.forEach((id) => {
         if (this.state.party[id].health > 0) {
-          this.setActorFrame(id, GAME_CONFIG.characters[id].frames.idle);
+          this.setActorFrame(id, this.getActorFrames(id).idle);
         }
       });
       this.advanceTurn();
@@ -2605,7 +2837,7 @@ export default class CombatScene extends Phaser.Scene {
     this.strokePolyline(bolt, points);
     bolt.lineStyle(6, 0xf8edff, 1);
     this.strokePolyline(bolt, points);
-    return bolt;
+    return this.promoteToOverlay(bolt);
   }
 
   private strokePolyline(
@@ -2655,7 +2887,7 @@ export default class CombatScene extends Phaser.Scene {
         1.16,
       );
       this.cameras.main.flash(100, 190, 145, 255, false);
-      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.defense[this.attackDirection]);
+      this.setActorFrame(targetId, this.getActorFrames(targetId).defense[this.attackDirection]);
       if (targetId === 'dexios') {
         const bossDamage = this.resolveIobrontesDamage(PERFECT_PARRY_DAMAGE, targetId);
         retaliationDamage = bossDamage.retaliationDamage;
@@ -2671,8 +2903,13 @@ export default class CombatScene extends Phaser.Scene {
       }
       this.promptText.setText('Parada perfecta: daño evitado.');
     } else if (outcome === 'blocked') {
-      this.showFloatingText('BLOCK', GAME_CONFIG.characters[targetId].x, this.actorSprites[targetId].y - GAME_CONFIG.characters[targetId].displayHeight, '#ffd65c');
-      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.defense[this.attackDirection]);
+      this.showFloatingText(
+        targetId === 'hazel' ? 'DEFENSA INEFICAZ' : 'BLOCK',
+        GAME_CONFIG.characters[targetId].x,
+        this.actorSprites[targetId].y - GAME_CONFIG.characters[targetId].displayHeight,
+        targetId === 'hazel' ? '#ffb7a9' : '#ffd65c',
+      );
+      this.setActorFrame(targetId, this.getActorFrames(targetId).defense[this.attackDirection]);
       this.createImpact(
         GAME_CONFIG.characters[targetId].x,
         GAME_CONFIG.characters[targetId].feetY - GAME_CONFIG.characters[targetId].displayHeight * 0.52,
@@ -2682,11 +2919,13 @@ export default class CombatScene extends Phaser.Scene {
       this.promptText.setText(
         targetId === 'sahira'
           ? 'Bloqueo: Sahira no recibe daño.'
-          : `Bloqueo imperfecto: ${actualDamage} de daño.`,
+          : targetId === 'hazel'
+            ? `La defensa de Hazel no detiene el rayo: ${actualDamage} de daño.`
+            : `Bloqueo imperfecto: ${actualDamage} de daño.`,
       );
     } else if (!shielded) {
       this.showFloatingText('FAIL', GAME_CONFIG.characters[targetId].x, this.actorSprites[targetId].y - GAME_CONFIG.characters[targetId].displayHeight, '#ff8d8d');
-      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.hit, 650);
+      this.setActorFrame(targetId, this.getActorFrames(targetId).hit, 650);
       this.createImpact(
         GAME_CONFIG.characters[targetId].x,
         GAME_CONFIG.characters[targetId].feetY - GAME_CONFIG.characters[targetId].displayHeight * 0.52,
@@ -2728,7 +2967,7 @@ export default class CombatScene extends Phaser.Scene {
       if (this.phase !== 'resolving' || this.result) {
         return;
       }
-      this.setActorFrame(targetId, GAME_CONFIG.characters[targetId].frames.idle);
+      this.setActorFrame(targetId, this.getActorFrames(targetId).idle);
       if (this.state.bosses.iobrontes.health <= 0) {
         this.finishEnemyChain();
         return;
@@ -2764,6 +3003,9 @@ export default class CombatScene extends Phaser.Scene {
           return;
         }
         const bossDamage = this.resolveIobrontesDamage(20, 'furai');
+        if (bossDamage.damage > 0) {
+          gainFuraiSpirit(this.state, 30);
+        }
         this.createImpact(
           GAME_CONFIG.characters.iobrontes.x,
           GAME_CONFIG.characters.iobrontes.feetY - 320,
@@ -2795,7 +3037,7 @@ export default class CombatScene extends Phaser.Scene {
       this.actorNames[this.targetCharacter].setColor('#f2d9a1');
       this.setActorFrame(
         this.targetCharacter,
-        GAME_CONFIG.characters[this.targetCharacter].frames.idle,
+        this.getActorFrames(this.targetCharacter).idle,
       );
     }
     this.targetCharacter = null;
@@ -2813,7 +3055,7 @@ export default class CombatScene extends Phaser.Scene {
       || this.cameraTransitioning
       || !character
       || this.state.party[character].health <= 0
-      || !canAfford(this.state.party[character], ability)
+      || !canUseAbility(this.state, character, ability)
     ) {
       return;
     }
@@ -2826,6 +3068,16 @@ export default class CombatScene extends Phaser.Scene {
       );
       this.targetText.setText('ELIGE UN ALIADO');
       this.refreshHud();
+      return;
+    }
+
+    if (
+      character === 'hazel'
+      && (ability.id === 'flame-dance' || ability.id === 'ignis-shift')
+    ) {
+      this.targetingAbility = null;
+      this.phase = 'action';
+      this.returnCameraToArena(() => this.executeHazelAreaAbility(ability));
       return;
     }
 
@@ -2916,6 +3168,10 @@ export default class CombatScene extends Phaser.Scene {
     ability: Ability,
     character: CharacterId,
   ): void {
+    if (character === 'hazel') {
+      this.executeHazelTargetedAbility(boss, ability);
+      return;
+    }
     spendCost(this.state.party[character], ability);
     this.portalRedirectTarget = null;
     if (
@@ -2923,7 +3179,7 @@ export default class CombatScene extends Phaser.Scene {
       && ability.damage > 0
       && this.state.kosmelysPortalShieldTurnsRemaining > 0
     ) {
-      const eligible = (['furai', 'dexios', 'sahira'] as const)
+      const eligible = PLAYABLE_CHARACTERS
         .filter((id) => this.state.party[id].health > 0);
       this.portalRedirectTarget = eligible.length > 0
         ? Phaser.Utils.Array.GetRandom(eligible)
@@ -2950,10 +3206,9 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
 
-    const empowered = this.state.bosses[boss].armorBreak && !this.portalRedirectTarget;
-    if (empowered && ability.damage > 0) {
-      this.state.bosses[boss].armorBreak = false;
-    }
+    const empowered = this.state.bosses[boss].armorBreak
+      && ability.damage > 0
+      && !this.portalRedirectTarget;
     this.promptText.setText(
       empowered && ability.damage > 0
         ? `${ability.name}: ¡el primer impacto recibe el doble de daño!`
@@ -2961,7 +3216,238 @@ export default class CombatScene extends Phaser.Scene {
     );
     this.soundscape.play(ability.sound);
     this.refreshHud();
-    this.performAbilityHit(character, ability, 0, empowered);
+    this.performAbilityHit(character, ability, 0);
+  }
+
+  private executeHazelTargetedAbility(boss: BossId, ability: Ability): void {
+    spendCost(this.state.party.hazel, ability);
+    this.portalRedirectTarget = null;
+    this.phase = 'action';
+    if (ability.id === 'glacio-shift') {
+      this.soundscape.play('shift');
+      this.setActorFrame('hazel', 'hazel_cambio');
+      this.time.delayedCall(GAME_CONFIG.timing.spritePoseMs, () => {
+        if (this.phase !== 'action' || this.result) {
+          return;
+        }
+        this.changeHazelForm('glacio');
+        this.soundscape.play('shard');
+        this.launchHazelProjectile('hielo_debil', boss, () => {
+          this.resolveHazelHit(boss, ability.damage, 'hielo_debil');
+          this.finishHazelAbility(ability);
+        });
+      });
+      return;
+    }
+
+    this.soundscape.play('shard');
+    this.setActorFrame('hazel', ability.frame);
+    this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
+      if (this.phase !== 'action' || this.result) {
+        return;
+      }
+      this.resolveHazelHit(boss, ability.damage, 'hielo');
+      this.finishHazelAbility(ability);
+    });
+  }
+
+  private executeHazelAreaAbility(ability: Ability): void {
+    if (this.phase !== 'action' || this.result) {
+      return;
+    }
+    spendCost(this.state.party.hazel, ability);
+    this.portalRedirectTarget = null;
+    if (ability.id === 'ignis-shift') {
+      this.soundscape.play('shift');
+      this.setActorFrame('hazel', 'hazel_cambio');
+      this.time.delayedCall(GAME_CONFIG.timing.spritePoseMs, () => {
+        if (this.phase !== 'action' || this.result) {
+          return;
+        }
+        this.changeHazelForm('ignis');
+        this.releaseHazelAreaAttack(ability);
+      });
+      return;
+    }
+    this.setActorFrame('hazel', ability.frame);
+    this.releaseHazelAreaAttack(ability);
+  }
+
+  private releaseHazelAreaAttack(ability: Ability): void {
+    if (this.phase !== 'action' || this.result) {
+      return;
+    }
+    const weakFire = ability.id === 'ignis-shift';
+    const effect = weakFire ? 'fuego_debil' : 'fuego';
+    this.soundscape.play('flame');
+    const livingBosses = (['iobrontes', 'kosmelys'] as const)
+      .filter((boss) => this.state.bosses[boss].health > 0);
+    if (weakFire) {
+      let pendingImpacts = livingBosses.length;
+      if (pendingImpacts === 0) {
+        this.finishHazelAbility(ability);
+        return;
+      }
+      livingBosses.forEach((boss) => {
+        this.launchHazelProjectile(effect, boss, () => {
+          this.resolveHazelHit(boss, ability.damage, effect, true);
+          pendingImpacts -= 1;
+          if (pendingImpacts === 0) {
+            this.finishHazelAbility(ability);
+          }
+        });
+      });
+      return;
+    }
+    livingBosses.forEach((boss) => {
+      this.resolveHazelHit(boss, ability.damage, effect, true);
+    });
+    this.finishHazelAbility(ability);
+  }
+
+  private resolveHazelHit(
+    boss: BossId,
+    baseDamage: number,
+    effect: string,
+    areaPortion = false,
+  ): void {
+    if (this.state.bosses[boss].health <= 0) {
+      return;
+    }
+    if (boss === 'kosmelys' && this.state.kosmelysPortalShieldTurnsRemaining > 0) {
+      const eligible = PLAYABLE_CHARACTERS
+        .filter((id) => this.state.party[id].health > 0);
+      if (eligible.length === 0) {
+        return;
+      }
+      this.portalRedirectTarget = Phaser.Utils.Array.GetRandom(eligible);
+      this.showPortalRedirection(this.portalRedirectTarget, areaPortion);
+      const shielded = consumeShieldHit(this.state, this.portalRedirectTarget);
+      const damage = shielded
+        ? 0
+        : damagePartyMember(this.state, this.portalRedirectTarget, baseDamage);
+      const redirected = GAME_CONFIG.characters[this.portalRedirectTarget];
+      this.showHazelImpact(effect, this.portalRedirectTarget);
+      if (shielded) {
+        this.showFloatingText(
+          'ESCUDO HIPOPÓTAMO',
+          redirected.x,
+          redirected.feetY - redirected.displayHeight * 0.62,
+          '#a8ffbd',
+        );
+      } else {
+        this.setActorFrame('hazel', this.getActorFrames('hazel').hit, 550);
+        this.showFloatingText(
+          `-${damage}`,
+          redirected.x,
+          redirected.feetY - redirected.displayHeight * 0.7,
+          '#ffb7a9',
+        );
+      }
+      return;
+    }
+
+    const result = boss === 'iobrontes'
+      ? this.resolveIobrontesDamage(baseDamage, 'hazel', true)
+      : {
+        ...damageBossWithArmorBreak(this.state, boss, baseDamage),
+        retaliationDamage: 0,
+        retaliationShielded: false,
+      };
+    const empowered = result.empowered;
+    const target = GAME_CONFIG.characters[boss];
+    this.showHazelImpact(effect, boss);
+    this.setBossFrame(target.frames.hit, GAME_CONFIG.timing.spritePoseMs, boss);
+    this.showFloatingText(
+      `-${result.damage}`,
+      target.x,
+      target.feetY - target.displayHeight * 0.7,
+      empowered ? '#fff0a5' : '#ffffff',
+    );
+    if (boss === 'iobrontes') {
+      this.showDivineRetaliation('hazel', result.retaliationDamage, result.retaliationShielded);
+    }
+  }
+
+  private finishHazelAbility(ability: Ability): void {
+    this.refreshHud();
+    if (this.finishIfBattleEnded()) {
+      return;
+    }
+    const attackFrame = this.getActorFrames('hazel').attack;
+    if (ability.frame !== attackFrame) {
+      this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+      this.finishAbility('hazel', ability);
+      return;
+    }
+    this.time.delayedCall(GAME_CONFIG.timing.hazelAttackPoseMs, () => {
+      if (this.phase !== 'action' || this.result) {
+        return;
+      }
+      this.setActorFrame('hazel', this.getActorFrames('hazel').idle);
+      this.finishAbility('hazel', ability);
+    });
+  }
+
+  private launchHazelProjectile(    effect: string,
+    boss: BossId,
+    onImpact: () => void,
+  ): void {
+    const key = effect;
+    if (!this.textures.exists(key)) {
+      console.error(`Falta el efecto de Hazel: ${key}`);
+      onImpact();
+      return;
+    }
+    const source = this.textures.get(key).getSourceImage();
+    const scale = 92 / Math.max(source.width, source.height);
+    const sprite = this.add.image(
+      GAME_CONFIG.characters.hazel.x,
+      GAME_CONFIG.characters.hazel.feetY - GAME_CONFIG.characters.hazel.displayHeight * 0.55,
+      key,
+    ).setDisplaySize(source.width * scale, source.height * scale).setDepth(16);
+    this.uiCamera.ignore(sprite);
+    this.hazelEffectObjects.push(sprite);
+    const target = GAME_CONFIG.characters[boss];
+    this.tweens.add({
+      targets: sprite,
+      x: target.x,
+      y: target.feetY - target.displayHeight * 0.55,
+      duration: GAME_CONFIG.timing.attackHitIntervalMs,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        this.hazelEffectObjects.splice(this.hazelEffectObjects.indexOf(sprite), 1);
+        sprite.destroy();
+        onImpact();
+      },
+    });
+  }
+
+  private showHazelImpact(effect: string, target: BossId | CharacterId): void {
+    if (!this.textures.exists(effect)) {
+      console.error(`Falta el efecto de Hazel: ${effect}`);
+      return;
+    }
+    const config = GAME_CONFIG.characters[target];
+    const source = this.textures.get(effect).getSourceImage();
+    const scale = 190 / Math.max(source.width, source.height);
+    const sprite = this.add.image(
+      config.x,
+      config.feetY - config.displayHeight * 0.55,
+      effect,
+    ).setDisplaySize(source.width * scale, source.height * scale).setDepth(16);
+    this.uiCamera.ignore(sprite);
+    this.hazelEffectObjects.push(sprite);
+    this.tweens.add({
+      targets: sprite,
+      alpha: 0,
+      scale: 1.35,
+      duration: 450,
+      onComplete: () => {
+        this.hazelEffectObjects.splice(this.hazelEffectObjects.indexOf(sprite), 1);
+        sprite.destroy();
+      },
+    });
   }
 
   private returnCameraToArena(onComplete: () => void): void {
@@ -2976,7 +3462,7 @@ export default class CombatScene extends Phaser.Scene {
     });
   }
 
-  private showPortalRedirection(target: CharacterId): void {
+  private showPortalRedirection(target: CharacterId, areaPortion = false): void {
     this.soundscape.play('teleport_ataque');
     const config = GAME_CONFIG.characters[target];
     const source = this.textures.get('portal_effect').getSourceImage();
@@ -3008,7 +3494,9 @@ export default class CombatScene extends Phaser.Scene {
       '#e6b4ff',
     );
     this.promptText.setText(
-      `Portal Shield redirige toda la habilidad hacia ${config.name}.`,
+      areaPortion
+        ? `Portal Shield redirige solo la parte dirigida a Kosmelys hacia ${config.name}.`
+        : `Portal Shield redirige toda la habilidad hacia ${config.name}.`,
     );
   }
 
@@ -3016,7 +3504,6 @@ export default class CombatScene extends Phaser.Scene {
     character: CharacterId,
     ability: Ability,
     hitIndex: number,
-    empowered: boolean,
   ): void {
     if (this.phase !== 'action' || this.result) {
       return;
@@ -3035,11 +3522,10 @@ export default class CombatScene extends Phaser.Scene {
         if (this.phase !== 'action' || this.result) {
           return;
         }
-        const multiplier = empowered && hitIndex === 0 ? 2 : 1;
-        const damage = ability.damage * multiplier;
         const boss = this.abilityBoss;
         const targetConfig = GAME_CONFIG.characters[boss];
         let resolvedDamage: number;
+        let empowered = false;
         let retaliationDamage = 0;
         let retaliationShielded = false;
         let redirectedShielded = false;
@@ -3047,14 +3533,21 @@ export default class CombatScene extends Phaser.Scene {
           redirectedShielded = consumeShieldHit(this.state, this.portalRedirectTarget);
           resolvedDamage = redirectedShielded
             ? 0
-            : damagePartyMember(this.state, this.portalRedirectTarget, damage);
+            : damagePartyMember(this.state, this.portalRedirectTarget, ability.damage);
         } else if (boss === 'iobrontes') {
-          const result = this.resolveIobrontesDamage(damage, character);
+          const result = this.resolveIobrontesDamage(ability.damage, character, true);
           resolvedDamage = result.damage;
+          empowered = result.empowered;
           retaliationDamage = result.retaliationDamage;
           retaliationShielded = result.retaliationShielded;
         } else {
-          resolvedDamage = damageBoss(this.state, boss, damage);
+          const result = damageBossWithArmorBreak(this.state, boss, ability.damage);
+          resolvedDamage = result.damage;
+          empowered = result.empowered;
+        }
+        const multiplier = empowered ? 2 : 1;
+        if (ability.id === 'tiger-spear' && resolvedDamage > 0) {
+          gainFuraiSpirit(this.state, 30);
         }
         if (!this.portalRedirectTarget) {
           this.setBossFrame(
@@ -3105,7 +3598,7 @@ export default class CombatScene extends Phaser.Scene {
         }
         if (hitIndex + 1 < ability.hits) {
           this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
-            this.performAbilityHit(character, ability, hitIndex + 1, empowered);
+            this.performAbilityHit(character, ability, hitIndex + 1);
           });
           return;
         }
@@ -3117,7 +3610,7 @@ export default class CombatScene extends Phaser.Scene {
   private finishAbility(character: CharacterId, ability: Ability): void {
     if (ability.selfDamage > 0) {
       const damage = damagePartyMember(this.state, character, ability.selfDamage, false);
-      this.setActorFrame(character, GAME_CONFIG.characters[character].frames.hit, 550);
+      this.setActorFrame(character, this.getActorFrames(character).hit, 550);
       this.showFloatingText(
         `-${damage}`,
         GAME_CONFIG.characters[character].x,
@@ -3155,7 +3648,10 @@ export default class CombatScene extends Phaser.Scene {
     const ability = GAME_CONFIG.abilities.sahira.find(
       (entry) => entry.id === 'hippopotamus-healing',
     );
-    if (!ability || !canAfford(this.state.party.sahira, ability)) {
+    if (!ability || !canUseAbility(this.state, 'sahira', ability)) {
+      return;
+    }
+    if (!consumeSahiraAbilityUse(this.state, 'hippopotamus-healing')) {
       return;
     }
     this.phase = 'action';
@@ -3203,7 +3699,10 @@ export default class CombatScene extends Phaser.Scene {
     const ability = GAME_CONFIG.abilities.sahira.find(
       (entry) => entry.id === 'hippopotamus-shield',
     );
-    if (!ability || !canAfford(this.state.party.sahira, ability)) {
+    if (!ability || !canUseAbility(this.state, 'sahira', ability)) {
+      return;
+    }
+    if (!consumeSahiraAbilityUse(this.state, 'hippopotamus-shield')) {
       return;
     }
     this.phase = 'action';
@@ -3232,7 +3731,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.activeCharacter) {
       this.setActorFrame(
         this.activeCharacter,
-        GAME_CONFIG.characters[this.activeCharacter].frames.idle,
+        this.getActorFrames(this.activeCharacter).idle,
       );
     }
     if (this.state.kosmelysPortalShieldTurnsRemaining > 0) {
@@ -3299,7 +3798,7 @@ export default class CombatScene extends Phaser.Scene {
       this.targetText.setText('¡PARADA PERFECTA!');
       this.setActorFrame(
         this.targetCharacter,
-        targetConfig.frames.defense[direction],
+        this.getActorFrames(this.targetCharacter).defense[direction],
         GAME_CONFIG.timing.spritePoseMs,
       );
       this.createImpact(
@@ -3314,12 +3813,16 @@ export default class CombatScene extends Phaser.Scene {
       );
       this.setActorFrame(
         this.targetCharacter,
-        targetConfig.frames.defense[direction],
+        this.getActorFrames(this.targetCharacter).defense[direction],
         GAME_CONFIG.timing.spritePoseMs,
       );
     } else {
       this.targetText.setText('DIRECCIÓN EQUIVOCADA');
-      this.setActorFrame(this.targetCharacter, targetConfig.frames.hit, 550);
+      this.setActorFrame(
+        this.targetCharacter,
+        this.getActorFrames(this.targetCharacter).hit,
+        550,
+      );
       this.cameras.main.shake(110, 0.004);
     }
   }
@@ -3366,7 +3869,7 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     if (this.allyTargetingAbility) {
-      const target = (['dexios', 'furai', 'sahira'] as const)[Number(key) - 1];
+      const target = ALLY_TARGET_ORDER[Number(key) - 1];
       if (target) {
         this.selectAllyTarget(target);
       }
@@ -3375,7 +3878,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.phase === 'player') {
       const abilityIndex = Number(key) - 1;
       if (abilityIndex >= 0 && this.activeCharacter) {
-        const ability = GAME_CONFIG.abilities[this.activeCharacter][abilityIndex];
+        const ability = this.getAbilities(this.activeCharacter)[abilityIndex];
         if (ability) {
           this.performAbility(ability);
         }
@@ -3441,8 +3944,9 @@ export default class CombatScene extends Phaser.Scene {
   private setActorFrame(id: CharacterId, frame: string, durationMs = 0): void {
     const sprite = this.actorSprites[id];
     const config = GAME_CONFIG.characters[id];
+    const idleFrame = this.getActorFrames(id).idle;
     const generation = ++this.frameGeneration[id];
-    if (frame === config.frames.idle && this.state.party[id].health > 0) {
+    if (frame === idleFrame && this.state.party[id].health > 0) {
       this.breathingTweens[id].stop();
       sprite.setY(config.feetY);
       this.breathingTweens[id].restart();
@@ -3463,7 +3967,7 @@ export default class CombatScene extends Phaser.Scene {
     if (durationMs > 0) {
       this.time.delayedCall(durationMs, () => {
         if (this.frameGeneration[id] === generation && this.state.party[id].health > 0) {
-          this.setActorFrame(id, config.frames.idle);
+          this.setActorFrame(id, this.getActorFrames(id).idle);
         }
       });
     }
@@ -3607,7 +4111,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private showFloatingText(text: string, x: number, y: number, color: string): void {
     const label = this.add.text(x, y, text, {
-      fontFamily: 'Georgia, serif',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '25px',
       fontStyle: 'bold',
       color,
@@ -3629,7 +4133,7 @@ export default class CombatScene extends Phaser.Scene {
     const mark = this.add.container(boss.x, boss.feetY - boss.displayHeight * 0.5).setDepth(13);
     const emblem = this.add.image(0, 0, 'tiger_mark').setDisplaySize(112, 112);
     const label = this.add.text(0, 48, 'ARMOR BREAK', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '13px',
       fontStyle: 'bold',
       color: '#f0d3ff',
@@ -3648,7 +4152,7 @@ export default class CombatScene extends Phaser.Scene {
     ).setDepth(character.depth + 10);
     const emblem = this.add.image(0, 0, 'hippo_mark').setDisplaySize(96, 96);
     const counter = this.add.text(40, -42, '2', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: UI_FONT_FAMILY,
       fontSize: '20px',
       fontStyle: 'bold',
       color: '#ffffff',
@@ -3713,6 +4217,8 @@ export default class CombatScene extends Phaser.Scene {
     });
     this.portalEffects.forEach((effect) => effect.destroy());
     this.portalEffects = [];
+    this.hazelEffectObjects.forEach((effect) => effect.destroy());
+    this.hazelEffectObjects.length = 0;
     this.warning.setVisible(false);
     this.timingRing.clear();
     this.targetText.setText('');
@@ -3727,7 +4233,7 @@ export default class CombatScene extends Phaser.Scene {
     } else {
       this.turnText.setText('DERROTA');
       this.promptText.setText('Todo el grupo ha quedado incapacitado.');
-      (['furai', 'dexios', 'sahira'] as const).forEach((id) => {
+      PLAYABLE_CHARACTERS.forEach((id) => {
         this.actorSprites[id].setAlpha(0.25);
       });
     }
@@ -3743,7 +4249,7 @@ export default class CombatScene extends Phaser.Scene {
     card.lineStyle(2, result === 'victory' ? COLORS.gold : COLORS.red, 0.92);
     card.strokeRoundedRect(620, 385, 680, 282, 20);
     this.add.text(WIDTH / 2, 422, result === 'victory' ? 'VICTORIA' : 'DERROTA', {
-      fontFamily: 'Georgia, serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '48px',
       fontStyle: 'bold',
       color: result === 'victory' ? '#f3d58e' : '#ff9a9a',
@@ -3755,13 +4261,13 @@ export default class CombatScene extends Phaser.Scene {
         ? 'Iobrontes y Kosmelys han sido vencidos.'
         : 'El grupo ya no puede continuar.',
       {
-        fontFamily: 'Georgia, serif',
+        fontFamily: GAME_FONT_FAMILY,
         fontSize: '20px',
         color: '#e5d9eb',
       },
     ).setOrigin(0.5, 0).setDepth(41);
     this.add.text(WIDTH / 2, 532, 'Pulsa R o el botón para volver a combatir', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '16px',
       color: '#bdb0c9',
     }).setOrigin(0.5, 0).setDepth(41);
@@ -3772,7 +4278,7 @@ export default class CombatScene extends Phaser.Scene {
     background.lineStyle(2, COLORS.gold, 0.8);
     background.strokeRoundedRect(0, 0, 250, 48, 10);
     const label = this.add.text(125, 14, 'REINTENTAR', {
-      fontFamily: 'Arial, sans-serif',
+      fontFamily: GAME_FONT_FAMILY,
       fontSize: '17px',
       fontStyle: 'bold',
       color: '#f4e4c4',

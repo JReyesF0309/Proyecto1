@@ -1,30 +1,31 @@
 LA DEXÍADA — GAME DESIGN DOCUMENT
-Version: 0.5 — Dual-Boss Combat Prototype
+Version: 0.6 — Four-Character Dual-Boss Combat Prototype
 Document Status: Implementation Specification
 Target Platform: PC (Phaser, browser)
 Genre: Turn-Based RPG with Real-Time Directional Defense
 Visual Perspective: 2D character-based combat with foreground/background depth
-Prototype Scope: Three playable characters, two bosses, one arena, and one complete dual-boss combat encounter.
+Prototype Scope: Four playable characters, two bosses, one arena, and one complete dual-boss combat encounter.
 Note to the implementer: This document is intended to be self-contained. Implement the mechanics and values described here without relying on previous versions. Numerical values, timings, character positions, camera settings, and animation references must be stored in configuration files whenever possible.
 ________________________________________
 1. GAME OVERVIEW
 1.1. Game Description
 La Dexíada is a fantasy RPG inspired by Greek mythology, set in Xantharchía, a world where gods, divine heirs, and mortals coexist within a society shaped by magic.
 The combat system combines turn-based strategic decisions with real-time directional defense. During their turns, players select attacks or abilities for their characters. During enemy turns, they must identify the direction of incoming attacks and press the corresponding defensive key at the correct moment.
-The player controls a party of three characters:
+The player controls a party of four characters:
 •	Dexios: A lightning-based fighter who uses electricity and Chaos energy.
 •	Furai: A tiger-themed fighter specializing in physical attacks, armor breaking, and defensive counterattacks.
 •	Sahira: A jackal-themed fighter and healer with strong defensive capabilities.
+•	Hazel Lancaster: A precision defender who alternates between Ignis (fire) and Glacio (ice).
 The party faces Iobrontes, God of Thunder and the Tenth Heir of Zeus, and Kosmelys, Goddess of Space and Tenth Heir of Hera, inside Iobrontes's temple.
 The prototype focuses entirely on this dual-boss combat encounter, demonstrating the game's core mechanics, character abilities, directional defense system, party management, and visual identity.
 1.2. Prototype Objectives
 The prototype must:
-1.	Implement a complete three-character party versus Iobrontes and Kosmelys.
+1.	Implement a complete four-character party versus Iobrontes and Kosmelys.
 2.	Use a fixed turn order without a speed-stat system.
 3.	Allow each playable character to execute their unique abilities.
 4.	Implement Iobrontes's three-hit directional Lightning Chain, team-targeting Watch the Thunder, and Divine Retribution.
 5.	Allow the targeted character to defend using WASD and all active characters to jump together using Space.
-6.	Implement different defensive mechanics for Dexios, Furai, and Sahira.
+6.	Implement the distinct defensive mechanics for Dexios, Furai, Sahira, and Hazel.
 7.	Include party health and resource management.
 8.	Implement healing, armor breaking, Chaos generation, and counterattacks.
 9.	Display all required character sprites and effects.
@@ -36,6 +37,24 @@ The prototype must:
 1.3. Out of Scope
 This prototype will not include exploration, interactive dialogue, inventory, character progression, equipment selection, additional bosses beyond Iobrontes and Kosmelys, multiple arenas, or a complete save system.
 Character speed statistics will also be excluded. Turn order will remain fixed throughout the encounter.
+
+1.4. Hazel Lancaster — Fourth Playable Character
+Hazel starts each battle with 80 / 80 Health in Ignis form. Her Ignis and Glacio forms share the same Health; switching forms does not restore or change it. Hazel has no Mana, Chaos, or ability costs. Her HUD shows IGNIS in orange or GLACIO in light blue in place of a resource bar, and switches between the supplied fire and ice portraits.
+
+Hazel has exactly two abilities in each form:
+
+| Form | Ability | Targets | Effect |
+|---|---|---|---|
+| Ignis | Flame Dance | Every living boss | 30 fire damage to each; use the `hazel_fuego_dance` action frame and `fuego` impact effect. |
+| Ignis | Glacio Shift | One selected living boss | Show `hazel_cambio`, change to Glacio, then launch one `hielo_debil` projectile for 10 damage. |
+| Glacio | Figure Shards | One selected living boss | Use the `hazel_hielo_shards` action frame and `hielo` impact effect for 60 damage. |
+| Glacio | Ignis Shift | Every living boss | Show `hazel_cambio`, change to Ignis, then launch one `fuego_debil` projectile per living boss for 5 damage each. |
+
+Both Shift actions are a single turn action. Multi-target attacks skip individual boss selection; single-target attacks use the existing living-boss selection flow. Each action plays its specified `flame`, `shard`, and/or `shift` sound once at release/transformation, applies damage once per valid target, and returns Hazel to the idle sprite for her current form. A boss at zero Health cannot be targeted or damaged.
+
+Hazel uses the existing directional input and timing windows. A correct normal/imperfect block and a missed/wrong-direction input each cause full incoming attack damage; only a Perfect Parry avoids damage. Hazel has no parry counterattack. Existing protective effects, including Sahira's Hippopotamus Shield, still apply. The team-wide Space jump and direct/unavoidable boss attacks retain their existing rules.
+
+Keep Hazel's fixed turn slot editable and label its current placement immediately after Sahira as provisional; do not change the relative order of the other turns or introduce Speed-based initiative.
 ________________________________________
 2. SETTING AND ART DIRECTION
 2.1. Arena: Temple of Iobrontes
@@ -69,7 +88,7 @@ Character images must support transparency.
 Assets should be scaled at runtime while preserving their original proportions.
 2.3. Screen Composition
 The arena must communicate depth through character placement, scaling, and floor perspective.
-The three playable characters stand closer to the camera, facing Iobrontes and Kosmelys.
+The four playable characters stand closer to the camera, facing Iobrontes and Kosmelys.
 Iobrontes and Kosmelys stand farther away, facing the party and the camera. Both bosses must be visible simultaneously.
 Party Formation
 Furai — Left
@@ -87,9 +106,12 @@ Sahira — Right
 •	Slightly closer to the camera than Dexios.
 •	Her feet should appear lower on the screen than the other party members' feet.
 •	Facing Iobrontes.
+Hazel — Configured fourth position
+•	Use Hazel's configured position and depth so her sprite remains readable without unnecessarily moving the established characters.
+•	Facing Iobrontes.
 Iobrontes — Background
 •	Positioned approximately in the center of the arena.
-•	Standing farther away than all three party members.
+•	Standing farther away than all four party members.
 •	Facing the playable characters.
 •	His upright posture must communicate divine authority.
 Kosmelys — Background
@@ -101,8 +123,7 @@ Formation Diagram
 
               IOBRONTES   KOSMELYS
 
-
-       FURAI
+       FURAI     HAZEL
                      DEXIOS
                                   SAHIRA
 
@@ -123,7 +144,7 @@ From back to front:
 9.	Combat HUD and directional indicators.
 The final draw order may be adjusted dynamically for attack effects, but the party formation must maintain a consistent sense of depth.
 2.4. Camera Behavior
-The camera normally displays the complete battlefield, including all three playable characters, Iobrontes, and Kosmelys.
+The camera normally displays the complete battlefield, including all four playable characters, Iobrontes, and Kosmelys.
 When Iobrontes selects a target:
 1.	The game identifies the chosen character.
 2.	The camera smoothly moves and zooms slightly toward that character.
@@ -177,9 +198,9 @@ ________________________________________
 4. COMBAT SYSTEM
 4.1. General Structure
 Combat is turn-based.
-The player controls three characters while Iobrontes and Kosmelys act as independent enemy bosses.
+The player controls four characters while Iobrontes and Kosmelys act as independent enemy bosses.
 Each character has unique attacks and defensive behavior.
-The combat continues until both bosses are defeated or all three party members are incapacitated.
+The combat continues until both bosses are defeated or all four party members are incapacitated.
 4.2. Fixed Turn Order
 The prototype will not calculate turn order using character speed.
 Instead, the following sequence is fixed:
@@ -191,9 +212,10 @@ Turn Position	Acting Character
 5	Iobrontes
 6	Kosmelys
 7	Sahira
-8	Iobrontes
-9	Kosmelys
-After turn position 9, the sequence restarts at position 1.
+8	Hazel (provisional)
+9	Iobrontes
+10	Kosmelys
+Hazel's configured slot immediately after Sahira is provisional. After turn position 10, the sequence restarts at position 1.
 Furai
   ↓
 Iobrontes
@@ -208,12 +230,14 @@ Kosmelys
   ↓
 Sahira
   ↓
+Hazel (provisional)
+  ↓
 Iobrontes
   ↓
 Kosmelys
   ↓
 Repeat
-Iobrontes and Kosmelys each act three times during every complete nine-position cycle.
+Iobrontes and Kosmelys each act three times during every complete ten-position cycle. Hazel's turn is configuration-controlled; every other turn keeps its existing relative position.
 Incapacitated Characters
 When a playable character reaches zero health:
 •	They become incapacitated.
@@ -223,7 +247,7 @@ When a playable character reaches zero health:
 •	Their HUD must indicate that they are incapacitated.
 For the initial implementation, only the incapacitated party member's turn is skipped. Boss positions in the fixed turn sequence remain unchanged. A defeated boss's remaining turns are skipped, not transferred to the other boss.
 This means a boss may receive consecutive turns if a skipped party-member turn falls between two boss turns.
-The battle only ends in defeat when all three playable characters have zero health.
+The battle only ends in defeat when all four playable characters have zero health.
 4.3. Target Selection
 During each Lightning Chain, Iobrontes selects exactly one active party member at random and keeps that target for all three lightning attacks.
 Watch the Thunder targets all active party members simultaneously and requires no single-target selection.
@@ -306,29 +330,29 @@ ________________________________________
 6.1. Starting Statistics
 Attribute	Initial Value	Maximum
 Health	80	80
-Mana	150	150
+Spiritual Energy	0	100
 Initial Frame: furai_base
 Furai specializes in physical attacks and techniques associated with the tiger.
 6.2. Ability 1 — Tiger Spear
 Damage: 15
-Mana Cost: 0
+Spiritual Energy Cost: 0
 Type: Single physical strike
 Frame: furai_ataque
 Furai performs a single physical attack against Iobrontes.
 The attack deals 15 damage and produces a visible impact effect.
-It does not consume Mana.
+It does not consume Spiritual Energy. A successful hit restores 30 Spiritual Energy, up to 100.
 6.3. Ability 2 — Tiger Fang
-Damage: 15 × 2 = 30
-Mana Cost: 20
+Damage: 20 × 2 = 40
+Spiritual Energy Cost: 20
 Type: Two-hit physical attack
 Frame: furai_tigre
 Furai attacks Iobrontes twice in succession.
-Each hit deals 15 damage, for a total of 30.
+Each hit deals 20 damage, for a total of 40.
 Each hit must have its own impact effect.
-The ability consumes 20 Mana when executed.
+The ability consumes 20 Spiritual Energy when executed.
 6.4. Ability 3 — Armor Break
 Damage: 0
-Mana Cost: 20
+Spiritual Energy Cost: 25
 Type: Debuff
 Frame: furai_romper
 Furai applies an armor-breaking mark to Iobrontes.
@@ -345,7 +369,7 @@ Armor Break Rules
 For multi-hit attacks, the damage of only the first hit within that one ability is doubled.
 Examples:
 •	Triple Lightning: 15 → 20 total damage.
-•	Tiger Fang: 30 → 45 total damage.
+•	Tiger Fang: 40 → 60 total damage.
 •	Electric Arc: 30 → 60 damage.
 •	Chaotic Lightning: 70 → 140 damage.
 For this prototype, automatic defensive counterattacks do not consume the mark. The effect waits for the next damaging attack chosen from a playable character's ability menu.
@@ -366,6 +390,7 @@ Three consecutive perfect parries	0 across the chain	20
 Furai's counterattack mechanic is different from Dexios's.
 A successful perfect parry prevents all damage from the individual bolt, but does not immediately damage Iobrontes.
 Furai only performs his counterattack if he perfectly parries all three lightning bolts in the same enemy chain.
+Each successful Tiger Parry restores 30 Spiritual Energy, up to 100.
 When this happens:
 1.	All three attacks deal zero damage to Furai.
 2.	The message "Parry perfecto" appears.
@@ -379,20 +404,19 @@ ________________________________________
 7.1. Starting Statistics
 Attribute	Initial Value	Maximum
 Health	125	125
-Mana	80	80
 Initial Frame: sahira_base
 Sahira specializes in physical attacks, healing, and defensive techniques.
 7.2. Ability 1 — Jackal Strike
 Damage: 15
-Mana Cost: 0
+Uses: Unlimited
 Type: Single physical strike
 Frame: sahira_ataque
 Sahira performs a physical attack against Iobrontes.
 The attack deals 15 damage and produces a visible impact effect.
-It does not consume Mana.
+It has no per-fight use limit.
 7.3. Ability 2 — Hippopotamus Healing
 Healing: Full restoration of the selected ally's Health
-Mana Cost: 40
+Uses: 2 per fight
 Type: Healing ability
 Frame: sahira_cura
 Sahira performs a healing ability that completely restores one selected party member's health.
@@ -401,11 +425,12 @@ The player can choose:
 •	Dexios
 •	Furai
 •	Sahira
+•	Hazel
 The healing effect restores the selected character to their maximum Health value.
-The ability consumes 40 Mana when successfully executed.
+Each successful use consumes one of the two uses available for the fight.
 Healing Target Selection
 1.	The player selects Hippopotamus Healing.
-2.	The game displays the three party members.
+2.	The game displays all four party members.
 3.	The player selects the character to heal.
 4.	Sahira's healing frame activates.
 5.	A healing effect appears over the selected character.
@@ -413,12 +438,12 @@ Healing Target Selection
 For the initial implementation, healing applies to conscious party members only and does not revive incapacitated allies. Incapacitated characters remain visible in the selection interface but are disabled as healing targets.
 This rule can be changed later if revival abilities are introduced.
 7.4. Ability 3 — Hippopotamus Shield
-Mana Cost: 0
+Uses: 10 per fight
 Type: Defensive support ability
 Frame: sahira_cura
 Sound: cura.mp3
 Sahira selects one conscious ally to protect. The `assets/effects/hippo-mark.png` image appears at the center of the target and displays the two remaining blocked attacks.
-The shield prevents all damage from the target's next two incoming attacks that are not perfectly parried, then disappears. An incoming attack consumes one shield charge unless the target performs a perfect parry. Incapacitated allies cannot be selected.
+Each successful use consumes one of the ten uses available for the fight. The shield prevents all damage from the target's next two incoming attacks that are not perfectly parried, then disappears. An incoming attack consumes one shield charge unless the target performs a perfect parry. Incapacitated allies cannot be selected.
 7.5. Defensive Frames
 Defensive Direction	Frame
 Right	sahira_derecha
@@ -500,7 +525,7 @@ Damage per Target: 50
 Casting Time: 0.6 seconds
 Jump Window: 0.3 seconds
 Iobrontes launches one long purple lightning beam from himself across Furai, Dexios, and Sahira. After the 0.6-second casting time, a white contracting timing ring appears around each active party member while the beam spans the whole party during the 0.3-second jump window.
-Pressing Space during the jump window makes all active party members jump at the same time. Use furai_salto, dexios_salto, and sahira_salto for their respective jump frames. A successful team jump avoids the attack completely. There is no perfect or imperfect result: each character who does not jump takes 50 damage, unless an active Hippopotamus Shield blocks that hit.
+Pressing Space during the jump window makes all active party members jump at the same time. Use each character's current-form jump frame, including Hazel's Ignis or Glacio jump. A successful team jump avoids the attack completely. There is no perfect or imperfect result: each character who does not jump takes 50 damage, unless an active Hippopotamus Shield blocks that hit.
 The attack is one event, not a chain. Resolve damage for all active characters together when the jump window closes.
 8.4. Ability — Divine Retribution
 Frame: iobrontes_armadura
@@ -636,7 +661,7 @@ Goddess of Space, Tenth Heir of Hera
 Health: 450 / 450
 Use purple styling with a cosmic or spatial appearance. Update both bars independently, and do not hide either bar merely because the other boss has been defeated.
 10.2. Party HUD
-The player must be able to see the status of all three playable characters.
+The player must be able to see the status of all four playable characters.
 Each character has an individual HUD panel.
 Dexios
 •	Health: Green bar — 100 / 100.
@@ -644,10 +669,13 @@ Dexios
 •	Chaos Energy: Red bar — 0 / 100.
 Furai
 •	Health: Green bar — 80 / 80.
-•	Mana: Blue bar — 150 / 150.
+•	Spiritual Energy: White bar — 0 / 100.
 Sahira
 •	Health: Green bar — 125 / 125.
-•	Mana: Blue bar — 80 / 80.
+•	No Mana bar; show ability-use counts for Hippopotamus Healing (2) and Hippopotamus Shield (10).
+Hazel
+•	Health: Green bar — 80 / 80.
+•	No Mana or Chaos bar; show the current Ignis/Glacio form instead.
 The HUD should display the character's name, current values, and maximum values.
 The three character panels should be clearly grouped and should not cover important battlefield animations.
 Active Character Indicator
@@ -670,13 +698,13 @@ Chaotic Lightning	50 Chaos Energy
 Furai
 Ability	Cost
 Tiger Spear	Free
-Tiger Fang	20 Mana
-Armor Break	20 Mana
+Tiger Fang	20 Spiritual Energy
+Armor Break	25 Spiritual Energy
 Sahira
 Ability	Cost
-Jackal Strike	Free
-Hippopotamus Healing	40 Mana
-Hippopotamus Shield	Free
+Jackal Strike	Unlimited
+Hippopotamus Healing	2 uses per fight
+Hippopotamus Shield	10 uses per fight
 Abilities that cannot be afforded must appear disabled.
 Sahira's healing ability opens an ally-selection interface before executing.
 Hippopotamus Shield also opens ally selection before protecting the selected ally.
@@ -702,9 +730,11 @@ It must disappear immediately after the empowered attack resolves.
 Before any Iobrontes action, display its name in white at the center of the screen for one second. Hide the message before beginning the action.
 ________________________________________
 11. AUDIO AND MUSIC
-11.1. Background Battle Music
+11.1. Welcome Music
+The `escena_bienvenida` scene plays `assets/music/start.mp3` on a loop. Stop the track when the scene shuts down and combat begins.
+11.2. Background Battle Music
 The combat alternates between `assets/music/watch_the_thunder.mp3` and `assets/music/cosmic_strike.mp3`, playing each track from beginning to end while the encounter is active. Do not overlap or individually loop the battle tracks. When both bosses reach 0 Health, stop the active battle track and transition to `assets/music/nike.mp3`, which loops throughout the victory screen until the battle restarts.
-11.2. Sound Effects
+11.3. Sound Effects
 Use the supplied sound effects in `assets/sfx/`:
 •	`dexios.mp3` plays for Triple Lightning, Electric Arc, and Chaotic Lightning.
 •	`iobrontes.mp3` plays once for each bolt in Lightning Chain.
@@ -716,14 +746,14 @@ Use the supplied sound effects in `assets/sfx/`:
 •	`sahira.mp3` plays for Jackal Strike.
 •	`cura.mp3` plays for Hippopotamus Healing.
 •	`cura.mp3` plays for Hippopotamus Shield.
-•	`perfect_block.mp3` plays for every perfect block by Dexios, Furai, or Sahira.
+•	`perfect_block.mp3` plays for every perfect block by Dexios, Furai, Sahira, or Hazel.
 •	`ataque_cosmico.mp3` plays on each Cosmic Rays projectile cast and midpoint direction change.
 •	`abrir_portal.mp3` plays once when Portal Shield activates.
 •	`teleport_ataque.mp3` plays once per ability redirected by Portal Shield.
 •	`meteor_fall.mp3` plays when each Meteor Rain meteor begins its descent.
 Existing generic effects may be used for other combat feedback.
 Sound effects should support the combat without overpowering the background music.
-11.3. Audio Behavior
+11.4. Audio Behavior
 •	Background music starts when the encounter begins, subject to browser audio playback restrictions.
 •	Music continues while the battle remains active.
 •	On victory, music transitions to the looping victory track; on defeat, music stops.
@@ -741,11 +771,10 @@ Once both bosses have reached zero Health:
 4.	The bosses' defeat frames or placeholders are displayed.
 5.	A victory message appears.
 12.2. Defeat Condition
-The player loses when:
-Dexios, Furai, and Sahira all reach 0 Health.
-The defeat condition requires all three party members to be incapacitated.
+The player loses when Dexios, Furai, Sahira, and Hazel all reach 0 Health.
+The defeat condition requires all four party members to be incapacitated.
 If only one or two characters are incapacitated, the battle continues.
-When all three reach zero Health:
+When all four reach zero Health:
 1.	The combat state changes to Defeat.
 2.	Combat inputs are disabled.
 3.	The party is shown defeated.
@@ -762,7 +791,7 @@ The project must support keyboard input, 2D sprites, graphical effects, audio, a
 13.2. Configuration System
 The following values must be editable without changing the main combat logic:
 •	Character starting statistics.
-•	Maximum Health, Mana, and Chaos energy.
+•	Maximum Health, Mana, Spiritual Energy, and Chaos energy.
 •	Attack damage.
 •	Ability costs.
 •	Chaos energy generation.
@@ -826,12 +855,12 @@ ________________________________________
 14. PROTOTYPE ACCEPTANCE CRITERIA
 The prototype will be considered complete when the following conditions are satisfied.
 General Combat
-1.	The game displays all three playable characters, Iobrontes, and Kosmelys.
+1.	The game displays all four playable characters, Iobrontes, and Kosmelys.
 2.	The characters follow the required foreground/background formation.
 3.	The fixed turn order works correctly.
 4.	Incapacitated characters have their turns skipped.
 5.	Iobrontes only targets active characters.
-6.	The battle ends when both bosses reach zero Health or all three party members are incapacitated.
+6.	The battle ends when both bosses reach zero Health or all four party members are incapacitated.
 7.	Both bosses remain visible simultaneously and have independent Health bars, actions, combat states, and defeated states.
 8.	Defeating one boss does not end the encounter; the surviving boss continues acting at its scheduled positions, and defeated boss turns are skipped rather than transferred.
 Dexios
@@ -843,17 +872,19 @@ Dexios
 12.	Every perfect parry prevents damage and deals 5 damage to Iobrontes.
 Furai
 13.	Tiger Spear deals 15 damage.
-14.	Tiger Fang deals two hits of 15 damage.
+14.	Tiger Fang deals two hits of 20 damage and costs 20 Spiritual Energy.
 15.	Armor Break doubles the next qualifying offensive ability's damage.
+Armor Break costs 25 Spiritual Energy. Successful Tiger Spear hits and successful Tiger Parry counterattacks each restore 30 Spiritual Energy, up to 100.
 16.	The purple tiger mark remains visible until consumed.
 17.	Furai takes 5 damage from imperfect blocks.
 18.	Three perfect parries in the same chain trigger a 20-damage counterattack.
 Sahira
 19.	Jackal Strike deals 15 damage.
-20.	Hippopotamus Healing restores a selected active ally to maximum Health.
-21.	The healing ability allows the selection of Dexios, Furai, or Sahira.
+20.	Jackal Strike has no use limit. Hippopotamus Healing restores a selected conscious ally to maximum Health and can be used twice per fight.
+21.	The healing ability allows the selection of Dexios, Furai, Sahira, or Hazel.
+Hippopotamus Shield can be used ten times per fight and can protect any conscious ally, including Hazel.
 22.	Sahira takes no damage from imperfect blocks.
-24.	Hippopotamus Shield costs no Mana and blocks the next two attacks against a selected active ally.
+24.	Hippopotamus Shield blocks the next two attacks against a selected active ally and can be used ten times per fight.
 Iobrontes
 25.	Iobrontes begins with 550 Health; Kosmelys begins with 450 Health.
 26.	Iobrontes chooses Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time.
@@ -890,31 +921,42 @@ Visuals and Audio
 55.	Meteor Rain applies Chaos generation, target exclusion for incapacitated characters, and the no-zoom camera behavior.
 56.	Kosmelys's ability selection uses the 50% / 30% / 20% distribution and proportionally redistributes unavailable Portal Shield probability.
 57.	The four Kosmelys sound effects play at their specified cast, direction-change, activation, redirection, and meteor-fall events without interrupting music.
-58.	The dual-boss encounter keeps the nine-position turn order and ends in victory only after both bosses are defeated.
+58.	The dual-boss encounter keeps the existing relative turn order, places Hazel immediately after Sahira provisionally, and ends in victory only after both bosses are defeated.
 59.	The Kosmelys Health bar displays her title and 450 / 450 Health directly below Iobrontes's 550 / 550 Health bar; both bars update independently and remain visible until the encounter ends.
 60.	Kosmelys's `kosmelys_base.png`, directional attack frames, Portal Shield frame, and Meteor Rain frame are registered with their supplied filenames; missing frames use labeled placeholders.
 61.	Kosmelys independently selects Cosmic Rays, Portal Shield, and Meteor Rain with the 50% / 30% / 20% distribution, proportionally redistributing unavailable Portal Shield probability.
 62.	Portal Shield redirects one complete attack to one conscious party member and expires after one playable-character turn; boss-specific statuses do not transfer between bosses.
 63.	The asset directory preserves all existing resources and includes Kosmelys's sprites, effects, and music at their configured paths.
+64.	Hazel starts every battle at 80 / 80 Health in Ignis; changing form preserves her Health and updates her portrait, form label, ability menu, idle, defense, jump, and hurt frames.
+65.	Hazel has no Mana, Chaos, or ability costs and has exactly two abilities for each form.
+66.	Flame Dance deals 30 damage to each living boss, uses `fuego` per target, and does not open boss selection.
+67.	Glacio Shift selects one living boss, displays `hazel_cambio`, switches to Glacio, then launches one `hielo_debil` projectile for 10 damage as a single turn action.
+68.	Figure Shards selects one living boss and deals 60 damage using `hielo`; Ignis Shift switches form and launches one `fuego_debil` projectile for 5 damage at each living boss without opening boss selection.
+69.	Hazel's correct normal block and missed/wrong-direction defenses each take full incoming damage from Lightning Chain, Cosmic Rays, and Meteor Rain; only a Perfect Parry avoids damage, with no Hazel counterattack.
+70.	Hazel can be selected for healing, shielding, Lightning Chain, Cosmic Rays, Meteor Rain, and Watch the Thunder; she participates in the shared Space jump and cannot act or be newly targeted when incapacitated.
+71.	For Hazel AoE attacks, Portal Shield affects only the Kosmelys portion; Iobrontes receives the normal portion. Treat this as the proposed AoE convention without changing redirection behavior for other abilities.
+72.	Hazel's provisional turn follows Sahira; the existing relative order of every other turn remains unchanged.
+73.	Hazel's `flame`, `shard`, and `shift` sounds and supplied sprites/effects load through the existing configuration and asset systems without interrupting battle or victory music.
 ________________________________________
 15. SUGGESTED IMPLEMENTATION ORDER
 The prototype should be developed in stages, with each stage tested before moving to the next.
 Stage 1 — Battlefield and Party Formation
 •	Load the supplied temple background.
 •	Place Iobrontes and Kosmelys in the background.
-•	Place Furai, Dexios, and Sahira in the requested formation.
+•	Place Furai, Dexios, Sahira, and Hazel in the requested formation.
 •	Configure sprite scaling and drawing order.
 •	Implement the initial HUD.
 •	Register Kosmelys's supplied sprites and effects from `kosmelys_assets/` without changing their visual design.
 Stage 2 — Combat State and Turn Order
 •	Create the character statistics.
-•	Implement the fixed nine-position turn sequence.
+•	Implement the fixed ten-position turn sequence, with Hazel immediately after Sahira provisionally.
 •	Add incapacitation logic.
 •	Add victory and defeat conditions.
 Stage 3 — Playable Character Abilities
 •	Implement Dexios's attacks and Chaos energy.
 •	Implement Furai's physical attacks and Armor Break.
 •	Implement Sahira's attack and healing ability.
+•	Implement Hazel's Ignis/Glacio forms, two abilities per form, and full-damage imperfect defense.
 •	Add resource costs and target selection.
 Stage 4 — Iobrontes's Attacks
 •	Implement random target selection.
@@ -951,7 +993,7 @@ Stage 8 — Final Integration and Testing
 •	Test all defensive windows.
 •	Verify that animations and camera transitions do not interrupt combat.
 •	Confirm victory and defeat behavior.
-•	Verify the nine-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
+•	Verify the ten-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
 •	Verify independent boss states, ability selection, and defeated-boss turn skipping.
 ________________________________________
 16. VISUAL REFERENCES
@@ -959,11 +1001,12 @@ The project's asset directory will contain the supplied reference frames for:
 •	Dexios
 •	Furai
 •	Sahira
+•	Hazel's Ignis and Glacio forms
 •	Iobrontes
 •	Kosmelys
 •	The temple background
 •	Additional combat effects, where available
-•	Dexios, Furai, and Sahira jump frames
+•	Dexios, Furai, Sahira, and Hazel's form-specific jump frames
 •	Iobrontes's Watch the Thunder frame
 •	Iobrontes's Divine Retribution electric-armor frame
 These assets establish the visual identity and character appearances of the prototype.
@@ -1025,7 +1068,7 @@ Kosmelys appears in the same arena as Iobrontes and fights alongside him.
 
 Both bosses must be visible simultaneously.
 
-The existing three playable characters—Furai, Dexios, and Sahira—remain in their current formation.
+The existing playable characters—Furai, Dexios, Sahira, and Hazel—remain in their current formation.
 
 Kosmelys should be positioned near Iobrontes, in the background area of the battlefield, while maintaining enough separation to make their sprites, attacks, and effects visually distinguishable.
 
@@ -1482,7 +1525,7 @@ Example: for the targets Dexios, Furai, Sahira, Furai, Dexios, Furai must perfec
 
 The camera stays at its normal battlefield position throughout the ability.
 
-All three playable characters must remain visible. Only one meteor and one targeting indicator are active at a time.
+All four playable characters must remain visible. Only one meteor and one targeting indicator are active at a time.
 
 The game must communicate the current target through:
 
@@ -1616,7 +1659,7 @@ When both bosses are defeated:
 2. Transition to the existing victory music, `nike.mp3`.
 3. Continue the normal victory sequence.
 
-If all three playable characters are defeated, stop the battle music and trigger the existing defeat sequence.
+If all four playable characters are defeated, stop the battle music and trigger the existing defeat sequence.
 
 The alternating music system must stop once combat ends.
 
@@ -1748,9 +1791,7 @@ The existing victory music and victory screen must trigger only after both bosse
 
 ## 9.3. Defeat Condition
 
-The defeat condition remains unchanged.
-
-The player loses when Dexios, Furai, and Sahira have all reached zero Health.
+The player loses only when Dexios, Furai, Sahira, and Hazel have all reached zero Health.
 
 If one or two playable characters are incapacitated, the battle continues.
 
@@ -1761,8 +1802,10 @@ All existing mechanics must continue functioning in the dual-boss encounter.
 In particular:
 
 - Dexios continues generating Chaos energy when taking eligible damage.
-- Furai's Armor Break remains attached to its selected boss.
-- Sahira can heal or protect conscious allies.
+- Furai uses Spirit instead of Mana; successful Tiger Spear and Tiger Parry actions each grant 30 Spirit, capped at 100. Tiger Spear deals 15 damage at no cost; Tiger Fang deals 20 damage per hit (40 total) for 20 Spirit; Armor Break retains its effect and costs 25 Spirit.
+- Sahira has no Mana. Jackal Strike is unlimited; Hippopotamus Healing has two uses and Hippopotamus Shield has ten uses per battle.
+- Sahira can heal or protect any conscious ally, including Hazel.
+- Hazel's two elemental forms share 80 Health; her form-specific actions, costs, and precision defense are defined in section 1.4.
 - Hippopotamus Shield can protect against damaging attacks, including eligible redirected attacks and meteors.
 - Iobrontes retains his existing abilities and unique defensive interactions.
 - Kosmelys's Portal Shield only redirects attacks intended for Kosmelys.
@@ -1842,8 +1885,11 @@ After implementing the dual-boss update, verify the following behavior.
 - Both bosses have independent Health values.
 - Enemy-targeting abilities can select either boss.
 - Healing and support abilities continue selecting allies.
+- Hazel's area attacks damage every living boss separately; they never damage a defeated boss.
+- For Hazel's area attacks, Portal Shield may redirect only the portion directed at Kosmelys; the other boss still receives its normal portion. This is the current proposed convention for the shared AoE interaction.
 - Furai's Armor Break applies to the chosen boss only.
-- Sahira's defensive behavior remains unchanged.
+- Sahira's and Hazel's defensive behavior follows their character-specific rules.
+- Hazel is included in all conscious-ally target pools, enemy attack target pools, and the shared Watch the Thunder jump.
 - Incapacitated characters cannot act or be selected as new attack targets.
 - The fight continues after one boss is defeated.
 - Victory occurs only when both bosses are defeated.
@@ -1856,7 +1902,7 @@ After implementing the dual-boss update, verify the following behavior.
 - The two battle songs alternate automatically.
 - Victory music starts only when both bosses have been defeated.
 - The asset manifest and `DESIGN.md` reflect the new project structure.
-- The fixed nine-position turn order remains unchanged.
+- The fixed ten-position turn order preserves the prior relative ordering, with Hazel immediately after Sahira provisionally.
 - The dual-boss victory and defeat conditions remain unchanged.
 
 ---
@@ -1867,7 +1913,7 @@ The prototype continues to use a fixed turn sequence.
 
 Do not implement character Speed statistics or dynamic initiative calculations.
 
-The new combat order is:
+The current test-build combat order is:
 
 | Position | Acting Character |
 |---|---|
@@ -1878,10 +1924,11 @@ The new combat order is:
 | 5 | Iobrontes |
 | 6 | Kosmelys |
 | 7 | Sahira |
-| 8 | Iobrontes |
-| 9 | Kosmelys |
+| 8 | Hazel (provisional: after Sahira) |
+| 9 | Iobrontes |
+| 10 | Kosmelys |
 
-After position 9, the sequence returns to position 1.
+After position 10, the sequence returns to position 1. Hazel's slot is configuration-controlled and provisional; all other turns retain their existing relative order.
 
 ### Complete Turn Cycle
 
@@ -1900,6 +1947,8 @@ Kosmelys
   ↓
 Sahira
   ↓
+Hazel (provisional)
+  ↓
 Iobrontes
   ↓
 Kosmelys
@@ -1907,11 +1956,12 @@ Kosmelys
 REPEAT
 ```
 
-Each complete nine-position cycle contains:
+Each complete ten-position cycle contains:
 
 - One turn for Furai.
 - One turn for Dexios.
 - One turn for Sahira.
+- One turn for Hazel (provisional placement).
 - Three turns for Iobrontes.
 - Three turns for Kosmelys.
 
@@ -1933,7 +1983,7 @@ Do not transfer turns from a defeated boss to the surviving boss.
 
 For example, if Kosmelys is defeated, the sequence continues with the remaining active turn positions:
 
-Furai → Iobrontes → Dexios → Iobrontes → Sahira → Iobrontes → Repeat.
+Furai → Iobrontes → Dexios → Iobrontes → Sahira → Hazel (provisional) → Iobrontes → Repeat.
 
 ## 11.3. Turn Resolution
 
@@ -1952,13 +2002,13 @@ This includes:
 
 A new turn must not begin while a previous action is still being resolved.
 
-**This nine-position sequence is the required turn order for the current dual-boss prototype.**
+**This ten-position sequence is the current test-build turn order; Hazel's position immediately after Sahira is provisional.**
 
 ---
 
 **End of Dual Boss Update — Kosmelys Implementation**
 
-**This is version 0.5.**
+**This is version 0.6, incorporating Hazel as the fourth playable character.**
 
 Nuevos cambios:
 1.	Que las flechas direccionales para la defensa muestre la tecla adecuada para defenderse entre W, A, S y D. También para el ataque de área como Watch the thunder tiene que mostrarse la barra espaciadora bien.
@@ -2067,7 +2117,7 @@ Un mismo personaje puede aparecer varias veces si tiene varias acciones dentro d
 
 **B. Panel de estado de aliados**
 
-Los iconos de Dexios, Furai y Sahira deben aparecer junto a sus barras de vida y maná.
+Los iconos de los cuatro aliados deben aparecer junto a sus datos de estado: maná para Dexios, energía espiritual blanca para Furai, usos disponibles para Sahira y forma elemental para Hazel.
 
 ### Requisitos técnicos
 
@@ -2122,7 +2172,7 @@ La distribución de los aliados debe seguir el boceto:
 - Furai a la izquierda.
 - Dexios en la zona central.
 - Sahira hacia la derecha.
-- Espacio preparado para un cuarto personaje futuro.
+- Hazel ocupa una posición configurable que no debe desplazar innecesariamente a los demás personajes.
 
 Los enemigos serán:
 
@@ -2252,7 +2302,9 @@ Icono: `furai_icono`
 
 Barras:
 - Verde: HP.
-- Azul: MP.
+- Blanca: energía espiritual (0–100).
+- Tiger Spear y Tiger Parry exitosos conceden 30 puntos de energía espiritual.
+- Tiger Fang cuesta 20 de energía espiritual; Armor Break cuesta 25.
 
 ### SAHIRA
 
@@ -2260,15 +2312,15 @@ Icono: `sahira_icono`
 
 Barras:
 - Verde: HP.
-- Azul: MP.
+- Sin barra de maná. Jackal Strike no tiene límite de usos; Hippopotamus Healing tiene 2 usos y Hippopotamus Shield tiene 10 usos por pelea.
 
-### CUARTO PERSONAJE
+### HAZEL LANCASTER
 
-Dejar preparado un espacio para un futuro integrante.
+Mostrar su retrato de Ignis (`hazel_fuego_icono`) o Glacio (`hazel_hielo_icono`), 80 / 80 HP y un indicador de forma en lugar de una barra de maná:
 
-Por ahora no debe tener habilidades ni participar en el combate.
-
-Puede aparecer como espacio vacío o desactivado, según el boceto.
+- IGNIS en naranja.
+- GLACIO en azul claro.
+- Sin barras de maná ni caos.
 
 ### Comportamiento de las barras
 
@@ -2323,7 +2375,7 @@ Debe ser un rectángulo con fondo oscuro translúcido.
 
 Quiero que el escenario siga siendo parcialmente visible detrás de la ventana.
 
-Dentro aparecerán las tres habilidades disponibles del personaje.
+Dentro aparecerán las habilidades disponibles del personaje: tres para quienes tengan tres acciones y exactamente dos para Hazel, según su forma.
 
 Ejemplo de distribución:
 
@@ -2619,6 +2671,8 @@ Conservar los controles actuales:
 | D | Defender derecha |
 | Space | Saltar o esquivar cuando corresponda |
 
+Para Hazel, la dirección correcta antes del Perfect Parry no reduce el daño: solo la Parada Perfecta evita el golpe. Esto no cambia las defensas ni los contraataques de los otros personajes.
+
 También conservar los controles existentes para:
 - Reiniciar el combate.
 - Controlar el audio.
@@ -2666,6 +2720,7 @@ No modificar:
 En particular, conservar las diferencias entre las defensas de Dexios, Furai y Sahira.
 
 Sahira debe mantener su sistema especial de bloqueo, sin incorporar un parry perfecto que no existe en su diseño.
+Hazel no puede bloquear eficazmente: el bloqueo imperfecto y el fallo aplican el daño completo de Lightning Chain, Cosmic Rays y Meteor Rain. Solo una parada perfecta evita ese daño y Hazel nunca realiza un contraataque. Hippopotamus Shield y el salto en equipo siguen funcionando según sus reglas existentes.
 
 Las animaciones de cámara no deben interferir con la sincronización del ataque enemigo ni con la posibilidad de reaccionar a tiempo.
 
@@ -2745,12 +2800,16 @@ Localiza los archivos:
 - `dexios_icono`
 - `sahira_icono`
 - `furai_icono`
+- Hazel's Ignis and Glacio sprites and portraits from `assets/hazel/`.
+- Hazel's `fuego.png`, `fuego_debil.png`, `hielo.png`, and `hielo_debil.png` effects.
+- `flame.mp3`, `shard.mp3`, and `shift.mp3` from the existing sound-effects directory.
 
 Busca sus extensiones y rutas reales.
 
 Los tres bocetos son referencias de diseño, mientras que los cinco iconos son recursos que se mostrarán en el juego.
 
 No inventar rutas ni cambiar sus nombres innecesariamente.
+Preserve the supplied filenames exactly. In particular, map the Ignis idle to its actual `hazel__fuego_base.png` filename and the Glacio jump to `hazelo_hielo_salto.png`; retain logical animation keys in configuration rather than renaming these files.
 
 ### Organización de la interfaz
 
@@ -3006,10 +3065,887 @@ Zoom cinematográfico al personaje activo con un menú translúcido de tres habi
 
 Zoom cinematográfico a los dos dioses, con una flecha indicadora del objetivo, selección mediante teclado o mouse y opción Back para regresar.
 
-Los iconos de los personajes deben obtenerse de los cinco archivos indicados anteriormente.
+Los iconos de los personajes deben obtenerse de los archivos indicados anteriormente y de los retratos suministrados de Hazel para sus dos formas.
 
 **La prioridad es que esta nueva interfaz funcione correctamente dentro del combate que ya existe, que respete mis bocetos y que haga mucho más cinematográfica la experiencia del jugador.**
 
 No quiero que reconstruyas todo el juego ni que cambies sus mecánicas.
 
 Quiero una nueva presentación visual profesional, dinámica y funcional sobre el sistema ya implementado.
+
+# LA DEXÍADA — VISUAL, UI AND GAMEPLAY CORRECTIONS
+
+Apply the following corrections to the existing Phaser combat prototype and update `DESIGN.md` accordingly.
+
+**IMPORTANT:** Do not rebuild the game from scratch. Preserve all existing combat mechanics, characters, abilities, animations, sound effects, timing systems, boss behavior, resource management, and turn order unless explicitly modified below.
+
+Fix the underlying causes of the problems, not just their visible symptoms.
+
+## 1. CHARACTER PROPORTIONS AND BATTLEFIELD POSITIONING
+
+The current battlefield has inconsistent character proportions and positioning.
+
+Some characters appear significantly smaller or larger than intended. Hazel, in particular, appears too small compared with the other playable characters.
+
+### Main Visual Reference
+
+**Use `boceto_combate.jpeg` as the primary reference for battlefield composition and character placement.**
+
+Locate and inspect this file in the project assets.
+
+The positioning and visual arrangement shown in this sketch take priority over previous approximate positioning instructions.
+
+Use it to determine:
+
+- The relative positions of Furai, Dexios, Sahira, and Hazel.
+- The placement of Iobrontes and Kosmelys.
+- The distance between the playable characters and the bosses.
+- The relative visual size of each character.
+- The overall perspective and composition of the battlefield.
+
+Do not invent a new formation when the reference already establishes one.
+
+If the reference cannot be located, report the missing file instead of guessing the intended layout.
+
+### Scaling Requirements
+
+Do not calculate character size using the full PNG canvas dimensions alone.
+
+Some character images contain significant transparent padding, causing their visible figures to appear incorrectly scaled.
+
+Instead:
+
+1. Determine the visible character bounds inside each PNG.
+2. Use the actual visible character height as the scaling reference.
+3. Preserve each character's original aspect ratio.
+4. Apply perspective-based scaling according to their battlefield position.
+5. Anchor sprites using the characters' feet rather than their image centers.
+6. Ensure every animation frame maintains the same apparent character size.
+7. Store all positions and scale values in configuration files.
+
+Do not stretch or deform the character artwork.
+
+### Animation Consistency
+
+Characters must not visibly grow, shrink, or jump to different ground positions when switching animation frames.
+
+This applies to all playable characters and both bosses.
+
+Hazel must maintain consistent proportions across both Ignis and Glacio forms.
+
+### Character Name Labels
+
+Correct the positions of battlefield character labels.
+
+Sahira's and Hazel's names currently overlap.
+
+Each name must appear in a readable position associated with its character, without overlapping another name, character sprite, or interface element.
+
+## 2. HAZEL — GLACIO DEFENSIVE ANIMATION BUG
+
+Hazel currently displays an Ignis defensive sprite for a fraction of a second when attempting to defend in Glacio mode.
+
+This must be fixed.
+
+### Required Behavior
+
+Hazel must display the correct elemental frame immediately, from the very first frame of every action.
+
+When Hazel is in Glacio mode, use only Glacio frames for:
+
+- Directional defenses.
+- Perfect parries.
+- Jumping.
+- Taking damage.
+- Returning to idle.
+
+When Hazel is in Ignis mode, use the corresponding Ignis frames.
+
+### Technical Requirements
+
+- Hazel's current elemental mode must be the authoritative source for animation selection.
+- Do not initialize actions using a default Ignis frame.
+- Select the correct sprite before displaying the defensive action.
+- Prevent outdated animation callbacks from restoring frames belonging to the previous form.
+- Returning to idle must always restore the base frame of Hazel's current mode.
+- Verify that the same problem does not occur during jumping or damage reactions.
+
+Do not change Hazel's existing defensive mechanics.
+
+She still receives full damage from an imperfect block and avoids directional damage only through a perfect parry.
+
+## 3. HAZEL — ARMOR BREAK COMPATIBILITY
+
+Hazel currently cannot consume Furai's Armor Break mark.
+
+This must be fixed.
+
+All of Hazel's damaging abilities must interact with Armor Break through the same centralized damage calculation system used by the other playable characters.
+
+### Flame Dance
+
+Base damage: 30 per enemy.
+
+Against a boss with Armor Break:
+
+- Damage becomes 60 against the marked boss.
+- Other unmarked enemies receive their normal 30 damage.
+
+The mark is consumed after damage is successfully applied.
+
+### Figure Shards
+
+Base damage: 60 to one enemy.
+
+Against a marked boss:
+
+- Damage becomes 120.
+- The mark is consumed.
+
+### Glacio Shift
+
+Base damage: 10 to one selected enemy.
+
+Against a marked boss:
+
+- Damage becomes 20.
+- The mark is consumed.
+
+Hazel must still transform to Glacio normally.
+
+### Ignis Shift
+
+Base damage: 5 to every active enemy.
+
+Against a marked boss:
+
+- The marked boss receives 10 damage.
+- Other unmarked bosses receive 5 damage.
+
+Hazel must still transform to Ignis normally.
+
+### General Rules
+
+- Armor Break only modifies damage against the boss carrying the mark.
+- Area-of-effect abilities must evaluate enemy status effects independently.
+- Failed offensive timing must not consume Armor Break.
+- Portal Shield redirection must not incorrectly consume Armor Break on a boss that receives no damage.
+- Preserve the existing rule that only the first hit of a multi-hit ability receives the Armor Break multiplier.
+- Do not modify Armor Break's existing duration or stacking rules.
+
+## 4. UNIVERSAL GAME FONT — ARCHEOLOGICAPS
+
+Apply the supplied font:
+
+`Archeologicaps.ttf`
+
+The font family is:
+
+`Archeologicaps`
+
+Use it as the universal typeface throughout La Dexíada.
+
+Store the font in the project's public font assets directory, for example:
+
+`public/assets/fonts/Archeologicaps.ttf`
+
+Register the font using `@font-face` and ensure it finishes loading before creating Phaser text objects.
+
+### Required Font Coverage
+
+Use Archeologicaps for:
+
+- Game title.
+- Character names.
+- Boss names and titles.
+- Health values.
+- Mana and resource values.
+- Ability names and costs.
+- Turn-order interface.
+- Ability selection.
+- Ally and enemy selection.
+- Timing instructions.
+- Damage numbers.
+- Attack announcements.
+- Combat messages.
+- Status effects.
+- Victory and defeat screens.
+- Audio controls.
+- All other game text.
+
+Apply it to both HTML interface elements and Phaser canvas text.
+
+Do not leave UI elements using default system fonts.
+
+Maintain the existing text colors and visual hierarchy.
+
+Adjust font sizes, spacing, and container dimensions where necessary to prevent overflow or clipping.
+
+## 5. FURAI — RESOURCE LABEL CORRECTION
+
+In Furai's HUD, change the resource label to:
+
+**ESPÍRITU**
+
+Do not display:
+
+- E. ESPIRITUAL
+- ENERGÍA ESPIRITUAL
+- ESPIRITUAL
+
+The displayed label must be exactly:
+
+`ESPÍRITU`
+
+Keep the existing resource bar, values, colors, functionality, and resource calculations unchanged.
+
+Apply the Archeologicaps font to this label.
+
+Make sure the accented character Í renders correctly.
+
+## 6. HAZEL — ELEMENTAL STATUS INDICATOR
+
+Improve the visual presentation of Hazel's elemental form indicator in her HUD.
+
+Currently, the text indicating Ignis or Glacio is too small and poorly positioned.
+
+### Required Changes
+
+- Center the elemental mode label horizontally within its designated HUD area.
+- Make the text noticeably larger.
+- Use the Archeologicaps font.
+- Keep the label fully visible without clipping.
+- Ensure it does not overlap Hazel's Health bar, name, or portrait.
+
+### Ignis Mode
+
+Display:
+
+`IGNIS`
+
+Color: Orange.
+
+### Glacio Mode
+
+Display:
+
+`GLACIO`
+
+Color: Light blue / Cyan.
+
+The label must update immediately after a successful elemental transformation.
+
+Use the same centered positioning and font size in both forms.h modes.
+
+Do not create a Mana bar for Hazel.
+
+Her HUD must continue displaying her Health and current elemental form.
+
+## 7. SAHIRA — ALLY SELECTION MENU LAYOUT
+
+There is a layout problem when Sahira selects an ally for:
+
+- Hippopotamus Healing.
+- Hippopotamus Shield.
+
+The ally selection interface now contains four playable characters:
+
+1. Furai
+2. Dexios
+3. Sahira
+4. Hazel Lancaster
+
+Currently, Hazel's selection box extends outside the intended attack-menu container.
+
+This must be fixed.
+
+### Required Layout
+
+Arrange all four ally selection options vertically in a clean and organized layout.
+
+Every option must:
+
+- Fit entirely inside the selection panel.
+- Have consistent width and height.
+- Maintain equal vertical spacing.
+- Display the correct character name.
+- Remain fully visible and selectable.
+- Use the Archeologicaps font.
+
+The ally selection panel must be large enough to accommodate four options without clipping or overlapping other interface elements.
+
+If necessary, increase the panel height or adjust the spacing of its contents.
+
+### Dynamic Layout
+
+The interface must adapt to the number of playable characters.
+
+Do not use fixed positioning that only works for three allies.
+
+Use a layout system that calculates the required height and distributes the selection options vertically.
+
+If the available screen space becomes insufficient, the panel may reposition itself or use an internal scroll area, but the preferred presentation at 1920 × 1080 is to display all four allies simultaneously.
+
+### Input and Targeting
+
+Preserve existing ally selection controls.
+
+The player must still be able to select allies using the keyboard or mouse.
+
+Incapacitated characters remain unavailable as healing or shield targets according to the existing rules.
+
+Do not alter the abilities' healing amounts, resource costs, or protection mechanics.
+
+## 8. BOSS HEALTH BARS — ALWAYS VISIBLE DURING PLAYER ATTACKS
+
+There is an interface problem where Iobrontes's and Kosmelys's Health bars disappear while a playable character performs an attack.
+
+**Both boss Health bars must remain visible throughout all playable-character offensive actions.**
+
+### Required Behavior
+
+The Health bars of Iobrontes and Kosmelys must remain on screen during:
+
+- Attack selection.
+- Enemy target selection.
+- Offensive timing minigames.
+- Cinematic attack presentations.
+- Attack animations.
+- Projectile travel.
+- Damage resolution.
+- Multi-hit attack sequences.
+- Elemental transformations that deal damage.
+
+For example, when Dexios performs Triple Lightning, both boss Health bars must remain visible while the three hits resolve.
+
+When Hazel performs Flame Dance, both boss Health bars must remain visible while damage is applied to each boss.
+
+### UI Rendering Rules
+
+The boss Health bars must be part of a persistent HUD layer.
+
+They must not be hidden merely because the game enters an attack animation, cinematic state, or player-action state.
+
+If camera zooms or pans occur during an attack, the Health bars must remain anchored to their intended screen positions.
+
+If the offensive timing cinematic displays a centered black horizontal strip, the strip must not obscure the boss Health bars.
+
+Use appropriate UI layering, camera exclusions, and rendering depth to keep the boss HUD visible above combat-world effects without covering important information.
+
+### Health Updates
+
+The bars must update in real time when damage is applied.
+
+For multi-hit attacks, the Health bar should visibly decrease after each individual hit.
+
+The bar must not disappear and then reappear with the final Health value.
+
+If one boss is defeated, its Health bar should still display zero according to the existing encounter HUD rules.
+
+Do not hide both Health bars simply because one boss has reached zero Health.
+
+The Health bars may be hidden or replaced only when the game intentionally transitions away from the combat scene into the final victory or defeat screen.
+
+## 9. REGRESSION TESTING
+
+After implementing these corrections, verify the following:
+
+1. Character positions follow `boceto_combate.jpeg`.
+2. All characters have coherent visual proportions.
+3. Hazel is no longer disproportionately small.
+4. Animation changes do not cause sprites to grow, shrink, or change ground position unexpectedly.
+5. Sahira's and Hazel's battlefield name labels remain readable and do not overlap.
+6. Hazel uses Glacio-only defense, parry, jump, damage, and idle frames while in Glacio form.
+7. Hazel's attacks consume Armor Break only when they successfully damage the marked boss.
+8. Area attacks evaluate Armor Break independently for each boss, and multi-hit attacks double only the first successful hit.
+9. Portal Shield redirection does not consume Armor Break when the boss takes no damage.
+10. Archeologicaps is loaded before any Phaser scene creates text and is used by all game text.
+11. Furai's resource label reads `ESPÍRITU`, including the accented `Í`.
+12. Hazel's `IGNIS` and `GLACIO` labels are centered, legible, and update after a successful shift.
+13. All four ally targets fit inside the selection panel and remain keyboard- and mouse-selectable.
+14. Both boss Health bars remain visible and update during player actions, including each hit in a multi-hit attack.
+15. Healing, shielding, resource calculations, turn order, defensive timing, boss behavior, and existing damage rules remain unchanged.
+
+Combat sprites for Dexios, Furai, Sahira, Hazel, Iobrontes, and Kosmelys are generated as transparent 1536 × 1536 PNGs in `assets/normalized/`; the original artwork remains untouched. Run `.\scripts\normalize-character-sprites.ps1` to reproduce them. Normalized frames share the configured 1320 ground baseline and reference visible height in `GAME_CONFIG`, so Phaser uses one character scale without rescanning alpha bounds at runtime. The party spacing follows `bocetos/boceto_combate.jpeg`; compact numeric HUD values use a readable UI font, while decorative text retains Archeologicaps. Per-frame exceptions live in `GAME_CONFIG.sprite.frameScale` (Dexios and Hazel Ignis/Glacio defense frames at 50% or 110%). Hazel's attack frames are `hazel_fuego_dance` and `hazel_hielo_shards`, held for `GAME_CONFIG.timing.hazelAttackPoseMs` before returning to idle. Pressing H on the welcome scene opens `escena_pruebahazel` (`src/hazel-test-scene.ts`), a sandbox with Hazel's forms, abilities, targeting, jump, and free W/A/S/D dodge poses against two refilling boss dummies. Pressing S opens `escena_sahira_prueba` (`src/sahira-test-scene.ts`), the equivalent sandbox for Sahira's Jackal Strike, Hippopotamus Healing and Shield (self-targeted, with the real use limits), jump, and dodges. Pressing D opens `escena_dexios_prueba` (`src/dexios-test-scene.ts`) for Dexios' three attacks with mana/chaos costs, chaos gained from damage, jump, and dodges. Pressing F opens `escena_furai_prueba` (`src/furai-test-scene.ts`) for Furai's Tiger Spear, Tiger Fang (spirit cost), Armor Break, spirit gain, jump, and dodges.
+
+# LA DEXÍADA — CHARACTER SPRITE NORMALIZATION AND UI FIXES
+
+## IMPORTANT INSTRUCTIONS
+
+The current Phaser combat prototype is functional. All existing gameplay mechanics must remain unchanged.
+
+Your task is to correct the visual issues affecting character proportions, sprite consistency, battlefield positioning, and text readability.
+
+**Do not rebuild the game from scratch.**
+
+Do not modify:
+- Combat mechanics or damage calculations.
+- Character abilities or resource costs.
+- Boss behavior or attack probabilities.
+- Turn order.
+- Defensive timing windows.
+- Music or sound effects.
+- Existing gameplay functionality.
+
+Work only on the visual corrections described below.
+
+Before modifying files, inspect the current sprite loading, scaling, positioning, rendering, and UI systems.
+
+Make a backup or use version control so the original assets and implementation can be restored if necessary.
+
+---
+
+# 1. NORMALIZE CHARACTER SPRITES TO 1536 × 1536
+
+The current game suffers from inconsistent character scaling because the supplied sprites have different canvas dimensions, transparent margins, and visible character bounds.
+
+Normalize the major combat character frames using a consistent transparent canvas measuring:
+
+**1536 × 1536 pixels**
+
+This applies to:
+- Dexios
+- Furai
+- Sahira
+- Hazel  — Ignis and Glacio
+- Iobrontes
+- Kosmelys
+
+## 1.1. Image Processing
+
+For each character sprite:
+
+1. Load the original PNG.
+2. Detect its visible nontransparent content.
+3. Determine the appropriate character bounds.
+4. Scale the visible character proportionally to a consistent reference size for that character.
+5. Preserve the original aspect ratio.
+6. Position the artwork inside a transparent 1536 × 1536 canvas.
+7. Maintain consistent alignment between frames belonging to the same character.
+8. Export the normalized sprite as a new PNG.
+
+Do not stretch, deform, crop, or distort the original artwork.
+
+Do not automatically enlarge every character to fill the entire canvas.
+
+## 1.2. Preserve Original Assets
+
+Do not overwrite or delete the original PNG files.
+
+Store normalized sprites in separate directories, such as:
+
+`assets/normalized/dexios/`
+
+`assets/normalized/furai/`
+
+`assets/normalized/sahira/`
+
+`assets/normalized/hazel/`
+
+`assets/normalized/iobrontes/`
+
+`assets/normalized/kosmelys/`
+
+Preserve the existing filenames so they can be associated with the correct animation states.
+
+Update the asset manifest to reference normalized sprites.
+
+Do not change unrelated assets, such as projectile effects, attack illustrations, UI icons, backgrounds, or music.
+
+## 1.3. Consistent Character Scaling
+
+Every frame belonging to the same character must maintain a consistent apparent anatomical size.
+
+For example, Hazel must not become larger or smaller when switching between:
+
+- Ignis idle.
+- Glacio idle.
+- Directional defenses.
+- Attacks.
+- Transformations.
+- Damaged frames.
+- Jump frames.
+
+Use the standing idle sprite as the primary reference for each character's body proportions.
+
+For extended poses, attacks, and jumps, preserve their intended movement and silhouette rather than forcing their visible bounds to match the idle frame.
+
+If a pose requires more space, adjust its internal offset without changing the character's anatomical scale.
+
+## 1.4. Ground Alignment
+
+For standing animations, align the character's feet to a consistent internal baseline.
+
+Use a configurable reference such as:
+
+`groundBaselineY = 1320`
+
+within the 1536 × 1536 canvas.
+
+This value is a starting reference and may be adjusted.
+
+Jumping animations must preserve their intended vertical displacement relative to the character's normal ground position.
+
+Do not artificially place the feet of a jumping character on the ground.
+
+The character's game-world ground anchor must remain stable during animation changes.
+
+## 1.5. Phaser Scaling
+
+After normalization:
+
+- Use one primary scale configuration per character.
+- Preserve a consistent ground origin.
+- Use configurable frame-specific offsets only when necessary.
+- Do not automatically assume that all 1536 × 1536 images must have the same displayed size.
+- Do not apply a second alpha-bounds normalization that reverses the normalization performed on the images.
+
+All normalizing and scaling operations must be deterministic and reproducible.
+
+Avoid expensive image processing during gameplay. Prepare normalized sprites as assets before runtime.
+
+---
+
+# 2. CORRECT THE BATTLEFIELD FORMATION
+
+The current battlefield contains an important positioning issue:
+
+**Hazel Lancaster overlaps Sahira.**
+
+This must be corrected.
+
+## 2.1. Authoritative Reference
+
+Use the existing file:
+
+`boceto_combate.jpeg`
+
+as the primary reference for character positions, relative sizes, camera perspective, and battlefield composition.
+
+Inspect this image before changing any positions.
+
+The current game must follow the reference rather than inventing a new formation.
+
+If the reference cannot be found, report that instead of guessing.
+
+## 2.2. Hazel and Sahira
+
+Hazel and Sahira must have separate, clearly readable silhouettes.
+
+Correct:
+
+- Horizontal position.
+- Vertical position.
+- Ground anchoring.
+- Character scale.
+- Sprite draw depth.
+- Associated character name labels.
+
+Hazel must not visually cover Sahira's body or make her difficult to distinguish.
+
+Preserve the overall party formation and perspective established by `boceto_combate.jpeg`.
+
+## 2.3. Perspective
+
+The game must preserve its foreground/background depth.
+
+Characters closer to the camera may appear larger.
+
+Characters farther away may appear smaller.
+
+However, this scaling must be consistent with the supplied composition reference.
+
+Do not make characters unnaturally large or small simply to compensate for transparent PNG margins.
+
+## 2.4. Camera
+
+Preserve the current cinematic camera system.
+
+Do not change its gameplay behavior.
+
+Ensure the corrected character positions remain visually appropriate during:
+
+- Normal battlefield view.
+- Ability selection.
+- Enemy targeting.
+- Defensive sequences.
+- Attack animations.
+
+Character name labels must not overlap one another.
+
+---
+
+# 3. FIX HAZEL'S ELEMENTAL ANIMATION BUG
+
+Hazel currently displays an Ignis sprite for a fraction of a second when performing a defensive action in Glacio mode.
+
+This must be corrected.
+
+Her current elemental form must determine the sprite used from the very first frame.
+
+## 3.1. Required Behavior
+
+When Hazel is in Glacio mode, all defensive, jumping, damaged, and idle states must use Glacio sprites.
+
+When Hazel is in Ignis mode, those states must use Ignis sprites.
+
+The game must never temporarily display the opposite form.
+
+## 3.2. Technical Correction
+
+Inspect the animation state machine and eliminate any hard-coded fallback to Ignis.
+
+Use Hazel's current elemental mode as the authoritative state.
+
+Ensure that:
+
+- The correct frame is selected before the animation becomes visible.
+- Previous animation callbacks cannot restore an outdated elemental sprite.
+- Returning to idle always uses the current form.
+- Jumping and taking damage do not reset the elemental mode.
+- The transformation updates the animation state and HUD consistently.
+
+Preserve Hazel's existing defensive rules and elemental abilities.
+
+---
+
+# 4. FIX NUMERICAL TEXT RENDERING
+
+The current interface displays many numeric values using glyphs that resemble Roman numerals or decorative symbols.
+
+This makes the gameplay information difficult to understand.
+
+All game values must be displayed using standard readable digits:
+
+**0 1 2 3 4 5 6 7 8 9**
+
+## 4.1. Font Policy
+
+Continue using the supplied font:
+
+`Archeologicaps.ttf`
+
+for decorative and thematic text, including:
+
+- Character names.
+- Boss names.
+- Titles.
+- Attack names.
+- Turn announcements.
+- Status labels.
+- Main menu headings.
+
+However, use a clear, readable interface font for numerical values and very small text.
+
+This applies to:
+
+- Health numbers.
+- Mana numbers.
+- Chaos numbers.
+- Spirit numbers.
+- Damage numbers.
+- Ability costs.
+- Boss Health values.
+- Small ability descriptions.
+
+Do not use Roman numeral conversion or substitute decorative glyphs for numeric values.
+
+If the font itself contains stylized numeral glyphs, use a different font for numeric data.
+
+## 4.2. Layout
+
+After applying the fonts:
+
+- Adjust text sizes.
+- Correct letter spacing.
+- Remove clipping.
+- Align values inside their corresponding panels.
+- Avoid overlapping text.
+- Ensure values remain readable during camera movement.
+
+Dynamic numbers must continue updating normally.
+
+---
+
+# 5. ADDITIONAL HUD CORRECTIONS
+
+## 5.1. Furai
+
+The name of Furai's resource must be displayed exactly as:
+
+**ESPÍRITU**
+
+Remove longer variations such as "Energía espiritual".
+
+Preserve the existing resource values and mechanics.
+
+## 5.2. Hazel
+
+Hazel's elemental status indicator must be:
+
+- Larger.
+- Horizontally centered.
+- Easy to read.
+- Clearly separated from her Health bar.
+
+Display:
+
+**IGNIS** in orange.
+
+**GLACIO** in light blue.
+
+The indicator and character portrait must update immediately after transformation.
+
+Hazel must not have a Mana bar.
+
+## 5.3. Sahira's Ally Selection Menu
+
+When Sahira uses Hippopotamus Healing or Hippopotamus Shield, the ally selection panel must show:
+
+1. Furai
+2. Dexios
+3. Sahira
+4. Hazel Lancaster
+
+Arrange all four options vertically.
+
+Ensure every option fits completely inside the panel.
+
+The fourth option must not overflow its container.
+
+Use consistent spacing, widths, heights, and typography.
+
+Preserve keyboard and mouse selection.
+
+## 5.4. Boss Health Bars
+
+Iobrontes's and Kosmelys's Health bars must remain visible during all player actions, including:
+
+- Ability selection.
+- Target selection.
+- Offensive timing.
+- Attack animations.
+- Damage resolution.
+- Multi-hit sequences.
+- Elemental transformations.
+
+Keep both Health bars in a persistent screen-space HUD layer.
+
+Do not hide them during cinematic attacks or camera transitions.
+
+They must update after each damage event.
+
+---
+
+# 6. HAZEL AND ARMOR BREAK
+
+Hazel's offensive abilities must correctly consume Furai's Armor Break mark when damaging the marked boss.
+
+Apply the existing first-hit-only rule to multi-hit attacks.
+
+Expected damage:
+
+| Ability | Normal | Armor Break |
+|---|---|---|
+| Flame Dance | 30 per enemy | 60 to marked enemy |
+| Figure Shards | 60 | 120 |
+| Glacio Shift | 10 | 20 |
+| Ignis Shift | 5 per enemy | 10 to marked enemy |
+
+For area attacks, the damage multiplier applies only to the marked boss.
+
+The mark must only disappear when an eligible damaging ability successfully applies its amplified damage.
+
+If an attack fails its offensive timing or is redirected without damaging the marked boss, the mark remains active.
+
+Do not change the existing Armor Break balance or duration.
+
+---
+
+# 7. PERFORMANCE AND WORKFLOW REQUIREMENTS
+
+The previous large correction task caused prolonged execution and build problems.
+
+Avoid repeating this issue.
+
+Follow a controlled workflow:
+
+1. Inspect the affected files and existing architecture.
+2. Record the current working state using version control or a backup.
+3. Normalize the character sprites as a separate preparation stage.
+4. Verify the normalized assets visually before using them.
+5. Update character scaling and positioning.
+6. Fix text rendering and HUD layouts.
+7. Fix Hazel's animation and Armor Break integration.
+8. Run one build after each completed stage.
+9. Stop if a build fails and identify the exact error before continuing.
+
+Do not repeatedly rerun the same failing build without making a relevant correction.
+
+Do not modify unrelated systems.
+
+Do not generate new character artwork.
+
+Preserve the original visual designs supplied by the user.
+
+If sprite normalization creates excessive memory usage or rendering problems, do not force all normalized images to load at once. Report the issue and use a more efficient asset-loading approach while preserving the visual requirements.
+
+---
+
+# 8. FINAL VALIDATION
+
+Verify all of the following:
+
+1. All character frames use consistent 1536 × 1536 transparent canvases where applicable.
+2. Original assets are preserved.
+3. Normalized sprites are loaded correctly by Phaser.
+4. Character proportions are stable across animations.
+5. No character visually jumps in position due to inconsistent sprite margins.
+6. Hazel and Sahira no longer overlap.
+7. Battlefield positions follow `boceto_combate.jpeg`.
+8. Hazel uses the correct Glacio or Ignis defensive sprite immediately.
+9. Health, Mana, Chaos, Spirit, damage, and cost numbers are readable.
+10. Archeologicaps remains applied to decorative text.
+11. Furai's resource label reads ESPÍRITU.
+12. Hazel's elemental status is larger and centered.
+13. Sahira's ally selection menu contains four correctly arranged options.
+14. Both boss Health bars remain visible during player attacks.
+15. Hazel can consume Armor Break correctly.
+16. All existing gameplay mechanics remain functional.
+17. The existing turn order remains unchanged.
+18. The game runs successfully in the browser.
+19. The production build succeeds without errors.
+
+---
+
+# 9. UPDATE DESIGN.md
+
+Update the existing `DESIGN.md` to describe:
+
+- The new sprite normalization standard.
+- Character ground anchoring.
+- Visible-bounds-based scaling.
+- Battlefield positions based on `boceto_combate.jpeg`.
+- Hazel's corrected animation behavior.
+- The revised typography policy.
+- The corrected HUD layouts.
+- Persistent boss Health bars.
+- Hazel's Armor Break compatibility.
+
+Integrate these corrections into the corresponding existing sections.
+
+Do not append another duplicated specification at the end of the document.
+
+---
+
+# FINAL REQUIREMENT
+
+The existing game is playable.
+
+**Your goal is to improve its visual consistency and usability without breaking its combat systems.**
+
+Preserve the game's existing functionality.
+
+After each completed stage, report what was changed and whether the build succeeded.
+
+If a stage cannot be completed safely, stop and explain the blocker instead of continuing with potentially destructive modifications.

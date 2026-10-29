@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Archeologicaps";
+  src: url("../assets/fonts/Archeologicaps.ttf") format("truetype");
+  font-style: normal;
+  font-weight: normal;
+  font-display: block;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -9,6 +17,7 @@ body {
   margin: 0;
   overflow: hidden;
   background: #11111c;
+  font-family: "Archeologicaps", sans-serif;
 }
 
 body {
