@@ -235,24 +235,40 @@ export default class CombatScene extends Phaser.Scene {
   private cosmicFuraiPerfectParries = 0;
   private cosmicProjectile?: Phaser.GameObjects.Image;
 
-  constructor() {
-    super({ key: 'escena_combate_dificil' });
+  private readonly practiceId: CharacterId | null;
+
+  // Con practiceId la escena funciona como escena de prueba de ese personaje.
+  constructor(key = 'escena_combate_dificil', practiceId: CharacterId | null = null) {
+    super({ key });
+    this.practiceId = practiceId;
   }
 
   preload(): void {
-    this.load.image('arena', IMAGE_ASSETS.arena);
+    const loadImage = (key: string, asset: string): void => {
+      if (!this.textures.exists(key)) {
+        this.load.image(key, asset);
+      }
+    };
+    loadImage('arena', IMAGE_ASSETS.arena);
     Object.entries(IMAGE_ASSETS).forEach(([key, asset]) => {
       if (key !== 'arena') {
-        this.load.image(key, asset);
+        loadImage(key, asset);
       }
     });
     Object.entries(ICON_ASSETS).forEach(([id, asset]) => {
-      this.load.image(`icon_${id}`, asset);
+      loadImage(`icon_${id}`, asset);
     });
   }
 
   create(): void {
     this.state = createCombatState();
+    if (this.practiceId) {
+      PLAYABLE_CHARACTERS.forEach((id) => {
+        if (id !== this.practiceId) {
+          this.state.party[id].health = 0;
+        }
+      });
+    }
     this.phase = 'player';
     this.result = null;
     this.turnIndex = 0;
@@ -322,7 +338,11 @@ export default class CombatScene extends Phaser.Scene {
 
     this.refreshHud();
     this.startAudio();
-    this.startTurn();
+    if (this.practiceId) {
+      this.setupPractice(this.practiceId);
+    } else {
+      this.startTurn();
+    }
   }
 
   update(): void {
@@ -573,8 +593,10 @@ export default class CombatScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(character.depth);
     this.sizeSprite(sprite, character.frames.idle, character.displayHeight);
-    this.add.ellipse(character.x, character.feetY - 3, character.displayHeight * 0.68, 38, 0x100d1b, 0.34)
-      .setDepth(character.depth - 1);
+    if (!this.practiceId || this.practiceId === id) {
+      this.add.ellipse(character.x, character.feetY - 3, character.displayHeight * 0.68, 38, 0x100d1b, 0.34)
+        .setDepth(character.depth - 1);
+    }
     return sprite;
   }
 
@@ -773,6 +795,139 @@ export default class CombatScene extends Phaser.Scene {
       strokeThickness: 7,
       align: 'center',
     }).setOrigin(0.5).setDepth(35).setVisible(false);
+    if (this.practiceId) {
+      this.createPracticeLegend(this.practiceId);
+    }
+  }
+
+  private createPracticeLegend(id: CharacterId): void {
+    const specialKey = id === 'sahira'
+      ? 'T · Reiniciar los usos de habilidades'
+      : id === 'dexios'
+        ? 'T · Recibir daño (genera caos)'
+        : id === 'furai'
+          ? 'T · Ganar espíritu'
+          : null;
+    const lines = [
+      `PRUEBA · ${GAME_CONFIG.characters[id].name.toUpperCase()}`,
+      '1 / 2 / 3 · Habilidades (elige objetivo)',
+      'I · Ataque aleatorio de Iobrontes',
+      'K · Ataque aleatorio de Kosmelys',
+      ...(specialKey ? [specialKey] : []),
+      'R · Reiniciar',
+      'ESC · Volver a la bienvenida',
+      'La vida de todos se recupera automáticamente',
+    ];
+    this.add.text(26, 20, lines.join('\n'), {
+      fontFamily: UI_FONT_FAMILY,
+      fontSize: '17px',
+      fontStyle: 'bold',
+      color: '#b8ffbd',
+      stroke: '#171326',
+      strokeThickness: 4,
+      lineSpacing: 5,
+    }).setDepth(30);
+  }
+
+  private setupPractice(id: CharacterId): void {
+    PLAYABLE_CHARACTERS.forEach((other) => {
+      if (other === id) {
+        return;
+      }
+      this.actorSprites[other].setVisible(false);
+      this.actorNames[other].setVisible(false);
+      this.missingLabels[other].setVisible(false);
+      this.partyCards[other].container.setVisible(false);
+    });
+    this.turnQueueSlots.forEach((slot) => slot.container.setVisible(false));
+    this.turnText.setPosition(700, 18).setOrigin(0.5, 0);
+    this.promptText.setPosition(700, 50).setOrigin(0.5, 0);
+    this.beginPracticeTurn(id);
+  }
+
+  private beginPracticeTurn(id: CharacterId): void {
+    this.activeCharacter = id;
+    this.allyTargetingAbility = null;
+    this.targetingAbility = null;
+    this.phase = 'player';
+    this.turnText.setText(`${GAME_CONFIG.characters[id].name.toUpperCase()} · TU TURNO`);
+    this.promptText.setText('Elige una habilidad o pulsa I / K para recibir un ataque.');
+    this.targetText.setText('');
+    this.setActorFrame(id, this.getActorFrames(id).idle);
+    this.refreshHud();
+    this.focusPlayerSelectionCamera(id);
+  }
+
+  private startPracticeAttack(boss: BossId): void {
+    if (!this.practiceId || this.phase !== 'player' || this.allyTargetingAbility) {
+      return;
+    }
+    const id = this.practiceId;
+    this.setActorFrame(id, this.getActorFrames(id).idle);
+    this.actorSprites[id].clearTint();
+    this.activeCharacter = null;
+    this.phase = 'announcing';
+    this.turnText.setText(`${GAME_CONFIG.characters[boss].name.toUpperCase()} · TURNO`);
+    this.promptText.setText('Prepárate para defenderte.');
+    this.targetText.setText('');
+    this.refreshHud();
+    this.cameraTransitioning = true;
+    this.cameras.main.pan(WIDTH / 2, HEIGHT / 2, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+    this.cameras.main.zoomTo(1, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+    this.time.delayedCall(GAME_CONFIG.camera.returnMs, () => {
+      this.cameraTransitioning = false;
+      if (this.phase !== 'announcing' || this.result) {
+        return;
+      }
+      if (boss === 'iobrontes') {
+        this.announceEnemyAttack();
+      } else {
+        this.announceKosmelysAttack();
+      }
+    });
+  }
+
+  private runPracticeSpecialAction(id: CharacterId): void {
+    if (this.phase !== 'player' || this.allyTargetingAbility) {
+      return;
+    }
+    const config = GAME_CONFIG.characters[id];
+    const x = config.x;
+    const y = config.feetY - config.displayHeight - 16;
+    if (id === 'sahira') {
+      this.state.sahiraAbilityUses.healing = SAHIRA_ABILITY_USE_LIMITS.healing;
+      this.state.sahiraAbilityUses.shield = SAHIRA_ABILITY_USE_LIMITS.shield;
+      this.showFloatingText('USOS REINICIADOS', x, y, '#b8ffbd');
+    } else if (id === 'dexios') {
+      damagePartyMember(this.state, 'dexios', 20);
+      this.showFloatingText('-20 · CAOS', x, y, '#ff9d9d');
+    } else if (id === 'furai') {
+      gainFuraiSpirit(this.state, 30);
+      this.showFloatingText('+30 ESPÍRITU', x, y, '#b8ffbd');
+    } else {
+      return;
+    }
+    this.refreshHud();
+  }
+
+  // Todos se recuperan en cuanto pierden su vida; así la prueba nunca termina.
+  private restorePracticeHealth(): void {
+    if (!this.practiceId) {
+      return;
+    }
+    const id = this.practiceId;
+    if (this.state.party[id].health <= 0) {
+      this.state.party[id].health = MAX_HEALTH[id];
+      this.actorSprites[id].setAlpha(1);
+      const config = GAME_CONFIG.characters[id];
+      this.showFloatingText('VIDA RESTAURADA', config.x, config.feetY - config.displayHeight - 16, '#b8ffbd');
+    }
+    (['iobrontes', 'kosmelys'] as const).forEach((boss) => {
+      if (this.state.bosses[boss].health <= 0) {
+        this.state.bosses[boss].health = MAX_BOSS_HEALTH[boss];
+        this.getBossSprite(boss).setAlpha(1);
+      }
+    });
   }
 
   private createPartyCard(id: CharacterId, x: number): PartyCard {
@@ -1245,6 +1400,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private refreshHud(): void {
+    this.restorePracticeHealth();
     this.updateBossHudVisibility();
     const partyLayout = GAME_CONFIG.partyHud;
     PLAYABLE_CHARACTERS.forEach((id) => {
@@ -1362,6 +1518,9 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private updateTurnQueue(): void {
+    if (this.practiceId) {
+      return;
+    }
     const layout = GAME_CONFIG.turnQueueHud;
     const upcoming: Array<CharacterId | BossId> = [];
     let orderIndex = this.turnIndex;
@@ -1554,6 +1713,12 @@ export default class CombatScene extends Phaser.Scene {
     }
     if (this.activeCharacter) {
       this.advanceDivineRetributionTurn();
+    }
+    if (this.practiceId) {
+      this.previousTurnWasBoss = false;
+      this.selectedBoss = null;
+      this.beginPracticeTurn(this.practiceId);
+      return;
     }
     const finishedActor = GAME_CONFIG.partyOrder[this.turnIndex];
     this.previousTurnWasBoss = finishedActor === 'iobrontes' || finishedActor === 'kosmelys';
@@ -2909,7 +3074,13 @@ export default class CombatScene extends Phaser.Scene {
         this.actorSprites[targetId].y - GAME_CONFIG.characters[targetId].displayHeight,
         targetId === 'hazel' ? '#ffb7a9' : '#ffd65c',
       );
-      this.setActorFrame(targetId, this.getActorFrames(targetId).defense[this.attackDirection]);
+      this.setActorFrame(
+        targetId,
+        targetId === 'hazel' && actualDamage > 0
+          ? this.getActorFrames(targetId).hit
+          : this.getActorFrames(targetId).defense[this.attackDirection],
+        targetId === 'hazel' && actualDamage > 0 ? 650 : 0,
+      );
       this.createImpact(
         GAME_CONFIG.characters[targetId].x,
         GAME_CONFIG.characters[targetId].feetY - GAME_CONFIG.characters[targetId].displayHeight * 0.52,
@@ -3838,6 +4009,30 @@ export default class CombatScene extends Phaser.Scene {
       this.updateAudioLabel();
       return;
     }
+    if (this.practiceId) {
+      if (key === 'escape' || event.code === 'Escape') {
+        this.scene.start('escena_bienvenida');
+        return;
+      }
+      if (key === 'r') {
+        this.scene.restart();
+        return;
+      }
+      if (this.phase === 'player' && !this.allyTargetingAbility) {
+        if (key === 'i') {
+          this.startPracticeAttack('iobrontes');
+          return;
+        }
+        if (key === 'k') {
+          this.startPracticeAttack('kosmelys');
+          return;
+        }
+        if (key === 't') {
+          this.runPracticeSpecialAction(this.practiceId);
+          return;
+        }
+      }
+    }
     if (key === 'r' && this.phase === 'ended') {
       this.scene.restart();
       return;
@@ -3947,11 +4142,11 @@ export default class CombatScene extends Phaser.Scene {
     const idleFrame = this.getActorFrames(id).idle;
     const generation = ++this.frameGeneration[id];
     if (frame === idleFrame && this.state.party[id].health > 0) {
-      this.breathingTweens[id].stop();
+      this.breathingTweens[id].pause();
       sprite.setY(config.feetY);
-      this.breathingTweens[id].restart();
+      this.breathingTweens[id].resume();
     } else {
-      this.breathingTweens[id].stop();
+      this.breathingTweens[id].pause();
       sprite.setY(config.feetY);
     }
     if (this.textures.exists(frame)) {
@@ -4176,6 +4371,9 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private finishIfBattleEnded(): boolean {
+    if (this.practiceId) {
+      return false;
+    }
     const result = getBattleResult(this.state);
     if (!result) {
       return false;
