@@ -1,5 +1,5 @@
-LA DEXÍADA — GAME DESIGN DOCUMENT
-Version: 0.6 — Four-Character Dual-Boss Combat Prototype
+﻿LA DEXÃADA â€” GAME DESIGN DOCUMENT
+Version: 0.6 â€” Four-Character Dual-Boss Combat Prototype
 Document Status: Implementation Specification
 Target Platform: PC (Phaser, browser)
 Genre: Turn-Based RPG with Real-Time Directional Defense
@@ -9,13 +9,13 @@ Note to the implementer: This document is intended to be self-contained. Impleme
 ________________________________________
 1. GAME OVERVIEW
 1.1. Game Description
-La Dexíada is a fantasy RPG inspired by Greek mythology, set in Xantharchía, a world where gods, divine heirs, and mortals coexist within a society shaped by magic.
+La DexÃ­ada is a fantasy RPG inspired by Greek mythology, set in XantharchÃ­a, a world where gods, divine heirs, and mortals coexist within a society shaped by magic.
 The combat system combines turn-based strategic decisions with real-time directional defense. During their turns, players select attacks or abilities for their characters. During enemy turns, they must identify the direction of incoming attacks and press the corresponding defensive key at the correct moment.
 The player controls a party of four characters:
-•	Dexios: A lightning-based fighter who uses electricity and Chaos energy.
-•	Furai: A tiger-themed fighter specializing in physical attacks, armor breaking, and defensive counterattacks.
-•	Sahira: A jackal-themed fighter and healer with strong defensive capabilities.
-•	Hazel Lancaster: A precision defender who alternates between Ignis (fire) and Glacio (ice).
+â€¢	Dexios: A lightning-based fighter who uses electricity and Chaos energy.
+â€¢	Furai: A tiger-themed fighter specializing in physical attacks, armor breaking, and defensive counterattacks.
+â€¢	Sahira: A jackal-themed fighter and healer with strong defensive capabilities.
+â€¢	Hazel Lancaster: A precision defender who alternates between Ignis (fire) and Glacio (ice).
 The party faces Iobrontes, God of Thunder and the Tenth Heir of Zeus, and Kosmelys, Goddess of Space and Tenth Heir of Hera, inside Iobrontes's temple.
 The prototype focuses entirely on this dual-boss combat encounter, demonstrating the game's core mechanics, character abilities, directional defense system, party management, and visual identity.
 1.2. Prototype Objectives
@@ -38,7 +38,7 @@ The prototype must:
 This prototype will not include exploration, interactive dialogue, inventory, character progression, equipment selection, additional bosses beyond Iobrontes and Kosmelys, multiple arenas, or a complete save system.
 Character speed statistics will also be excluded. Turn order will remain fixed throughout the encounter.
 
-1.4. Hazel Lancaster — Fourth Playable Character
+1.4. Hazel Lancaster â€” Fourth Playable Character
 Hazel starts each battle with 80 / 80 Health in Ignis form. Her Ignis and Glacio forms share the same Health; switching forms does not restore or change it. Hazel has no Mana, Chaos, or ability costs. Her HUD shows IGNIS in orange or GLACIO in light blue in place of a resource bar, and switches between the supplied fire and ice portraits.
 
 Hazel has exactly two abilities in each form:
@@ -62,28 +62,28 @@ The battle takes place inside a Greek temple dedicated to Iobrontes.
 The environment must convey the solemnity of a sacred place and the presence of a deity associated with lightning and storms.
 The provided background image must be used as the main arena reference and scene asset.
 The temple's visual identity includes:
-•	Classical Greek-inspired architecture.
-•	Stone columns and monumental structures.
-•	A statue representing Iobrontes.
-•	Banners displaying his divine symbol.
-•	Decorations and architectural elements inspired by lightning.
-•	An opening revealing a stormy, gray sky.
-•	Cold ambient lighting with possible purple lightning flashes.
+â€¢	Classical Greek-inspired architecture.
+â€¢	Stone columns and monumental structures.
+â€¢	A statue representing Iobrontes.
+â€¢	Banners displaying his divine symbol.
+â€¢	Decorations and architectural elements inspired by lightning.
+â€¢	An opening revealing a stormy, gray sky.
+â€¢	Cold ambient lighting with possible purple lightning flashes.
 The environment should remain mostly static, although subtle environmental effects may be added.
 2.2. Visual Style
 The game uses hand-drawn 2D character artwork following the visual references provided in the assets directory.
 The intended style is not pixel art.
 Characters should retain the appearance, proportions, clothing, and recognizable design details of their supplied reference images.
 Technical Resolution
-Target Resolution: 1920 × 1080 pixels
+Target Resolution: 1920 Ã— 1080 pixels
 Aspect Ratio: 16:9
 Recommended starting asset dimensions:
 Asset	Recommended Dimensions
-Arena background	1920 × 1080 px
-Playable character canvases	Approximately 512 × 1024 px
-Iobrontes canvas	Approximately 768 × 1024 px
-Lightning effects	256–512 px, depending on the effect
-Attack icons	128 × 128 px
+Arena background	1920 Ã— 1080 px
+Playable character canvases	Approximately 512 Ã— 1024 px
+Iobrontes canvas	Approximately 768 Ã— 1024 px
+Lightning effects	256â€“512 px, depending on the effect
+Attack icons	128 Ã— 128 px
 Character images must support transparency.
 Assets should be scaled at runtime while preserving their original proportions.
 2.3. Screen Composition
@@ -91,33 +91,33 @@ The arena must communicate depth through character placement, scaling, and floor
 The four playable characters stand closer to the camera, facing Iobrontes and Kosmelys.
 Iobrontes and Kosmelys stand farther away, facing the party and the camera. Both bosses must be visible simultaneously.
 Party Formation
-Furai — Left
-•	Positioned on the left side of the party.
-•	Slightly farther away from the camera.
-•	His feet should be higher on the screen than Dexios's.
-•	Facing Iobrontes.
-Dexios — Center
-•	Positioned in the center of the party formation.
-•	Standing slightly closer to the camera than Furai.
-•	Seen primarily from behind, facing Iobrontes.
-•	Retains his combat stance with his left arm and left leg forward.
-Sahira — Right
-•	Positioned on the right side of the formation.
-•	Slightly closer to the camera than Dexios.
-•	Her feet should appear lower on the screen than the other party members' feet.
-•	Facing Iobrontes.
-Hazel — Configured fourth position
-•	Use Hazel's configured position and depth so her sprite remains readable without unnecessarily moving the established characters.
-•	Facing Iobrontes.
-Iobrontes — Background
-•	Positioned approximately in the center of the arena.
-•	Standing farther away than all four party members.
-•	Facing the playable characters.
-•	His upright posture must communicate divine authority.
-Kosmelys — Background
-•	Positioned near Iobrontes in the background area.
-•	Separated enough from Iobrontes to distinguish both sprites, attacks, and effects.
-•	Facing the playable characters.
+Furai â€” Left
+â€¢	Positioned on the left side of the party.
+â€¢	Slightly farther away from the camera.
+â€¢	His feet should be higher on the screen than Dexios's.
+â€¢	Facing Iobrontes.
+Dexios â€” Center
+â€¢	Positioned in the center of the party formation.
+â€¢	Standing slightly closer to the camera than Furai.
+â€¢	Seen primarily from behind, facing Iobrontes.
+â€¢	Retains his combat stance with his left arm and left leg forward.
+Sahira â€” Right
+â€¢	Positioned on the right side of the formation.
+â€¢	Slightly closer to the camera than Dexios.
+â€¢	Her feet should appear lower on the screen than the other party members' feet.
+â€¢	Facing Iobrontes.
+Hazel â€” Configured fourth position
+â€¢	Use Hazel's configured position and depth so her sprite remains readable without unnecessarily moving the established characters.
+â€¢	Facing Iobrontes.
+Iobrontes â€” Background
+â€¢	Positioned approximately in the center of the arena.
+â€¢	Standing farther away than all four party members.
+â€¢	Facing the playable characters.
+â€¢	His upright posture must communicate divine authority.
+Kosmelys â€” Background
+â€¢	Positioned near Iobrontes in the background area.
+â€¢	Separated enough from Iobrontes to distinguish both sprites, attacks, and effects.
+â€¢	Facing the playable characters.
 Formation Diagram
                   TEMPLE BACKGROUND
 
@@ -154,9 +154,9 @@ When Iobrontes selects a target:
 6.	After the three attacks resolve, the camera returns smoothly to its normal position.
 The camera must make the selected target obvious without hiding the boss or obstructing directional indicators.
 Suggested initial camera values:
-•	Zoom multiplier: approximately 1.08.
-•	Camera transition duration: 0.2–0.3 seconds.
-•	Return transition: approximately 0.3 seconds.
+â€¢	Zoom multiplier: approximately 1.08.
+â€¢	Camera transition duration: 0.2â€“0.3 seconds.
+â€¢	Return transition: approximately 0.3 seconds.
 These values are adjustable and must not be hard-coded.
 Boss positions and scales must also be configurable. Keep both bosses visible together without allowing their sprites, attacks, or effects to obscure one another.
 ________________________________________
@@ -169,26 +169,26 @@ The names written in this document identify the required animation poses or fram
 3.2. Animation Requirements
 A state-based visual system must manage the displayed frame or animation for each character.
 Possible states include:
-•	Idle
-•	Attacking
-•	Defending
-•	Taking damage
-•	Healing
-•	Special ability
-•	Counterattacking
-•	Defeated
+â€¢	Idle
+â€¢	Attacking
+â€¢	Defending
+â€¢	Taking damage
+â€¢	Healing
+â€¢	Special ability
+â€¢	Counterattacking
+â€¢	Defeated
 Kosmelys uses `kosmelys_base.png` as her idle frame, `kosmelys_derecha.png`, `kosmelys_izquierda.png`, and `kosmelys_arriba.png` for directional attacks, `kosmelys_escudo.png` for Portal Shield, and `kosmelys_mr.png` for Meteor Rain. Use a clearly labeled placeholder for the missing downward attack frame. Resolve the Portal Shield file using its actual supplied filename and extension. Return her to `kosmelys_base.png` after an action unless Portal Shield remains active. Do not change the supplied artwork's design.
 When a character begins an action, the appropriate frame must replace their idle frame.
 Once the action ends, the character returns to the idle frame unless they have been defeated.
 Dexios, Furai, and Sahira gently move up and down while in their base idle frame.
 If a supplied asset is a static frame rather than a complete sprite sheet, simple movements and effects may be produced through Phaser, such as:
-•	Small positional movements.
-•	Slight scaling.
-•	Recoil.
-•	Character flashes.
-•	Projectile movements.
-•	Lightning effects.
-•	Camera movement.
+â€¢	Small positional movements.
+â€¢	Slight scaling.
+â€¢	Recoil.
+â€¢	Character flashes.
+â€¢	Projectile movements.
+â€¢	Lightning effects.
+â€¢	Camera movement.
 These effects must not change the appearance or design of the provided character artwork.
 3.3. Missing Asset Policy
 If a required frame is unavailable, the game must use a clearly identified temporary placeholder.
@@ -217,34 +217,34 @@ Turn Position	Acting Character
 10	Kosmelys
 Hazel's configured slot immediately after Sahira is provisional. After turn position 10, the sequence restarts at position 1.
 Furai
-  ↓
+  â†“
 Iobrontes
-  ↓
+  â†“
 Kosmelys
-  ↓
+  â†“
 Dexios
-  ↓
+  â†“
 Iobrontes
-  ↓
+  â†“
 Kosmelys
-  ↓
+  â†“
 Sahira
-  ↓
+  â†“
 Hazel (provisional)
-  ↓
+  â†“
 Iobrontes
-  ↓
+  â†“
 Kosmelys
-  ↓
+  â†“
 Repeat
 Iobrontes and Kosmelys each act three times during every complete ten-position cycle. Hazel's turn is configuration-controlled; every other turn keeps its existing relative position.
 Incapacitated Characters
 When a playable character reaches zero health:
-•	They become incapacitated.
-•	They cannot execute attacks or abilities.
-•	Their turn is automatically skipped.
-•	The combat continues with the remaining characters.
-•	Their HUD must indicate that they are incapacitated.
+â€¢	They become incapacitated.
+â€¢	They cannot execute attacks or abilities.
+â€¢	Their turn is automatically skipped.
+â€¢	The combat continues with the remaining characters.
+â€¢	Their HUD must indicate that they are incapacitated.
 For the initial implementation, only the incapacitated party member's turn is skipped. Boss positions in the fixed turn sequence remain unchanged. A defeated boss's remaining turns are skipped, not transferred to the other boss.
 This means a boss may receive consecutive turns if a skipped party-member turn falls between two boss turns.
 The battle only ends in defeat when all four playable characters have zero health.
@@ -255,15 +255,15 @@ For Cosmic Rays, Kosmelys selects one conscious playable character once per abil
 4.4. Targeting Feedback
 The game must clearly communicate which character Iobrontes is attacking.
 Before a Lightning Chain begins:
-•	The selected character is visually highlighted.
-•	The camera moves slightly toward the selected character.
-•	The character's name or HUD receives a targeting indicator.
-•	The other party members remain visible but are not eligible to perform defensive actions.
+â€¢	The selected character is visually highlighted.
+â€¢	The camera moves slightly toward the selected character.
+â€¢	The character's name or HUD receives a targeting indicator.
+â€¢	The other party members remain visible but are not eligible to perform defensive actions.
 During Lightning Chain, WASD controls only the targeted character. During Watch the Thunder, Space triggers a simultaneous jump for the party.
 Inputs must not activate defensive animations for other party members.
 After the chain finishes, the camera returns to the default view and the targeting indicator disappears.
 ________________________________________
-5. PLAYABLE CHARACTER — DEXIOS
+5. PLAYABLE CHARACTER â€” DEXIOS
 5.1. Starting Statistics
 Attribute	Initial Value	Maximum
 Health	100	100
@@ -272,19 +272,19 @@ Chaos Energy	0	100
 Initial Frame: dexios_base
 Downward defense frame: dexios_abajo
 Dexios specializes in electrical attacks and Chaos energy.
-5.2. Ability 1 — Triple Lightning
-Damage: 5 × 3 = 15
+5.2. Ability 1 â€” Triple Lightning
+Damage: 5 Ã— 3 = 15
 Mana Cost: 0
 Type: Three-hit physical/electrical attack
 Frame: dexios_ataque
 Dexios performs three consecutive strikes against Iobrontes.
 Each strike:
-•	Deals 5 damage.
-•	Produces a yellow lightning effect.
-•	Updates the boss's health.
+â€¢	Deals 5 damage.
+â€¢	Produces a yellow lightning effect.
+â€¢	Updates the boss's health.
 The attack consumes no Mana.
 Each individual impact must be visible.
-5.3. Ability 2 — Electric Arc
+5.3. Ability 2 â€” Electric Arc
 Damage: 30
 Mana Cost: 20
 Type: Electrical attack
@@ -293,7 +293,7 @@ Dexios unleashes a large white lightning attack toward Iobrontes.
 The attack deals 30 damage in one hit.
 When selected, 20 Mana is consumed.
 The attack must include a visible white lightning effect.
-5.4. Ability 3 — Chaotic Lightning
+5.4. Ability 3 â€” Chaotic Lightning
 Damage: 70
 Chaos Energy Cost: 50
 Type: Chaos-based electrical attack
@@ -304,9 +304,9 @@ The attack must use visually distinctive red lightning effects.
 5.5. Chaos Energy
 Dexios gains 20 Chaos energy whenever he takes damage from an enemy attack.
 Examples:
-•	An unblocked lightning hit deals 10 damage and grants 20 Chaos energy.
-•	An imperfect block deals 5 damage and grants 20 Chaos energy.
-•	A perfect parry deals 0 damage and grants no Chaos energy.
+â€¢	An unblocked lightning hit deals 10 damage and grants 20 Chaos energy.
+â€¢	An imperfect block deals 5 damage and grants 20 Chaos energy.
+â€¢	A perfect parry deals 0 damage and grants no Chaos energy.
 Chaos energy cannot exceed 100.
 Each damaging hit is processed separately. Therefore, taking damage from three lightning bolts in a single chain may generate up to 60 Chaos energy.
 5.6. Defensive Frames
@@ -326,14 +326,14 @@ Every successful perfect parry triggers a 5-damage counterattack against Iobront
 If Dexios perfectly parries all three lightning attacks in a chain, he deals 15 counterattack damage in total.
 There is no additional three-hit parry bonus for Dexios.
 ________________________________________
-6. PLAYABLE CHARACTER — FURAI
+6. PLAYABLE CHARACTER â€” FURAI
 6.1. Starting Statistics
 Attribute	Initial Value	Maximum
 Health	80	80
 Spiritual Energy	0	100
 Initial Frame: furai_base
 Furai specializes in physical attacks and techniques associated with the tiger.
-6.2. Ability 1 — Tiger Spear
+6.2. Ability 1 â€” Tiger Spear
 Damage: 15
 Spiritual Energy Cost: 0
 Type: Single physical strike
@@ -341,8 +341,8 @@ Frame: furai_ataque
 Furai performs a single physical attack against Iobrontes.
 The attack deals 15 damage and produces a visible impact effect.
 It does not consume Spiritual Energy. A successful hit restores 30 Spiritual Energy, up to 100.
-6.3. Ability 2 — Tiger Fang
-Damage: 20 × 2 = 40
+6.3. Ability 2 â€” Tiger Fang
+Damage: 20 Ã— 2 = 40
 Spiritual Energy Cost: 20
 Type: Two-hit physical attack
 Frame: furai_tigre
@@ -350,7 +350,7 @@ Furai attacks Iobrontes twice in succession.
 Each hit deals 20 damage, for a total of 40.
 Each hit must have its own impact effect.
 The ability consumes 20 Spiritual Energy when executed.
-6.4. Ability 3 — Armor Break
+6.4. Ability 3 â€” Armor Break
 Damage: 0
 Spiritual Energy Cost: 25
 Type: Debuff
@@ -368,10 +368,10 @@ Armor Break Rules
 4.	The mark disappears after the empowered attack resolves.
 For multi-hit attacks, the damage of only the first hit within that one ability is doubled.
 Examples:
-•	Triple Lightning: 15 → 20 total damage.
-•	Tiger Fang: 40 → 60 total damage.
-•	Electric Arc: 30 → 60 damage.
-•	Chaotic Lightning: 70 → 140 damage.
+â€¢	Triple Lightning: 15 â†’ 20 total damage.
+â€¢	Tiger Fang: 40 â†’ 60 total damage.
+â€¢	Electric Arc: 30 â†’ 60 damage.
+â€¢	Chaotic Lightning: 70 â†’ 140 damage.
 For this prototype, automatic defensive counterattacks do not consume the mark. The effect waits for the next damaging attack chosen from a playable character's ability menu.
 Armor Break cannot stack with itself. Reapplying it while active refreshes the same effect instead of multiplying damage again.
 6.5. Defensive Frames
@@ -400,13 +400,13 @@ When this happens:
 If even one attack in the chain is an imperfect block or failed defense, the special counterattack does not occur.
 Perfectly blocked individual attacks still deal zero damage.
 ________________________________________
-7. PLAYABLE CHARACTER — SAHIRA
+7. PLAYABLE CHARACTER â€” SAHIRA
 7.1. Starting Statistics
 Attribute	Initial Value	Maximum
 Health	125	125
 Initial Frame: sahira_base
 Sahira specializes in physical attacks, healing, and defensive techniques.
-7.2. Ability 1 — Jackal Strike
+7.2. Ability 1 â€” Jackal Strike
 Damage: 15
 Uses: Unlimited
 Type: Single physical strike
@@ -414,7 +414,7 @@ Frame: sahira_ataque
 Sahira performs a physical attack against Iobrontes.
 The attack deals 15 damage and produces a visible impact effect.
 It has no per-fight use limit.
-7.3. Ability 2 — Hippopotamus Healing
+7.3. Ability 2 â€” Hippopotamus Healing
 Healing: Full restoration of the selected ally's Health
 Uses: 2 per fight
 Type: Healing ability
@@ -422,10 +422,10 @@ Frame: sahira_cura
 Sahira performs a healing ability that completely restores one selected party member's health.
 When this ability is selected, a targeting menu appears.
 The player can choose:
-•	Dexios
-•	Furai
-•	Sahira
-•	Hazel
+â€¢	Dexios
+â€¢	Furai
+â€¢	Sahira
+â€¢	Hazel
 The healing effect restores the selected character to their maximum Health value.
 Each successful use consumes one of the two uses available for the fight.
 Healing Target Selection
@@ -437,7 +437,7 @@ Healing Target Selection
 6.	The character's Health is restored to maximum.
 For the initial implementation, healing applies to conscious party members only and does not revive incapacitated allies. Incapacitated characters remain visible in the selection interface but are disabled as healing targets.
 This rule can be changed later if revival abilities are introduced.
-7.4. Ability 3 — Hippopotamus Shield
+7.4. Ability 3 â€” Hippopotamus Shield
 Uses: 10 per fight
 Type: Defensive support ability
 Frame: sahira_cura
@@ -460,7 +460,7 @@ Failed defense	10	0
 Unlike Dexios and Furai, Sahira takes no damage from an imperfect block.
 Her defense only fails to protect her when the player presses the wrong directional input or misses the defensive window entirely.
 ________________________________________
-8. BOSS — IOBRONTES
+8. BOSS â€” IOBRONTES
 8.1. Starting Statistics
 Attribute	Initial Value	Maximum
 Health	550	550
@@ -468,7 +468,7 @@ Initial Sprite: iobrontes_base
 Iobrontes is one of two independent bosses in the prototype. He has three actions: Lightning Chain, Watch the Thunder, and Divine Retribution. His co-boss, Kosmelys, has separate statistics, abilities, health, and turns as specified in the dual-boss combat sections.
 Before each action, the game displays its name in white at the center of the screen for one second. The action begins only after this announcement disappears.
 Iobrontes chooses Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time.
-8.2. Ability — Lightning Chain
+8.2. Ability â€” Lightning Chain
 Ability Name: Lightning Chain
 Number of Attacks: 3
 Damage per Unblocked Attack: 10
@@ -479,10 +479,10 @@ Iobrontes selects one active party member and unleashes three consecutive lightn
 Each attack has a 0.187-second casting (wind-up) time before its lightning bolt launches.
 Lightning Chain's attack rate is reduced by 33%: its wind-up, projectile travel, result display, and interval between bolts are lengthened accordingly. Projectile travel takes 0.373 seconds.
 Each bolt independently chooses a direction at random from:
-•	Up
-•	Down
-•	Left
-•	Right
+â€¢	Up
+â€¢	Down
+â€¢	Left
+â€¢	Right
 The same direction may appear more than once during a chain.
 Directional Frames
 Attack Direction	Frame
@@ -517,7 +517,7 @@ Each lightning bolt deals 10 damage if the target fails to defend.
 A successful imperfect block reduces the damage according to the targeted character's defensive rules.
 A perfect parry prevents all damage and may trigger a counterattack.
 The maximum unblocked damage of one complete Lightning Chain is 30.
-8.3. Ability — Watch the Thunder
+8.3. Ability â€” Watch the Thunder
 Frame: iobrontes_wtt
 Sound: assets/sfx/trueno.mp3
 Target Count: All active party members
@@ -527,7 +527,7 @@ Jump Window: 0.3 seconds
 Iobrontes launches one long purple lightning beam from himself across Furai, Dexios, and Sahira. After the 0.6-second casting time, a white contracting timing ring appears around each active party member while the beam spans the whole party during the 0.3-second jump window.
 Pressing Space during the jump window makes all active party members jump at the same time. Use each character's current-form jump frame, including Hazel's Ignis or Glacio jump. A successful team jump avoids the attack completely. There is no perfect or imperfect result: each character who does not jump takes 50 damage, unless an active Hippopotamus Shield blocks that hit.
 The attack is one event, not a chain. Resolve damage for all active characters together when the jump window closes.
-8.4. Ability — Divine Retribution
+8.4. Ability â€” Divine Retribution
 Frame: iobrontes_armadura
 Sound: assets/sfx/armadura.mp3
 Target Count: Self, then the first playable character whose attack damages Iobrontes
@@ -536,7 +536,7 @@ Duration: 2 playable-character turns
 Divine Retribution covers Iobrontes in an electric shield. The next attack that damages him still deals its normal damage, then the shield immediately retaliates against its attacker for 30 damage and disappears.
 The shield lasts until that hit occurs or two playable-character turns have ended, whichever comes first. Count turns whether or not the character attacks Iobrontes; a skipped incapacitated-character turn also counts. If Dexios and Sahira take their turns without damaging Iobrontes, the shield has expired by Furai's next turn.
 Whenever the shield is consumed or expires, Iobrontes returns to iobrontes_base. If another action temporarily changes his frame while the shield remains active, restore iobrontes_armadura when that action's frame ends.
-8.5. Boss — Kosmelys
+8.5. Boss â€” Kosmelys
 Full Title: Kosmelys, Goddess of Space, Tenth Heir of Hera
 Role: Second boss
 Element: Space / Cosmic Magic
@@ -563,24 +563,24 @@ Each lightning bolt has an independent defensive input opportunity.
 Space is accepted only during Watch the Thunder's jump window.
 9.2. Attack Timing
 Each lightning bolt follows three phases.
-Phase 1 — Wind-up
+Phase 1 â€” Wind-up
 Duration: 0.187 seconds
 Iobrontes prepares the attack and indicates its direction.
 The appropriate directional frame becomes visible.
 A warning marker appears on the side corresponding to the attack.
 Defensive inputs during this phase are ignored without penalty.
-Phase 2 — Projectile Travel
+Phase 2 â€” Projectile Travel
 Duration: 0.373 seconds
 The lightning projectile travels toward the targeted character.
 A timing ring appears around the target and contracts toward them.
 The ring reaches its final size at the moment of visual impact.
-Phase 3 — Defensive Resolution
+Phase 3 â€” Defensive Resolution
 All timing is measured relative to the moment of impact, called T.
 The defensive window opens 0.5 seconds before impact and closes 0.1 seconds after impact.
 Timing	Correct Input Result	Indicator
-Before T − 0.5 s	Ignored	Neutral
-T − 0.5 s to T − 0.1 s	Imperfect block	Yellow
-T − 0.1 s to T + 0.1 s	Perfect parry	White, glowing
+Before T âˆ’ 0.5 s	Ignored	Neutral
+T âˆ’ 0.5 s to T âˆ’ 0.1 s	Imperfect block	Yellow
+T âˆ’ 0.1 s to T + 0.1 s	Perfect parry	White, glowing
 After T + 0.1 s	No valid defense	Inactive
 Only the first directional input made during the active window is accepted.
 An incorrect directional input results in a failed defense.
@@ -606,37 +606,37 @@ Dexios	10 damage	5 damage	0 damage, 5 counterdamage
 Furai	10 damage	5 damage	0 damage
 Sahira	10 damage	0 damage	0 damage
 Additional chain effects:
-•	Dexios deals 5 damage for every individual perfect parry.
-•	Furai deals 20 damage only if all three parries in the chain are perfect.
+â€¢	Dexios deals 5 damage for every individual perfect parry.
+â€¢	Furai deals 20 damage only if all three parries in the chain are perfect.
 9.5. Perfect-Parry Tracking
 For Furai, the game must track whether every attack in the current Lightning Chain was perfectly parried.
 A simple chain tracking structure can contain:
-•	Target character.
-•	Current lightning index.
-•	Number of perfect parries.
-•	Whether any imperfect block occurred.
-•	Whether any failed defense occurred.
+â€¢	Target character.
+â€¢	Current lightning index.
+â€¢	Number of perfect parries.
+â€¢	Whether any imperfect block occurred.
+â€¢	Whether any failed defense occurred.
 At the end of the third attack:
-•	If Furai has three perfect parries, trigger their special counterattack.
-•	Otherwise, do not trigger the special counterattack.
+â€¢	If Furai has three perfect parries, trigger their special counterattack.
+â€¢	Otherwise, do not trigger the special counterattack.
 The tracking data must be reset when the next Lightning Chain begins.
 Dexios does not require a three-hit counterattack condition because his perfect parries resolve individually. Sahira does not require a three-hit counterattack condition.
 9.6. Defensive Feedback
 Each defensive result must produce immediate visual feedback.
 Perfect Parry
-•	Bright electrical effect.
-•	Strong impact feedback.
-•	Text: PERFECT.
-•	Counterattack when applicable.
+â€¢	Bright electrical effect.
+â€¢	Strong impact feedback.
+â€¢	Text: PERFECT.
+â€¢	Counterattack when applicable.
 Imperfect Block
-•	Defensive impact effect.
-•	Text: BLOCK.
-•	Character-specific damage calculation.
+â€¢	Defensive impact effect.
+â€¢	Text: BLOCK.
+â€¢	Character-specific damage calculation.
 Failed Defense
-•	Visible lightning impact.
-•	Damaged frame.
-•	Text: FAIL.
-•	Full 10 damage applied.
+â€¢	Visible lightning impact.
+â€¢	Damaged frame.
+â€¢	Text: FAIL.
+â€¢	Full 10 damage applied.
 For Furai's successful triple-perfect chain, display the additional message:
 "Tiger Parry"
 This message appears once, after the third successful perfect parry.
@@ -664,18 +664,18 @@ Use purple styling with a cosmic or spatial appearance. Update both bars indepen
 The player must be able to see the status of all four playable characters.
 Each character has an individual HUD panel.
 Dexios
-•	Health: Green bar — 100 / 100.
-•	Mana: Blue bar — 100 / 100.
-•	Chaos Energy: Red bar — 0 / 100.
+â€¢	Health: Green bar â€” 100 / 100.
+â€¢	Mana: Blue bar â€” 100 / 100.
+â€¢	Chaos Energy: Red bar â€” 0 / 100.
 Furai
-•	Health: Green bar — 80 / 80.
-•	Spiritual Energy: White bar — 0 / 100.
+â€¢	Health: Green bar â€” 80 / 80.
+â€¢	Spiritual Energy: White bar â€” 0 / 100.
 Sahira
-•	Health: Green bar — 125 / 125.
-•	No Mana bar; show ability-use counts for Hippopotamus Healing (2) and Hippopotamus Shield (10).
+â€¢	Health: Green bar â€” 125 / 125.
+â€¢	No Mana bar; show ability-use counts for Hippopotamus Healing (2) and Hippopotamus Shield (10).
 Hazel
-•	Health: Green bar — 80 / 80.
-•	No Mana or Chaos bar; show the current Ignis/Glacio form instead.
+â€¢	Health: Green bar â€” 80 / 80.
+â€¢	No Mana or Chaos bar; show the current Ignis/Glacio form instead.
 The HUD should display the character's name, current values, and maximum values.
 The three character panels should be clearly grouped and should not cover important battlefield animations.
 Active Character Indicator
@@ -683,10 +683,10 @@ During a party member's turn, their HUD panel must be highlighted.
 Only the current character's ability menu should be active.
 Incapacitated Character Indicator
 When a character reaches zero Health:
-•	Their HUD becomes visually disabled.
-•	Their Health bar displays zero.
-•	Their turn is skipped.
-•	Their action menu is no longer available.
+â€¢	Their HUD becomes visually disabled.
+â€¢	Their Health bar displays zero.
+â€¢	Their turn is skipped.
+â€¢	Their action menu is no longer available.
 10.3. Ability Menu
 The active character's ability menu appears during their turn.
 The menu displays the available abilities and their costs.
@@ -716,9 +716,9 @@ An arrow or marker showing the direction of the incoming lightning.
 Timing Ring
 A ring surrounding the targeted character that contracts as the lightning approaches.
 Timing Colors
-•	Neutral before the defensive window.
-•	Yellow during the imperfect-block window.
-•	White and glowing during the perfect-parry window.
+â€¢	Neutral before the defensive window.
+â€¢	Yellow during the imperfect-block window.
+â€¢	White and glowing during the perfect-parry window.
 Result Label
 A brief label indicating the defensive result.
 The indicators must be clearly readable without covering the character's silhouette.
@@ -736,30 +736,30 @@ The `escena_bienvenida` scene plays `assets/music/start.mp3` on a loop. Stop the
 The combat alternates between `assets/music/watch_the_thunder.mp3` and `assets/music/cosmic_strike.mp3`, playing each track from beginning to end while the encounter is active. Do not overlap or individually loop the battle tracks. When both bosses reach 0 Health, stop the active battle track and transition to `assets/music/nike.mp3`, which loops throughout the victory screen until the battle restarts.
 11.3. Sound Effects
 Use the supplied sound effects in `assets/sfx/`:
-•	`dexios.mp3` plays for Triple Lightning, Electric Arc, and Chaotic Lightning.
-•	`iobrontes.mp3` plays once for each bolt in Lightning Chain.
-•	`trueno.mp3` plays for Watch the Thunder.
-•	`armadura.mp3` plays for Divine Retribution.
-•	`furai.mp3` plays for Tiger Spear.
-•	`tigre.mp3` plays for Tiger Fang.
-•	`tigre.mp3` plays for Armor Break.
-•	`sahira.mp3` plays for Jackal Strike.
-•	`cura.mp3` plays for Hippopotamus Healing.
-•	`cura.mp3` plays for Hippopotamus Shield.
-•	`perfect_block.mp3` plays for every perfect block by Dexios, Furai, Sahira, or Hazel.
-•	`ataque_cosmico.mp3` plays on each Cosmic Rays projectile cast and midpoint direction change.
-•	`abrir_portal.mp3` plays once when Portal Shield activates.
-•	`teleport_ataque.mp3` plays once per ability redirected by Portal Shield.
-•	`meteor_fall.mp3` plays when each Meteor Rain meteor begins its descent.
+â€¢	`dexios.mp3` plays for Triple Lightning, Electric Arc, and Chaotic Lightning.
+â€¢	`iobrontes.mp3` plays once for each bolt in Lightning Chain.
+â€¢	`trueno.mp3` plays for Watch the Thunder.
+â€¢	`armadura.mp3` plays for Divine Retribution.
+â€¢	`furai.mp3` plays for Tiger Spear.
+â€¢	`tigre.mp3` plays for Tiger Fang.
+â€¢	`tigre.mp3` plays for Armor Break.
+â€¢	`sahira.mp3` plays for Jackal Strike.
+â€¢	`cura.mp3` plays for Hippopotamus Healing.
+â€¢	`cura.mp3` plays for Hippopotamus Shield.
+â€¢	`perfect_block.mp3` plays for every perfect block by Dexios, Furai, Sahira, or Hazel.
+â€¢	`ataque_cosmico.mp3` plays on each Cosmic Rays projectile cast and midpoint direction change.
+â€¢	`abrir_portal.mp3` plays once when Portal Shield activates.
+â€¢	`teleport_ataque.mp3` plays once per ability redirected by Portal Shield.
+â€¢	`meteor_fall.mp3` plays when each Meteor Rain meteor begins its descent.
 Existing generic effects may be used for other combat feedback.
 Sound effects should support the combat without overpowering the background music.
 11.4. Audio Behavior
-•	Background music starts when the encounter begins, subject to browser audio playback restrictions.
-•	Music continues while the battle remains active.
-•	On victory, music transitions to the looping victory track; on defeat, music stops.
-•	Sound effects play alongside the music.
-•	Audio volumes should be independently adjustable through configuration.
-•	A mute option is recommended for testing.
+â€¢	Background music starts when the encounter begins, subject to browser audio playback restrictions.
+â€¢	Music continues while the battle remains active.
+â€¢	On victory, music transitions to the looping victory track; on defeat, music stops.
+â€¢	Sound effects play alongside the music.
+â€¢	Audio volumes should be independently adjustable through configuration.
+â€¢	A mute option is recommended for testing.
 ________________________________________
 12. VICTORY AND DEFEAT CONDITIONS
 12.1. Victory Condition
@@ -790,24 +790,24 @@ The prototype will be developed using Phaser and must be playable in a desktop b
 The project must support keyboard input, 2D sprites, graphical effects, audio, and camera transitions.
 13.2. Configuration System
 The following values must be editable without changing the main combat logic:
-•	Character starting statistics.
-•	Maximum Health, Mana, Spiritual Energy, and Chaos energy.
-•	Attack damage.
-•	Ability costs.
-•	Chaos energy generation.
-•	Enemy attack damage.
-•	Boss ability-selection probabilities and availability rules.
-•	Turn order.
-•	Projectile timing.
-•	Defense timing windows.
-•	Ability phase timing, including sequential multi-hit and Meteor Rain events.
-•	Character positions and scales.
-•	Camera zoom and transition speed.
-•	Animation references.
-•	Visual effects.
-•	Audio volume.
-•	Audio resource paths and sound-effect event configuration.
-•	Both bosses' Health, positions, scales, status effects, ability availability, and independent turn states.
+â€¢	Character starting statistics.
+â€¢	Maximum Health, Mana, Spiritual Energy, and Chaos energy.
+â€¢	Attack damage.
+â€¢	Ability costs.
+â€¢	Chaos energy generation.
+â€¢	Enemy attack damage.
+â€¢	Boss ability-selection probabilities and availability rules.
+â€¢	Turn order.
+â€¢	Projectile timing.
+â€¢	Defense timing windows.
+â€¢	Ability phase timing, including sequential multi-hit and Meteor Rain events.
+â€¢	Character positions and scales.
+â€¢	Camera zoom and transition speed.
+â€¢	Animation references.
+â€¢	Visual effects.
+â€¢	Audio volume.
+â€¢	Audio resource paths and sound-effect event configuration.
+â€¢	Both bosses' Health, positions, scales, status effects, ability availability, and independent turn states.
 13.3. Combat State Management
 The combat system should use clearly separated states.
 Recommended states:
@@ -825,14 +825,14 @@ The system must prevent contradictory actions, such as selecting a new attack wh
 13.4. Boss Attack Logic
 Choose Lightning Chain 50% of the time, Watch the Thunder 30% of the time, and Divine Retribution 20% of the time at the start of each Iobrontes turn. Announce the selected action in white at the center of the screen for one second, and start it only after the announcement disappears.
 Each Lightning Chain must be treated as one enemy action containing three separate attack events. The structure must support:
-•	One target for the full chain.
-•	Three independently randomized directions.
-•	Three separate timing windows.
-•	Three defensive results.
-•	Character-specific block and parry calculations.
-•	Chain-level perfect-parry tracking.
-•	A final counterattack when applicable.
-•	Automatic cancellation if the target becomes incapacitated.
+â€¢	One target for the full chain.
+â€¢	Three independently randomized directions.
+â€¢	Three separate timing windows.
+â€¢	Three defensive results.
+â€¢	Character-specific block and parry calculations.
+â€¢	Chain-level perfect-parry tracking.
+â€¢	A final counterattack when applicable.
+â€¢	Automatic cancellation if the target becomes incapacitated.
 Watch the Thunder is one enemy action targeting all active party members. It has a 0.6-second casting time followed by a 0.3-second team jump window, deals 50 damage to each character who does not jump, and has no directional or parry outcomes.
 Divine Retribution activates a two-playable-turn electric shield using iobrontes_armadura and armadura.mp3. The next damaging attack against Iobrontes deals its normal damage and triggers 30 damage to its attacker; the shield then ends. It also ends after two playable-character turns, whether or not either character attacked, and Iobrontes returns to iobrontes_base on either ending.
 Kosmelys independently selects Cosmic Rays (50%), Portal Shield (30%), or Meteor Rain (20%). If Portal Shield is unavailable because it is already active, redistribute its probability proportionally among the available abilities. Cosmic Rays targets one conscious character with both sequential projectiles, changes each projectile's direction once at its travel midpoint, and resolves each projectile once. Meteor Rain resolves five meteors strictly sequentially: the first has a 0.5-second casting phase and 0.5-second travel, and each following meteor begins falling as soon as the preceding perfect-parry window closes, with 0.7-second travel. Every meteor uses normal-block and perfect-parry windows relative to impact, character-specific results, and any eligible counterattacks. Portal Shield redirects one entire offensive ability to a conscious party member and observes its one-character-turn duration.
@@ -910,11 +910,11 @@ Visuals and Audio
 44.	Attacks display their specified lightning colors and impact effects.
 45.	Watch the Thunder and Cosmic Strike alternate without individually looping during combat.
 46.	Sound effects accompany major combat actions.
-47.	The battle remains visually readable at 1920 × 1080 resolution.
+47.	The battle remains visually readable at 1920 Ã— 1080 resolution.
 48.	Kosmelys's Cosmic Rays targets one party member for both projectiles; each changes direction at its midpoint, moves the same effect to the new directional origin without resetting remaining travel time, and resolves damage exactly once.
 49.	Cosmic Rays applies the specified Dexios, Furai, and Sahira defensive and counterattack rules.
 50.	Meteor Rain launches five meteors one at a time, with no overlapping projectile, targeting indicator, defensive window, or unresolved event; each new meteor begins falling as soon as the previous perfect-parry window closes.
-51.	The first Meteor Rain meteor has a 0.5-second casting phase and 0.5-second travel; following meteors begin falling immediately after the preceding window closes and travel for 0.7 seconds. Every meteor has a 0.4-second normal-block window from T − 0.7 to T − 0.3, a 0.4-second perfect-parry window from T − 0.3 to T + 0.1, and resolves only after T + 0.1.
+51.	The first Meteor Rain meteor has a 0.5-second casting phase and 0.5-second travel; following meteors begin falling immediately after the preceding window closes and travel for 0.7 seconds. Every meteor has a 0.4-second normal-block window from T âˆ’ 0.7 to T âˆ’ 0.3, a 0.4-second perfect-parry window from T âˆ’ 0.3 to T + 0.1, and resolves only after T + 0.1.
 52.	Dexios counterattacks Kosmelys for 5 damage after every meteor he perfectly parries.
 53.	Furai deals one 20-damage Tiger Parry after Meteor Rain only if he was targeted at least once and perfectly parried every meteor assigned to him.
 54.	Sahira blocks any meteor with a correct W input in the full 0.8-second window; she has no perfect-parry result or counterattack.
@@ -940,83 +940,83 @@ Visuals and Audio
 ________________________________________
 15. SUGGESTED IMPLEMENTATION ORDER
 The prototype should be developed in stages, with each stage tested before moving to the next.
-Stage 1 — Battlefield and Party Formation
-•	Load the supplied temple background.
-•	Place Iobrontes and Kosmelys in the background.
-•	Place Furai, Dexios, Sahira, and Hazel in the requested formation.
-•	Configure sprite scaling and drawing order.
-•	Implement the initial HUD.
-•	Register Kosmelys's supplied sprites and effects from `kosmelys_assets/` without changing their visual design.
-Stage 2 — Combat State and Turn Order
-•	Create the character statistics.
-•	Implement the fixed ten-position turn sequence, with Hazel immediately after Sahira provisionally.
-•	Add incapacitation logic.
-•	Add victory and defeat conditions.
-Stage 3 — Playable Character Abilities
-•	Implement Dexios's attacks and Chaos energy.
-•	Implement Furai's physical attacks and Armor Break.
-•	Implement Sahira's attack and healing ability.
-•	Implement Hazel's Ignis/Glacio forms, two abilities per form, and full-damage imperfect defense.
-•	Add resource costs and target selection.
-Stage 4 — Iobrontes's Attacks
-•	Implement random target selection.
-•	Implement the three directional lightning attacks.
-•	Load the corresponding directional frames.
-•	Implement projectile movement and attack timing.
-•	Add Watch the Thunder, its team-wide beam, casting, jump window, and damage resolution.
-•	Add Divine Retribution, its electric shield, retaliation damage, and two-player-turn expiration.
-•	Select between Iobrontes's three actions with the specified probabilities and announce each action before it begins.
-•	Add Kosmelys's Cosmic Rays, Portal Shield, and sequential Meteor Rain actions, with independent ability selection and boss state.
-•	Add the two independent boss Health bars, with Kosmelys's bar directly below Iobrontes's.
-Stage 5 — Defensive Mechanics
-•	Implement WASD controls.
-•	Implement the directional warning system.
-•	Implement the contracting timing ring.
-•	Implement imperfect blocks and perfect parries.
-•	Add each character's unique defensive calculations.
-•	Implement three-perfect-parry counterattacks.
-Stage 6 — Camera and Visual Feedback
-•	Add target highlighting.
-•	Add camera zoom and return transitions.
-•	Add hit reactions.
-•	Add damage numbers and defense result labels.
-•	Add lightning and impact effects.
-Stage 7 — Audio
-•	Add alternating background battle music.
-•	Add existing and Kosmelys-specific combat sound effects.
-•	Balance audio levels.
-Stage 8 — Final Integration and Testing
-•	Verify all damage calculations.
-•	Verify resource consumption.
-•	Verify the fixed turn sequence.
-•	Test incapacitated-character behavior.
-•	Test all defensive windows.
-•	Verify that animations and camera transitions do not interrupt combat.
-•	Confirm victory and defeat behavior.
-•	Verify the ten-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
-•	Verify independent boss states, ability selection, and defeated-boss turn skipping.
+Stage 1 â€” Battlefield and Party Formation
+â€¢	Load the supplied temple background.
+â€¢	Place Iobrontes and Kosmelys in the background.
+â€¢	Place Furai, Dexios, Sahira, and Hazel in the requested formation.
+â€¢	Configure sprite scaling and drawing order.
+â€¢	Implement the initial HUD.
+â€¢	Register Kosmelys's supplied sprites and effects from `kosmelys_assets/` without changing their visual design.
+Stage 2 â€” Combat State and Turn Order
+â€¢	Create the character statistics.
+â€¢	Implement the fixed ten-position turn sequence, with Hazel immediately after Sahira provisionally.
+â€¢	Add incapacitation logic.
+â€¢	Add victory and defeat conditions.
+Stage 3 â€” Playable Character Abilities
+â€¢	Implement Dexios's attacks and Chaos energy.
+â€¢	Implement Furai's physical attacks and Armor Break.
+â€¢	Implement Sahira's attack and healing ability.
+â€¢	Implement Hazel's Ignis/Glacio forms, two abilities per form, and full-damage imperfect defense.
+â€¢	Add resource costs and target selection.
+Stage 4 â€” Iobrontes's Attacks
+â€¢	Implement random target selection.
+â€¢	Implement the three directional lightning attacks.
+â€¢	Load the corresponding directional frames.
+â€¢	Implement projectile movement and attack timing.
+â€¢	Add Watch the Thunder, its team-wide beam, casting, jump window, and damage resolution.
+â€¢	Add Divine Retribution, its electric shield, retaliation damage, and two-player-turn expiration.
+â€¢	Select between Iobrontes's three actions with the specified probabilities and announce each action before it begins.
+â€¢	Add Kosmelys's Cosmic Rays, Portal Shield, and sequential Meteor Rain actions, with independent ability selection and boss state.
+â€¢	Add the two independent boss Health bars, with Kosmelys's bar directly below Iobrontes's.
+Stage 5 â€” Defensive Mechanics
+â€¢	Implement WASD controls.
+â€¢	Implement the directional warning system.
+â€¢	Implement the contracting timing ring.
+â€¢	Implement imperfect blocks and perfect parries.
+â€¢	Add each character's unique defensive calculations.
+â€¢	Implement three-perfect-parry counterattacks.
+Stage 6 â€” Camera and Visual Feedback
+â€¢	Add target highlighting.
+â€¢	Add camera zoom and return transitions.
+â€¢	Add hit reactions.
+â€¢	Add damage numbers and defense result labels.
+â€¢	Add lightning and impact effects.
+Stage 7 â€” Audio
+â€¢	Add alternating background battle music.
+â€¢	Add existing and Kosmelys-specific combat sound effects.
+â€¢	Balance audio levels.
+Stage 8 â€” Final Integration and Testing
+â€¢	Verify all damage calculations.
+â€¢	Verify resource consumption.
+â€¢	Verify the fixed turn sequence.
+â€¢	Test incapacitated-character behavior.
+â€¢	Test all defensive windows.
+â€¢	Verify that animations and camera transitions do not interrupt combat.
+â€¢	Confirm victory and defeat behavior.
+â€¢	Verify the ten-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
+â€¢	Verify independent boss states, ability selection, and defeated-boss turn skipping.
 ________________________________________
 16. VISUAL REFERENCES
 The project's asset directory will contain the supplied reference frames for:
-•	Dexios
-•	Furai
-•	Sahira
-•	Hazel's Ignis and Glacio forms
-•	Iobrontes
-•	Kosmelys
-•	The temple background
-•	Additional combat effects, where available
-•	Dexios, Furai, Sahira, and Hazel's form-specific jump frames
-•	Iobrontes's Watch the Thunder frame
-•	Iobrontes's Divine Retribution electric-armor frame
+â€¢	Dexios
+â€¢	Furai
+â€¢	Sahira
+â€¢	Hazel's Ignis and Glacio forms
+â€¢	Iobrontes
+â€¢	Kosmelys
+â€¢	The temple background
+â€¢	Additional combat effects, where available
+â€¢	Dexios, Furai, Sahira, and Hazel's form-specific jump frames
+â€¢	Iobrontes's Watch the Thunder frame
+â€¢	Iobrontes's Divine Retribution electric-armor frame
 These assets establish the visual identity and character appearances of the prototype.
 The code must reference them through their registered names, allowing images to be replaced or improved without requiring changes to the core combat systems.
 ________________________________________
-Core Design Specification — Version 0.5
+Core Design Specification â€” Version 0.5
 
 
-# LA DEXÍADA — DUAL BOSS FIGHT UPDATE
-**Design Document Update — Kosmelys Implementation**
+# LA DEXÃADA â€” DUAL BOSS FIGHT UPDATE
+**Design Document Update â€” Kosmelys Implementation**
 
 **Target file:** `DESIGN.md`  
 **Scope:** Expand the existing combat prototype into a simultaneous dual-boss encounter featuring Iobrontes and Kosmelys.
@@ -1039,7 +1039,7 @@ Any new values required for the implementation, including timing, damage, animat
 
 # 1. BOSS HEALTH AND DUAL-BOSS INTERFACE
 
-## 1.1. Iobrontes — Health Update
+## 1.1. Iobrontes â€” Health Update
 
 Iobrontes's maximum Health is increased to **550 HP**.
 
@@ -1049,7 +1049,7 @@ All of his previously implemented abilities and mechanics must remain functional
 
 Do not change the existing attack probabilities unless required by another explicit instruction.
 
-## 1.2. Kosmelys — New Boss
+## 1.2. Kosmelys â€” New Boss
 
 Add Kosmelys as a second boss.
 
@@ -1068,7 +1068,7 @@ Kosmelys appears in the same arena as Iobrontes and fights alongside him.
 
 Both bosses must be visible simultaneously.
 
-The existing playable characters—Furai, Dexios, Sahira, and Hazel—remain in their current formation.
+The existing playable charactersâ€”Furai, Dexios, Sahira, and Hazelâ€”remain in their current formation.
 
 Kosmelys should be positioned near Iobrontes, in the background area of the battlefield, while maintaining enough separation to make their sprites, attacks, and effects visually distinguishable.
 
@@ -1100,7 +1100,7 @@ Neither Health bar should disappear merely because the other boss has been defea
 
 ---
 
-# 2. KOSMELYS — CHARACTER ASSETS AND ANIMATION STATES
+# 2. KOSMELYS â€” CHARACTER ASSETS AND ANIMATION STATES
 
 All Kosmelys frames are provided in the `kosmelys_assets` directory.
 
@@ -1134,7 +1134,7 @@ If an asset is missing, use an explicitly labeled temporary placeholder rather t
 
 ---
 
-# 3. KOSMELYS — ATTACK 1: COSMIC RAYS
+# 3. KOSMELYS â€” ATTACK 1: COSMIC RAYS
 
 ## 3.1. Basic Description
 
@@ -1173,10 +1173,10 @@ When the initial direction is selected, Kosmelys activates the corresponding dir
 
 For example:
 
-- Initial direction Left → `kosmelys_izquierda.png`
-- Initial direction Right → `kosmelys_derecha.png`
-- Initial direction Up → `kosmelys_arriba.png`
-- Initial direction Down → a labeled temporary placeholder because no down frame was supplied
+- Initial direction Left â†’ `kosmelys_izquierda.png`
+- Initial direction Right â†’ `kosmelys_derecha.png`
+- Initial direction Up â†’ `kosmelys_arriba.png`
+- Initial direction Down â†’ a labeled temporary placeholder because no down frame was supplied
 
 The projectile begins moving toward its target while Kosmelys displays the relevant casting pose.
 
@@ -1277,7 +1277,7 @@ The existing character-specific block damage rules remain active. A failed defen
 
 ---
 
-# 4. KOSMELYS — ATTACK 2: PORTAL SHIELD
+# 4. KOSMELYS â€” ATTACK 2: PORTAL SHIELD
 
 ## 4.1. Basic Description
 
@@ -1348,7 +1348,7 @@ The same principle applies to Furai's Tiger Fang.
 
 ## 4.4. Interaction with Other Abilities
 
-**Furai — Armor Break**
+**Furai â€” Armor Break**
 
 Armor Break does not deal direct damage.
 
@@ -1358,13 +1358,13 @@ The existing tiger mark and damage amplification mechanics remain unchanged.
 
 Armor Break should be associated with the enemy it is applied to. A mark applied to Iobrontes should not automatically amplify damage against Kosmelys.
 
-**Dexios — Chaotic Lightning**
+**Dexios â€” Chaotic Lightning**
 
 If Chaotic Lightning is redirected, its offensive damage is redirected to the selected party member.
 
 Any self-damage associated with the ability remains attached to Dexios according to the existing implementation.
 
-**Sahira — Hippopotamus Shield**
+**Sahira â€” Hippopotamus Shield**
 
 If the selected party member has an active Hippopotamus Shield, the redirected attack can be absorbed according to the existing shield rules.
 
@@ -1407,7 +1407,7 @@ If the shield is already active, Kosmelys should not waste another action refres
 
 ---
 
-# 5. KOSMELYS — ATTACK 3: METEOR RAIN
+# 5. KOSMELYS â€” ATTACK 3: METEOR RAIN
 
 ## 5.1. Basic Description
 
@@ -1459,9 +1459,9 @@ The first meteor has a 0.5-second casting/preparation phase followed by 0.5 seco
 
 | Timing relative to impact T | Result |
 |---|---|
-| Before T − 0.7 s | Input ignored |
-| T − 0.7 s to T − 0.3 s | Normal block (0.4 s) |
-| T − 0.3 s to T + 0.1 s | Perfect parry (0.4 s) |
+| Before T âˆ’ 0.7 s | Input ignored |
+| T âˆ’ 0.7 s to T âˆ’ 0.3 s | Normal block (0.4 s) |
+| T âˆ’ 0.3 s to T + 0.1 s | Perfect parry (0.4 s) |
 | After T + 0.1 s | Failed defense if no valid input was registered |
 
 For the first meteor, the attack sequence starts at 0 ms and impact occurs at 1000 ms; its active window opens at 300 ms, the perfect-parry period begins at 700 ms, and the window closes at 1100 ms. Each following meteor's impact occurs 700 ms after it starts falling; its active window opens immediately, the perfect-parry period begins at 400 ms, and the window closes at 800 ms. Do not resolve damage at the visual impact time.
@@ -1470,7 +1470,7 @@ The timing indicator is yellow during the normal-block window, white and glowing
 
 The meteor reaches the target visually at T, but damage is not finalized at that moment. Wait until T + 0.1 seconds, then resolve the result and apply damage or counterattack. This allows a valid perfect parry shortly after visual impact. Every meteor resolves damage exactly once.
 
-## 5.4. Sequential Meteor Sequence — No Overlap
+## 5.4. Sequential Meteor Sequence â€” No Overlap
 
 Each meteor must complete its entire attack sequence before the next meteor begins. There must never be more than one active meteor, targeting indicator, defensive window, or unresolved meteor attack at the same time.
 
@@ -1491,7 +1491,7 @@ Repeat until all five meteors have resolved. The meteor must disappear before th
 
 ## 5.5. Defensive Inputs and Character-Specific Results
 
-Each meteor requires an individual defensive response. The correct input is always **W — Defend Up**. Every meteor has its own attack identifier, target, projectile, casting and travel timers, input result, and resolution state. One W press resolves only the current meteor; it cannot block multiple meteors. In this sequential system, input overlap is not possible.
+Each meteor requires an individual defensive response. The correct input is always **W â€” Defend Up**. Every meteor has its own attack identifier, target, projectile, casting and travel timers, input result, and resolution state. One W press resolves only the current meteor; it cannot block multiple meteors. In this sequential system, input overlap is not possible.
 
 **Dexios**
 
@@ -1579,15 +1579,15 @@ The remaining boss must continue fighting normally.
 
 | Ability | Target Type |
 |---|---|
-| Dexios — Triple Lightning | Iobrontes or Kosmelys |
-| Dexios — Electric Arc | Iobrontes or Kosmelys |
-| Dexios — Chaotic Lightning | Iobrontes or Kosmelys |
-| Furai — Tiger Spear | Iobrontes or Kosmelys |
-| Furai — Tiger Fang | Iobrontes or Kosmelys |
-| Furai — Armor Break | Iobrontes or Kosmelys |
-| Sahira — Jackal Strike | Iobrontes or Kosmelys |
-| Sahira — Hippopotamus Healing | Conscious playable ally |
-| Sahira — Hippopotamus Shield | Conscious playable ally |
+| Dexios â€” Triple Lightning | Iobrontes or Kosmelys |
+| Dexios â€” Electric Arc | Iobrontes or Kosmelys |
+| Dexios â€” Chaotic Lightning | Iobrontes or Kosmelys |
+| Furai â€” Tiger Spear | Iobrontes or Kosmelys |
+| Furai â€” Tiger Fang | Iobrontes or Kosmelys |
+| Furai â€” Armor Break | Iobrontes or Kosmelys |
+| Sahira â€” Jackal Strike | Iobrontes or Kosmelys |
+| Sahira â€” Hippopotamus Healing | Conscious playable ally |
+| Sahira â€” Hippopotamus Shield | Conscious playable ally |
 
 Healing and defensive support abilities retain their ally selection menus.
 
@@ -1605,7 +1605,7 @@ Resource costs are deducted only after the ability and its target are confirmed.
 
 ---
 
-# 7. AUDIO — ALTERNATING BATTLE MUSIC
+# 7. AUDIO â€” ALTERNATING BATTLE MUSIC
 
 The current battle soundtrack must be expanded to alternate between two songs.
 
@@ -1637,7 +1637,7 @@ This sequence repeats continuously while the encounter remains active.
 
 The intended playback order is:
 
-Watch the Thunder → Cosmic Strike → Watch the Thunder → Cosmic Strike → Repeat.
+Watch the Thunder â†’ Cosmic Strike â†’ Watch the Thunder â†’ Cosmic Strike â†’ Repeat.
 
 ## 7.2. Playback Rules
 
@@ -1689,50 +1689,50 @@ The recommended structure is:
 
 ```text
 assets/
-│
-├── dexios/
-│   └── [existing Dexios frames]
-│
-├── furai/
-│   └── [existing Furai frames]
-│
-├── sahira/
-│   └── [existing Sahira frames]
-│
-├── iobrontes/
-│   └── [existing Iobrontes frames]
-│
-├── kosmelys/
-│   ├── kosmelys_base.png
-│   ├── kosmelys_derecha.png
-│   ├── kosmelys_izquierda.png
-│   ├── kosmelys_arriba.png
-│   ├── kosmelys_escudo.png
-│   ├── kosmelys_herida.png
-│   └── kosmelys_mr.png
-│
-├── effects/
-│   ├── cosmico.png
-│   ├── portal.png
-│   ├── meteoro.png
-│   ├── tiger-mark.png
-│   ├── hippo-mark.png
-│   └── [existing combat effects]
-│
-├── music/
-│   ├── watch_the_thunder.mp3
-│   ├── cosmic_strike.mp3
-│   └── nike.mp3
-│
-├── sfx/
-│   ├── ataque_cosmico.mp3
-│   ├── abrir_portal.mp3
-│   ├── teleport_ataque.mp3
-│   ├── meteor_fall.mp3
-│   └── [existing sound effects]
-│
-└── backgrounds/
-    └── escenario.png
+â”‚
+â”œâ”€â”€ dexios/
+â”‚   â””â”€â”€ [existing Dexios frames]
+â”‚
+â”œâ”€â”€ furai/
+â”‚   â””â”€â”€ [existing Furai frames]
+â”‚
+â”œâ”€â”€ sahira/
+â”‚   â””â”€â”€ [existing Sahira frames]
+â”‚
+â”œâ”€â”€ iobrontes/
+â”‚   â””â”€â”€ [existing Iobrontes frames]
+â”‚
+â”œâ”€â”€ kosmelys/
+â”‚   â”œâ”€â”€ kosmelys_base.png
+â”‚   â”œâ”€â”€ kosmelys_derecha.png
+â”‚   â”œâ”€â”€ kosmelys_izquierda.png
+â”‚   â”œâ”€â”€ kosmelys_arriba.png
+â”‚   â”œâ”€â”€ kosmelys_escudo.png
+â”‚   â”œâ”€â”€ kosmelys_herida.png
+â”‚   â””â”€â”€ kosmelys_mr.png
+â”‚
+â”œâ”€â”€ effects/
+â”‚   â”œâ”€â”€ cosmico.png
+â”‚   â”œâ”€â”€ portal.png
+â”‚   â”œâ”€â”€ meteoro.png
+â”‚   â”œâ”€â”€ tiger-mark.png
+â”‚   â”œâ”€â”€ hippo-mark.png
+â”‚   â””â”€â”€ [existing combat effects]
+â”‚
+â”œâ”€â”€ music/
+â”‚   â”œâ”€â”€ watch_the_thunder.mp3
+â”‚   â”œâ”€â”€ cosmic_strike.mp3
+â”‚   â””â”€â”€ nike.mp3
+â”‚
+â”œâ”€â”€ sfx/
+â”‚   â”œâ”€â”€ ataque_cosmico.mp3
+â”‚   â”œâ”€â”€ abrir_portal.mp3
+â”‚   â”œâ”€â”€ teleport_ataque.mp3
+â”‚   â”œâ”€â”€ meteor_fall.mp3
+â”‚   â””â”€â”€ [existing sound effects]
+â”‚
+â””â”€â”€ backgrounds/
+    â””â”€â”€ escenario.png
 ```
 
 The Kosmelys character frames are supplied in `kosmelys_assets/`. Copy them into `assets/kosmelys/`, and place `cosmico.png`, `portal.png`, and `meteoro.png` in `assets/effects/`. The supplied directory has no down-attack frame, so display a labeled temporary placeholder instead.
@@ -1868,7 +1868,7 @@ After implementing the dual-boss update, verify the following behavior.
 - Meteors can target the same character repeatedly.
 - Meteors resolve strictly one at a time: no more than one meteor, targeting indicator, defensive window, or unresolved event is active.
 - The first meteor has a 0.5-second casting phase and 0.5-second travel; every following meteor begins falling as soon as the previous defense window closes and travels for 0.7 seconds.
-- Every meteor's normal-block window runs from T − 0.7 to T − 0.3, and its perfect-parry window runs from T − 0.3 to T + 0.1; damage resolves only after T + 0.1.
+- Every meteor's normal-block window runs from T âˆ’ 0.7 to T âˆ’ 0.3, and its perfect-parry window runs from T âˆ’ 0.3 to T + 0.1; damage resolves only after T + 0.1.
 - Dexios counterattacks for 5 damage after every Meteor Rain perfect parry.
 - Furai counterattacks once for 20 damage after all five meteors only if every meteor targeting him was perfectly parried and he was targeted at least once.
 - Sahira blocks any meteor with a correct W input during the full 0.8-second window, without a perfect-parry result.
@@ -1934,25 +1934,25 @@ After position 10, the sequence returns to position 1. Hazel's slot is configura
 
 ```text
 Furai
-  ↓
+  â†“
 Iobrontes
-  ↓
+  â†“
 Kosmelys
-  ↓
+  â†“
 Dexios
-  ↓
+  â†“
 Iobrontes
-  ↓
+  â†“
 Kosmelys
-  ↓
+  â†“
 Sahira
-  ↓
+  â†“
 Hazel (provisional)
-  ↓
+  â†“
 Iobrontes
-  ↓
+  â†“
 Kosmelys
-  ↓
+  â†“
 REPEAT
 ```
 
@@ -1983,7 +1983,7 @@ Do not transfer turns from a defeated boss to the surviving boss.
 
 For example, if Kosmelys is defeated, the sequence continues with the remaining active turn positions:
 
-Furai → Iobrontes → Dexios → Iobrontes → Sahira → Hazel (provisional) → Iobrontes → Repeat.
+Furai â†’ Iobrontes â†’ Dexios â†’ Iobrontes â†’ Sahira â†’ Hazel (provisional) â†’ Iobrontes â†’ Repeat.
 
 ## 11.3. Turn Resolution
 
@@ -2006,29 +2006,29 @@ A new turn must not begin while a previous action is still being resolved.
 
 ---
 
-**End of Dual Boss Update — Kosmelys Implementation**
+**End of Dual Boss Update â€” Kosmelys Implementation**
 
 **This is version 0.6, incorporating Hazel as the fourth playable character.**
 
 Nuevos cambios:
-1.	Que las flechas direccionales para la defensa muestre la tecla adecuada para defenderse entre W, A, S y D. También para el ataque de área como Watch the thunder tiene que mostrarse la barra espaciadora bien.
+1.	Que las flechas direccionales para la defensa muestre la tecla adecuada para defenderse entre W, A, S y D. TambiÃ©n para el ataque de Ã¡rea como Watch the thunder tiene que mostrarse la barra espaciadora bien.
 2.	Aumenta un 0.5 segundos de tiempo entre ataques de Iobrontes y Kosmelys
 
-# LA DEXÍADA — REDISEÑO COMPLETO DE LA INTERFAZ DE COMBATE EN PHASER
+# LA DEXÃADA â€” REDISEÃ‘O COMPLETO DE LA INTERFAZ DE COMBATE EN PHASER
 
 ## 1. OBJETIVO PRINCIPAL
 
-Quiero realizar un rediseño completo de la interfaz de combate de **La Dexíada**, mi videojuego desarrollado en Phaser.
+Quiero realizar un rediseÃ±o completo de la interfaz de combate de **La DexÃ­ada**, mi videojuego desarrollado en Phaser.
 
-La finalidad es transformar la interfaz actual en una experiencia JRPG mucho más cinematográfica, elegante y dinámica, conservando todas las mecánicas de combate existentes.
+La finalidad es transformar la interfaz actual en una experiencia JRPG mucho mÃ¡s cinematogrÃ¡fica, elegante y dinÃ¡mica, conservando todas las mecÃ¡nicas de combate existentes.
 
-He preparado tres bocetos que deben servir como referencias visuales para la implementación.
+He preparado tres bocetos que deben servir como referencias visuales para la implementaciÃ³n.
 
-**IMPORTANTE: Este trabajo consiste en rediseñar la interfaz, no en reconstruir el sistema de combate.**
+**IMPORTANTE: Este trabajo consiste en rediseÃ±ar la interfaz, no en reconstruir el sistema de combate.**
 
-Debes examinar primero cómo está organizado actualmente el código, identificar los sistemas que ya funcionan y reutilizarlos.
+Debes examinar primero cÃ³mo estÃ¡ organizado actualmente el cÃ³digo, identificar los sistemas que ya funcionan y reutilizarlos.
 
-No debes modificar los sprites originales, las habilidades, las estadísticas, los cálculos de daño ni las reglas del combate.
+No debes modificar los sprites originales, las habilidades, las estadÃ­sticas, los cÃ¡lculos de daÃ±o ni las reglas del combate.
 
 ---
 
@@ -2036,112 +2036,112 @@ No debes modificar los sprites originales, las habilidades, las estadísticas, l
 
 ### 2.1. Bocetos de interfaz
 
-He creado tres imágenes que muestran cómo debe funcionar y verse la nueva interfaz.
+He creado tres imÃ¡genes que muestran cÃ³mo debe funcionar y verse la nueva interfaz.
 
 Sus nombres son:
 
 **boceto_combate**
 
-Es la imagen principal que muestra la distribución completa de la interfaz durante el combate.
+Es la imagen principal que muestra la distribuciÃ³n completa de la interfaz durante el combate.
 
 Define:
 - Posiciones generales de los personajes.
-- Distribución de los dos bosses.
+- DistribuciÃ³n de los dos bosses.
 - Cola de turnos en la esquina superior izquierda.
-- Información de los enemigos en la zona superior.
+- InformaciÃ³n de los enemigos en la zona superior.
 - Estado de los aliados en la parte inferior derecha.
-- Distribución general de los elementos permanentes del HUD.
+- DistribuciÃ³n general de los elementos permanentes del HUD.
 
 **boceto_elegir_ataque**
 
-Muestra cómo debe verse la pantalla durante el turno de un personaje jugable.
+Muestra cÃ³mo debe verse la pantalla durante el turno de un personaje jugable.
 
 Define:
-- Zoom cinematográfico hacia el personaje activo.
-- Menú de habilidades.
-- Posición aproximada de la ventana.
-- Distribución de las tres opciones de ataque.
-- Composición de la cámara durante la elección.
+- Zoom cinematogrÃ¡fico hacia el personaje activo.
+- MenÃº de habilidades.
+- PosiciÃ³n aproximada de la ventana.
+- DistribuciÃ³n de las tres opciones de ataque.
+- ComposiciÃ³n de la cÃ¡mara durante la elecciÃ³n.
 
 **boceto_objetivo**
 
-Muestra cómo debe verse la pantalla cuando el jugador selecciona a qué enemigo atacar.
+Muestra cÃ³mo debe verse la pantalla cuando el jugador selecciona a quÃ© enemigo atacar.
 
 Define:
 - Zoom hacia los dos bosses.
-- Composición que permite visualizar ambos enemigos ampliados.
+- ComposiciÃ³n que permite visualizar ambos enemigos ampliados.
 - Flecha indicadora del objetivo.
-- Selección de uno de los dos dioses.
+- SelecciÃ³n de uno de los dos dioses.
 
 ### Instrucciones sobre los bocetos
 
-Debes examinar las tres imágenes antes de implementar los cambios.
+Debes examinar las tres imÃ¡genes antes de implementar los cambios.
 
-Los bocetos representan el diseño y la composición que quiero conseguir.
+Los bocetos representan el diseÃ±o y la composiciÃ³n que quiero conseguir.
 
-No son imágenes que deban utilizarse como fondos del juego ni interfaces estáticas.
+No son imÃ¡genes que deban utilizarse como fondos del juego ni interfaces estÃ¡ticas.
 
 **Debes recrear sus elementos mediante objetos reales de Phaser**, conectados a los sistemas existentes.
 
-Respeta especialmente las posiciones relativas, tamaños, agrupaciones de elementos y cambios de cámara.
+Respeta especialmente las posiciones relativas, tamaÃ±os, agrupaciones de elementos y cambios de cÃ¡mara.
 
-Puedes mejorar los acabados, la tipografía y la ornamentación para obtener una interfaz profesional, pero sin alterar sustancialmente la composición de los bocetos.
+Puedes mejorar los acabados, la tipografÃ­a y la ornamentaciÃ³n para obtener una interfaz profesional, pero sin alterar sustancialmente la composiciÃ³n de los bocetos.
 
 ---
 
 ## 3. ARCHIVOS DE ICONOS DE PERSONAJES
 
-Los siguientes archivos serán utilizados para representar a cada personaje en la interfaz:
+Los siguientes archivos serÃ¡n utilizados para representar a cada personaje en la interfaz:
 
 | Archivo | Personaje |
 |---|---|
-| `iobrontes_icono` | Ióbrontēs |
+| `iobrontes_icono` | IÃ³brontÄ“s |
 | `kosmelys_icono` | Kosmelys |
 | `dexios_icono` | Dexios |
 | `sahira_icono` | Sahira |
 | `furai_icono` | Furai |
 
-Estos nombres identifican los recursos gráficos. Utiliza las extensiones y rutas reales que encuentres en el proyecto.
+Estos nombres identifican los recursos grÃ¡ficos. Utiliza las extensiones y rutas reales que encuentres en el proyecto.
 
 ### Uso de los iconos
 
-Los iconos se utilizarán principalmente en dos elementos:
+Los iconos se utilizarÃ¡n principalmente en dos elementos:
 
 **A. Cola de turnos**
 
 Los cinco iconos deben poder aparecer en la cola situada en la esquina superior izquierda.
 
-Cada icono representa quién actuará en ese turno.
+Cada icono representa quiÃ©n actuarÃ¡ en ese turno.
 
-Un mismo personaje puede aparecer varias veces si tiene varias acciones dentro de los próximos seis turnos.
+Un mismo personaje puede aparecer varias veces si tiene varias acciones dentro de los prÃ³ximos seis turnos.
 
 **B. Panel de estado de aliados**
 
-Los iconos de los cuatro aliados deben aparecer junto a sus datos de estado: maná para Dexios, energía espiritual blanca para Furai, usos disponibles para Sahira y forma elemental para Hazel.
+Los iconos de los cuatro aliados deben aparecer junto a sus datos de estado: manÃ¡ para Dexios, energÃ­a espiritual blanca para Furai, usos disponibles para Sahira y forma elemental para Hazel.
 
-### Requisitos técnicos
+### Requisitos tÃ©cnicos
 
 - Cargar los archivos mediante el sistema de recursos de Phaser.
 - Reutilizar las texturas cargadas.
 - Mantener sus proporciones originales.
-- No estirar ni deformar las imágenes.
-- No sustituirlos por letras o círculos de colores si los archivos están disponibles.
-- Utilizar máscaras circulares o marcos decorativos cuando corresponda.
+- No estirar ni deformar las imÃ¡genes.
+- No sustituirlos por letras o cÃ­rculos de colores si los archivos estÃ¡n disponibles.
+- Utilizar mÃ¡scaras circulares o marcos decorativos cuando corresponda.
 - No duplicar innecesariamente los archivos originales.
 
-Si algún recurso no se encuentra, identifica cuál falta e informa del problema.
+Si algÃºn recurso no se encuentra, identifica cuÃ¡l falta e informa del problema.
 
 ---
 
-## 4. RESOLUCIÓN Y DISTRIBUCIÓN GENERAL
+## 4. RESOLUCIÃ“N Y DISTRIBUCIÃ“N GENERAL
 
-La interfaz está diseñada para una resolución de referencia de:
+La interfaz estÃ¡ diseÃ±ada para una resoluciÃ³n de referencia de:
 
-**1920 × 1080 píxeles — 16:9**
+**1920 Ã— 1080 pÃ­xeles â€” 16:9**
 
 Utiliza `boceto_combate` como principal referencia para distribuir los elementos.
 
-### Distribución
+### DistribuciÃ³n
 
 **Esquina superior izquierda**
 
@@ -2149,7 +2149,7 @@ Cola de los siguientes seis turnos.
 
 **Parte superior**
 
-Información de los dos jefes.
+InformaciÃ³n de los dos jefes.
 
 **Zona central**
 
@@ -2161,33 +2161,33 @@ Panel de estado de los personajes jugables.
 
 **Paneles temporales**
 
-Menús de habilidades y selección de objetivos, que aparecerán únicamente cuando corresponda.
+MenÃºs de habilidades y selecciÃ³n de objetivos, que aparecerÃ¡n Ãºnicamente cuando corresponda.
 
 ### Posicionamiento de personajes
 
 Mantener el escenario y los sprites actuales.
 
-La distribución de los aliados debe seguir el boceto:
+La distribuciÃ³n de los aliados debe seguir el boceto:
 
 - Furai a la izquierda.
 - Dexios en la zona central.
 - Sahira hacia la derecha.
-- Hazel ocupa una posición configurable que no debe desplazar innecesariamente a los demás personajes.
+- Hazel ocupa una posiciÃ³n configurable que no debe desplazar innecesariamente a los demÃ¡s personajes.
 
-Los enemigos serán:
+Los enemigos serÃ¡n:
 
-- Ióbrontēs.
+- IÃ³brontÄ“s.
 - Kosmelys.
 
-No cambiar sus diseños gráficos ni reemplazar sus animaciones.
+No cambiar sus diseÃ±os grÃ¡ficos ni reemplazar sus animaciones.
 
-Ajustar las posiciones y escalas únicamente cuando sea necesario para reproducir la composición visual deseada.
+Ajustar las posiciones y escalas Ãºnicamente cuando sea necesario para reproducir la composiciÃ³n visual deseada.
 
 ---
 
 ## 5. COLA DE TURNOS
 
-En la esquina superior izquierda debe aparecer una columna compacta con los iconos de los próximos seis turnos.
+En la esquina superior izquierda debe aparecer una columna compacta con los iconos de los prÃ³ximos seis turnos.
 
 La cola muestra:
 
@@ -2196,15 +2196,15 @@ La cola muestra:
 Por ejemplo:
 
 1. Furai.
-2. Ióbrontēs.
+2. IÃ³brontÄ“s.
 3. Kosmelys.
 4. Dexios.
-5. Ióbrontēs.
+5. IÃ³brontÄ“s.
 6. Kosmelys.
 
-Esta secuencia es únicamente ilustrativa.
+Esta secuencia es Ãºnicamente ilustrativa.
 
-La interfaz debe consultar el sistema real de turnos del juego y representar su secuencia auténtica.
+La interfaz debe consultar el sistema real de turnos del juego y representar su secuencia autÃ©ntica.
 
 ### Funcionamiento
 
@@ -2212,70 +2212,70 @@ Cuando empieza el combate:
 - Mostrar los seis turnos correspondientes.
 
 Cuando comienza un turno:
-- El icono correspondiente ocupa la primera posición.
+- El icono correspondiente ocupa la primera posiciÃ³n.
 - El primer icono debe diferenciarse del resto.
 
 Cuando termina un turno:
 - La lista avanza.
 - Desaparece el turno completado.
-- Los demás ascienden.
+- Los demÃ¡s ascienden.
 - Se incorpora el siguiente turno al final.
 
 Si un personaje queda derrotado:
 - La lista debe respetar el sistema existente que omite sus acciones.
-- No debe presentar como ejecutable un turno que realmente no ocurrirá.
+- No debe presentar como ejecutable un turno que realmente no ocurrirÃ¡.
 
-Si un personaje o boss actúa varias veces:
-- Su icono aparecerá tantas veces como corresponda.
+Si un personaje o boss actÃºa varias veces:
+- Su icono aparecerÃ¡ tantas veces como corresponda.
 
 ### Apariencia
 
 - Iconos compactos.
-- Organización vertical.
-- Separación uniforme.
+- OrganizaciÃ³n vertical.
+- SeparaciÃ³n uniforme.
 - Marcos sutiles.
 - Turno activo destacado.
 - Los otros cinco iconos ligeramente menos prominentes.
 
-Se puede añadir una transición visual breve al actualizar la cola.
+Se puede aÃ±adir una transiciÃ³n visual breve al actualizar la cola.
 
 No quiero textos enormes ni paneles que oculten gran parte del escenario.
 
 ---
 
-## 6. INFORMACIÓN DE LOS DOS BOSSES
+## 6. INFORMACIÃ“N DE LOS DOS BOSSES
 
 En la parte superior deben mostrarse los indicadores de vida de ambos enemigos.
 
-Seguir la distribución de `boceto_combate`.
+Seguir la distribuciÃ³n de `boceto_combate`.
 
-### IÓBRONTĒS
+### IÃ“BRONTÄ’S
 
 Mostrar:
-- Nombre: IÓBRONTĒS.
-- Título divino correspondiente.
+- Nombre: IÃ“BRONTÄ’S.
+- TÃ­tulo divino correspondiente.
 - Barra de vida morada.
-- Vida actual y máxima, si esos valores ya se muestran en el juego.
+- Vida actual y mÃ¡xima, si esos valores ya se muestran en el juego.
 
 ### KOSMELYS
 
 Mostrar:
 - Nombre: KOSMELYS.
-- Título divino correspondiente.
+- TÃ­tulo divino correspondiente.
 - Barra de vida naranja o dorada.
-- Vida actual y máxima, si corresponde.
+- Vida actual y mÃ¡xima, si corresponde.
 
-Mantener los títulos completos y los valores establecidos en los datos actuales del juego.
+Mantener los tÃ­tulos completos y los valores establecidos en los datos actuales del juego.
 
 ### Comportamiento
 
-Las barras deben actualizarse automáticamente cuando cada boss recibe daño o recupera vida.
+Las barras deben actualizarse automÃ¡ticamente cuando cada boss recibe daÃ±o o recupera vida.
 
-Los indicadores no deben perder su posición cuando la cámara aplica zoom.
+Los indicadores no deben perder su posiciÃ³n cuando la cÃ¡mara aplica zoom.
 
 Si un boss es derrotado, su indicador debe reflejar el estado correspondiente.
 
-El diseño visual debe transmitir importancia y solemnidad, sin resultar demasiado recargado.
+El diseÃ±o visual debe transmitir importancia y solemnidad, sin resultar demasiado recargado.
 
 ---
 
@@ -2283,9 +2283,9 @@ El diseño visual debe transmitir importancia y solemnidad, sin resultar demasia
 
 La interfaz actual tiene paneles grandes en la parte inferior.
 
-Quiero sustituirlos por el diseño compacto de `boceto_combate`.
+Quiero sustituirlos por el diseÃ±o compacto de `boceto_combate`.
 
-En la parte inferior derecha aparecerá una columna vertical con los personajes jugables.
+En la parte inferior derecha aparecerÃ¡ una columna vertical con los personajes jugables.
 
 ### DEXIOS
 
@@ -2302,9 +2302,9 @@ Icono: `furai_icono`
 
 Barras:
 - Verde: HP.
-- Blanca: energía espiritual (0–100).
-- Tiger Spear y Tiger Parry exitosos conceden 30 puntos de energía espiritual.
-- Tiger Fang cuesta 20 de energía espiritual; Armor Break cuesta 25.
+- Blanca: energÃ­a espiritual (0â€“100).
+- Tiger Spear y Tiger Parry exitosos conceden 30 puntos de energÃ­a espiritual.
+- Tiger Fang cuesta 20 de energÃ­a espiritual; Armor Break cuesta 25.
 
 ### SAHIRA
 
@@ -2312,58 +2312,58 @@ Icono: `sahira_icono`
 
 Barras:
 - Verde: HP.
-- Sin barra de maná. Jackal Strike no tiene límite de usos; Hippopotamus Healing tiene 2 usos y Hippopotamus Shield tiene 10 usos por pelea.
+- Sin barra de manÃ¡. Jackal Strike no tiene lÃ­mite de usos; Hippopotamus Healing tiene 2 usos y Hippopotamus Shield tiene 10 usos por pelea.
 
 ### HAZEL LANCASTER
 
-Mostrar su retrato de Ignis (`hazel_fuego_icono`) o Glacio (`hazel_hielo_icono`), 80 / 80 HP y un indicador de forma en lugar de una barra de maná:
+Mostrar su retrato de Ignis (`hazel_fuego_icono`) o Glacio (`hazel_hielo_icono`), 80 / 80 HP y un indicador de forma en lugar de una barra de manÃ¡:
 
 - IGNIS en naranja.
 - GLACIO en azul claro.
-- Sin barras de maná ni caos.
+- Sin barras de manÃ¡ ni caos.
 
 ### Comportamiento de las barras
 
 - Deben representar los valores reales.
-- Deben actualizarse al recibir daño.
+- Deben actualizarse al recibir daÃ±o.
 - Deben actualizarse al utilizar habilidades.
 - Deben actualizarse al recuperar recursos.
 - Deben conservar los valores entre turnos.
 - Deben reflejar correctamente cuando un personaje ha sido derrotado.
 
-No reiniciar ni reemplazar las estadísticas originales.
+No reiniciar ni reemplazar las estadÃ­sticas originales.
 
-### Diseño
+### DiseÃ±o
 
-Quiero barras horizontales pequeñas, fáciles de leer, situadas junto a los iconos.
+Quiero barras horizontales pequeÃ±as, fÃ¡ciles de leer, situadas junto a los iconos.
 
 El panel debe ocupar mucho menos espacio que la interfaz anterior.
 
 ---
 
-## 8. SELECCIÓN DE HABILIDADES — ZOOM AL PERSONAJE
+## 8. SELECCIÃ“N DE HABILIDADES â€” ZOOM AL PERSONAJE
 
 Tomar como referencia exacta:
 
 **`boceto_elegir_ataque`**
 
-Cuando empieza el turno de un personaje controlado por el jugador, la cámara debe realizar un zoom cinematográfico hacia él.
+Cuando empieza el turno de un personaje controlado por el jugador, la cÃ¡mara debe realizar un zoom cinematogrÃ¡fico hacia Ã©l.
 
 ### Secuencia
 
 1. Termina el turno anterior.
 2. Se identifica al personaje activo.
 3. Se actualiza la cola de turnos.
-4. La cámara se desplaza hacia el personaje activo.
+4. La cÃ¡mara se desplaza hacia el personaje activo.
 5. Se realiza un zoom muy pronunciado.
-6. Aparece una ventana translúcida con sus habilidades.
-7. Se habilita la selección por teclado y mouse.
+6. Aparece una ventana translÃºcida con sus habilidades.
+7. Se habilita la selecciÃ³n por teclado y mouse.
 
-### Cámara
+### CÃ¡mara
 
-El personaje debe ocupar una porción importante de la pantalla.
+El personaje debe ocupar una porciÃ³n importante de la pantalla.
 
-Quiero que el zoom sea notorio, no un acercamiento mínimo.
+Quiero que el zoom sea notorio, no un acercamiento mÃ­nimo.
 
 Debe permitir apreciar los detalles de su sprite.
 
@@ -2371,19 +2371,19 @@ Evitar recortar excesivamente su cuerpo o sus animaciones.
 
 ### Ventana de habilidades
 
-Debe ser un rectángulo con fondo oscuro translúcido.
+Debe ser un rectÃ¡ngulo con fondo oscuro translÃºcido.
 
-Quiero que el escenario siga siendo parcialmente visible detrás de la ventana.
+Quiero que el escenario siga siendo parcialmente visible detrÃ¡s de la ventana.
 
-Dentro aparecerán las habilidades disponibles del personaje: tres para quienes tengan tres acciones y exactamente dos para Hazel, según su forma.
+Dentro aparecerÃ¡n las habilidades disponibles del personaje: tres para quienes tengan tres acciones y exactamente dos para Hazel, segÃºn su forma.
 
-Ejemplo de distribución:
+Ejemplo de distribuciÃ³n:
 
-1 — Primera habilidad
+1 â€” Primera habilidad
 
-2 — Segunda habilidad
+2 â€” Segunda habilidad
 
-3 — Tercera habilidad
+3 â€” Tercera habilidad
 
 Los nombres y funciones deben obtenerse del sistema actual.
 
@@ -2397,7 +2397,7 @@ No inventar habilidades nuevas ni sustituir las existentes.
 
 ### Control con mouse
 
-Cada habilidad debe ser un botón interactivo.
+Cada habilidad debe ser un botÃ³n interactivo.
 
 Al pasar el cursor:
 - Resaltar ligeramente la habilidad.
@@ -2408,16 +2408,16 @@ Al hacer clic:
 
 ### Restricciones
 
-Si una habilidad no tiene suficiente maná o no cumple los requisitos para ejecutarse:
+Si una habilidad no tiene suficiente manÃ¡ o no cumple los requisitos para ejecutarse:
 - Debe mostrarse deshabilitada.
 - No debe poder seleccionarse.
 - El sistema no debe gastar recursos.
 
-Las acciones solo se ejecutan cuando la selección sea válida.
+Las acciones solo se ejecutan cuando la selecciÃ³n sea vÃ¡lida.
 
 ### Posicionamiento
 
-El panel debe seguir la composición de `boceto_elegir_ataque`.
+El panel debe seguir la composiciÃ³n de `boceto_elegir_ataque`.
 
 No debe tapar completamente al personaje.
 
@@ -2425,28 +2425,28 @@ Debe situarse de forma que tanto el personaje como sus habilidades sean claramen
 
 ---
 
-## 9. SELECCIÓN DE OBJETIVOS — ZOOM A LOS BOSSES
+## 9. SELECCIÃ“N DE OBJETIVOS â€” ZOOM A LOS BOSSES
 
 Tomar como referencia:
 
 **`boceto_objetivo`**
 
-Cuando el jugador elige una habilidad que requiere seleccionar un enemigo, se activa el modo de selección de objetivo.
+Cuando el jugador elige una habilidad que requiere seleccionar un enemigo, se activa el modo de selecciÃ³n de objetivo.
 
 ### Secuencia
 
 1. El jugador selecciona una habilidad.
-2. El menú de habilidades desaparece.
-3. La cámara sale del zoom del aliado.
+2. El menÃº de habilidades desaparece.
+3. La cÃ¡mara sale del zoom del aliado.
 4. Se desplaza hacia la zona de los bosses.
 5. Se aplica un zoom muy pronunciado.
 6. Ambos bosses deben verse grandes.
-7. Aparece una flecha indicando el objetivo al que se está apuntando.
+7. Aparece una flecha indicando el objetivo al que se estÃ¡ apuntando.
 8. El jugador selecciona uno de los bosses.
 
 ### Apariencia
 
-Los dos jefes deben seguir siendo visibles durante la selección.
+Los dos jefes deben seguir siendo visibles durante la selecciÃ³n.
 
 No quiero que el zoom termine mostrando exclusivamente a uno de ellos.
 
@@ -2454,22 +2454,22 @@ Se debe poder comparar visualmente ambos objetivos.
 
 ### Flecha indicadora
 
-La flecha debe señalar claramente al boss seleccionado.
+La flecha debe seÃ±alar claramente al boss seleccionado.
 
-Debe estar posicionada cerca de él, sin taparlo innecesariamente.
+Debe estar posicionada cerca de Ã©l, sin taparlo innecesariamente.
 
-El objetivo señalado debe distinguirse de manera inmediata.
+El objetivo seÃ±alado debe distinguirse de manera inmediata.
 
-Se puede añadir un pequeño resplandor o borde de selección, pero evitar efectos excesivos.
+Se puede aÃ±adir un pequeÃ±o resplandor o borde de selecciÃ³n, pero evitar efectos excesivos.
 
 ### Control por teclado
 
-- Tecla `1`: seleccionar y confirmar a Ióbrontēs.
+- Tecla `1`: seleccionar y confirmar a IÃ³brontÄ“s.
 - Tecla `2`: seleccionar y confirmar a Kosmelys.
 
 ### Control con mouse
 
-El jugador podrá hacer clic directamente sobre el sprite del boss correspondiente.
+El jugador podrÃ¡ hacer clic directamente sobre el sprite del boss correspondiente.
 
 Al pasar el mouse sobre un enemigo:
 - La flecha debe indicar ese objetivo.
@@ -2478,32 +2478,32 @@ Al pasar el mouse sobre un enemigo:
 Al hacer clic:
 - Se confirma el objetivo.
 
-El sistema debe utilizar las zonas interactivas de los sprites correctamente, incluso cuando la cámara tenga zoom.
+El sistema debe utilizar las zonas interactivas de los sprites correctamente, incluso cuando la cÃ¡mara tenga zoom.
 
-### Confirmación
+### ConfirmaciÃ³n
 
-Al elegir un objetivo válido:
+Al elegir un objetivo vÃ¡lido:
 
 1. Se guarda el objetivo seleccionado.
-2. Se cierra la interfaz de selección.
-3. Se prepara la cámara para la ejecución del ataque.
+2. Se cierra la interfaz de selecciÃ³n.
+3. Se prepara la cÃ¡mara para la ejecuciÃ³n del ataque.
 4. Se reproduce la habilidad existente.
-5. Se aplican los efectos según las mecánicas actuales.
+5. Se aplican los efectos segÃºn las mecÃ¡nicas actuales.
 6. Se actualizan los recursos y la vida de los personajes.
 
 ### Enemigos derrotados
 
-No permitir seleccionar a un enemigo que ya no pueda recibir ataques según las reglas actuales.
+No permitir seleccionar a un enemigo que ya no pueda recibir ataques segÃºn las reglas actuales.
 
 Si queda un solo enemigo disponible, el sistema debe permitir seleccionarlo correctamente.
 
-Las habilidades que no necesitan objetivo o afectan a todos los enemigos deben conservar su lógica actual y no abrir una selección individual innecesaria.
+Las habilidades que no necesitan objetivo o afectan a todos los enemigos deben conservar su lÃ³gica actual y no abrir una selecciÃ³n individual innecesaria.
 
 ---
 
-## 10. CANCELAR SELECCIÓN — ESCAPE Y BACK
+## 10. CANCELAR SELECCIÃ“N â€” ESCAPE Y BACK
 
-Durante la selección de objetivos quiero poder retroceder.
+Durante la selecciÃ³n de objetivos quiero poder retroceder.
 
 ### Teclado
 
@@ -2511,7 +2511,7 @@ Pulsar `Escape`.
 
 ### Mouse
 
-Añadir un botón visible que diga:
+AÃ±adir un botÃ³n visible que diga:
 
 **Back**
 
@@ -2519,29 +2519,29 @@ Añadir un botón visible que diga:
 
 Al pulsar Escape o hacer clic en Back:
 
-1. Cancelar la selección del enemigo.
+1. Cancelar la selecciÃ³n del enemigo.
 2. No ejecutar ninguna habilidad.
-3. No consumir maná.
-4. No modificar las estadísticas.
+3. No consumir manÃ¡.
+4. No modificar las estadÃ­sticas.
 5. No terminar el turno.
-6. Desactivar el modo de selección de objetivo.
+6. Desactivar el modo de selecciÃ³n de objetivo.
 7. Volver a enfocar al personaje activo.
-8. Restaurar el zoom de selección de habilidades.
+8. Restaurar el zoom de selecciÃ³n de habilidades.
 9. Volver a mostrar las tres habilidades.
 
-De esta manera, el jugador podrá cambiar de opinión antes de confirmar el ataque.
+De esta manera, el jugador podrÃ¡ cambiar de opiniÃ³n antes de confirmar el ataque.
 
-El botón Back solo debe aparecer cuando tenga sentido retroceder.
+El botÃ³n Back solo debe aparecer cuando tenga sentido retroceder.
 
 ---
 
-## 11. SISTEMA DE CÁMARA
+## 11. SISTEMA DE CÃMARA
 
-La cámara es uno de los elementos más importantes del rediseño.
+La cÃ¡mara es uno de los elementos mÃ¡s importantes del rediseÃ±o.
 
 Quiero distinguir tres encuadres principales.
 
-### A. CÁMARA GENERAL
+### A. CÃMARA GENERAL
 
 Es la vista normal del combate.
 
@@ -2552,58 +2552,58 @@ Se muestran:
 - La cola de turnos.
 - Los indicadores de estado.
 
-La composición debe corresponder a `boceto_combate`.
+La composiciÃ³n debe corresponder a `boceto_combate`.
 
-### B. CÁMARA DE HABILIDADES
+### B. CÃMARA DE HABILIDADES
 
 Se activa cuando llega el turno de un aliado.
 
 Debe:
 - Enfocar al personaje activo.
-- Acercar considerablemente la cámara.
+- Acercar considerablemente la cÃ¡mara.
 - Mantener al personaje bien encuadrado.
-- Mostrar el panel translúcido de habilidades.
+- Mostrar el panel translÃºcido de habilidades.
 
-La composición debe corresponder a `boceto_elegir_ataque`.
+La composiciÃ³n debe corresponder a `boceto_elegir_ataque`.
 
-### C. CÁMARA DE OBJETIVOS
+### C. CÃMARA DE OBJETIVOS
 
 Se activa al elegir una habilidad que necesita objetivo.
 
 Debe:
 - Desplazarse hacia los bosses.
-- Acercar considerablemente la cámara.
+- Acercar considerablemente la cÃ¡mara.
 - Mantener visibles a ambos.
 - Mostrar la flecha del objetivo.
-- Permitir la selección por teclado o mouse.
+- Permitir la selecciÃ³n por teclado o mouse.
 
-La composición debe corresponder a `boceto_objetivo`.
+La composiciÃ³n debe corresponder a `boceto_objetivo`.
 
 ### Transiciones
 
-No quiero cambios instantáneos y bruscos entre los encuadres.
+No quiero cambios instantÃ¡neos y bruscos entre los encuadres.
 
 Utilizar interpolaciones suaves para:
-- Movimiento de cámara.
+- Movimiento de cÃ¡mara.
 - Zoom.
-- Restauración del encuadre general.
+- RestauraciÃ³n del encuadre general.
 
-Las transiciones deben ser rápidas y fluidas, sin volver lento el ritmo del combate.
+Las transiciones deben ser rÃ¡pidas y fluidas, sin volver lento el ritmo del combate.
 
-Los valores exactos de zoom y duración deben ajustarse según la posición real y las dimensiones de los sprites.
+Los valores exactos de zoom y duraciÃ³n deben ajustarse segÃºn la posiciÃ³n real y las dimensiones de los sprites.
 
-No establecer valores arbitrarios sin comprobar cómo se ven en pantalla.
+No establecer valores arbitrarios sin comprobar cÃ³mo se ven en pantalla.
 
 ### Muy importante
 
-El sistema de cámara no debe alterar:
+El sistema de cÃ¡mara no debe alterar:
 - Las ventanas de parry.
-- La duración de los ataques.
+- La duraciÃ³n de los ataques.
 - Las animaciones defensivas.
-- Los tiempos de reacción.
+- Los tiempos de reacciÃ³n.
 - El funcionamiento de habilidades.
 
-El zoom debe ser una presentación visual, no una modificación de las reglas del combate.
+El zoom debe ser una presentaciÃ³n visual, no una modificaciÃ³n de las reglas del combate.
 
 ---
 
@@ -2615,45 +2615,45 @@ Quiero separar correctamente los elementos permanentes de los temporales.
 
 Deben mantenerse correctamente posicionados:
 - Cola de turnos.
-- Información de los bosses.
+- InformaciÃ³n de los bosses.
 - Panel de estado de aliados.
 
 ### Elementos contextuales
 
-Aparecerán únicamente durante ciertas acciones:
-- Menú de habilidades.
-- Flecha de selección de objetivo.
-- Botón Back.
+AparecerÃ¡n Ãºnicamente durante ciertas acciones:
+- MenÃº de habilidades.
+- Flecha de selecciÃ³n de objetivo.
+- BotÃ³n Back.
 - Indicadores de defensa ya existentes.
 
-### Interacción con el zoom
+### InteracciÃ³n con el zoom
 
 Los elementos del HUD deben permanecer anclados a la pantalla.
 
-**No quiero que las barras de vida ni los iconos se hagan enormes cuando la cámara acerca a un personaje.**
+**No quiero que las barras de vida ni los iconos se hagan enormes cuando la cÃ¡mara acerca a un personaje.**
 
-Utilizar una solución apropiada para Phaser, como una cámara independiente para la interfaz o elementos con `setScrollFactor(0)` cuando corresponda.
+Utilizar una soluciÃ³n apropiada para Phaser, como una cÃ¡mara independiente para la interfaz o elementos con `setScrollFactor(0)` cuando corresponda.
 
-El menú contextual debe estar visualmente situado según el boceto, pero mantenerse legible e interactivo durante los acercamientos.
+El menÃº contextual debe estar visualmente situado segÃºn el boceto, pero mantenerse legible e interactivo durante los acercamientos.
 
 ---
 
 ## 13. CONTROLES DE LA NUEVA INTERFAZ
 
-### Selección de habilidades
+### SelecciÃ³n de habilidades
 
-| Entrada | Acción |
+| Entrada | AcciÃ³n |
 |---|---|
 | 1 | Primera habilidad |
 | 2 | Segunda habilidad |
 | 3 | Tercera habilidad |
 | Mouse | Seleccionar una habilidad |
 
-### Selección de objetivos
+### SelecciÃ³n de objetivos
 
-| Entrada | Acción |
+| Entrada | AcciÃ³n |
 |---|---|
-| 1 | Seleccionar a Ióbrontēs |
+| 1 | Seleccionar a IÃ³brontÄ“s |
 | 2 | Seleccionar a Kosmelys |
 | Mouse | Seleccionar haciendo clic en el boss |
 | Escape | Volver a habilidades |
@@ -2663,7 +2663,7 @@ El menú contextual debe estar visualmente situado según el boceto, pero manten
 
 Conservar los controles actuales:
 
-| Entrada | Acción |
+| Entrada | AcciÃ³n |
 |---|---|
 | W | Defender arriba |
 | A | Defender izquierda |
@@ -2671,26 +2671,26 @@ Conservar los controles actuales:
 | D | Defender derecha |
 | Space | Saltar o esquivar cuando corresponda |
 
-Para Hazel, la dirección correcta antes del Perfect Parry no reduce el daño: solo la Parada Perfecta evita el golpe. Esto no cambia las defensas ni los contraataques de los otros personajes.
+Para Hazel, la direcciÃ³n correcta antes del Perfect Parry no reduce el daÃ±o: solo la Parada Perfecta evita el golpe. Esto no cambia las defensas ni los contraataques de los otros personajes.
 
-También conservar los controles existentes para:
+TambiÃ©n conservar los controles existentes para:
 - Reiniciar el combate.
 - Controlar el audio.
-- Cualquier otra acción implementada.
+- Cualquier otra acciÃ³n implementada.
 
 ### Evitar conflictos
 
-Las teclas `1`, `2` y `3` deben interpretarse según la fase activa.
+Las teclas `1`, `2` y `3` deben interpretarse segÃºn la fase activa.
 
 Por ejemplo:
 
 Si estoy seleccionando habilidades, `1` significa primera habilidad.
 
-Si estoy seleccionando un objetivo, `1` significa atacar a Ióbrontēs.
+Si estoy seleccionando un objetivo, `1` significa atacar a IÃ³brontÄ“s.
 
 Durante una defensa, esas teclas no deben activar accidentalmente habilidades o selecciones.
 
-No debe ser posible ejecutar dos acciones por una sola pulsación.
+No debe ser posible ejecutar dos acciones por una sola pulsaciÃ³n.
 
 ---
 
@@ -2699,13 +2699,13 @@ No debe ser posible ejecutar dos acciones por una sola pulsación.
 Cuando llegue el turno de un boss:
 
 - Actualizar la cola de turnos.
-- Ocultar los menús de habilidades.
-- Desactivar la selección de objetivos.
+- Ocultar los menÃºs de habilidades.
+- Desactivar la selecciÃ³n de objetivos.
 - Ejecutar el comportamiento enemigo existente.
 - Mostrar las animaciones correspondientes.
 - Mantener visibles los indicadores necesarios.
 
-Durante los ataques enemigos, el jugador debe seguir pudiendo defenderse con las mecánicas originales.
+Durante los ataques enemigos, el jugador debe seguir pudiendo defenderse con las mecÃ¡nicas originales.
 
 No modificar:
 - Parry perfecto.
@@ -2714,56 +2714,56 @@ No modificar:
 - Saltos evasivos.
 - Contraataques.
 - Costes de recursos.
-- Cálculos de daño.
+- CÃ¡lculos de daÃ±o.
 - Ventanas de tiempo.
 
 En particular, conservar las diferencias entre las defensas de Dexios, Furai y Sahira.
 
-Sahira debe mantener su sistema especial de bloqueo, sin incorporar un parry perfecto que no existe en su diseño.
-Hazel no puede bloquear eficazmente: el bloqueo imperfecto y el fallo aplican el daño completo de Lightning Chain, Cosmic Rays y Meteor Rain. Solo una parada perfecta evita ese daño y Hazel nunca realiza un contraataque. Hippopotamus Shield y el salto en equipo siguen funcionando según sus reglas existentes.
+Sahira debe mantener su sistema especial de bloqueo, sin incorporar un parry perfecto que no existe en su diseÃ±o.
+Hazel no puede bloquear eficazmente: el bloqueo imperfecto y el fallo aplican el daÃ±o completo de Lightning Chain, Cosmic Rays y Meteor Rain. Solo una parada perfecta evita ese daÃ±o y Hazel nunca realiza un contraataque. Hippopotamus Shield y el salto en equipo siguen funcionando segÃºn sus reglas existentes.
 
-Las animaciones de cámara no deben interferir con la sincronización del ataque enemigo ni con la posibilidad de reaccionar a tiempo.
+Las animaciones de cÃ¡mara no deben interferir con la sincronizaciÃ³n del ataque enemigo ni con la posibilidad de reaccionar a tiempo.
 
 ---
 
-## 15. ESTILO ARTÍSTICO
+## 15. ESTILO ARTÃSTICO
 
-Quiero una interfaz que encaje con la estética de La Dexíada.
+Quiero una interfaz que encaje con la estÃ©tica de La DexÃ­ada.
 
-Inspiración:
-- Mitología griega.
-- Fantasía.
+InspiraciÃ³n:
+- MitologÃ­a griega.
+- FantasÃ­a.
 - JRPG.
-- Combate cinematográfico.
+- Combate cinematogrÃ¡fico.
 
 ### Colores
 
 Paleta principal:
 - Morado.
 - Dorado.
-- Negro translúcido.
+- Negro translÃºcido.
 
 Colores funcionales:
 - Verde: vida.
-- Azul: maná.
+- Azul: manÃ¡.
 - Rojo: caos.
-- Morado: vida de Ióbrontēs.
+- Morado: vida de IÃ³brontÄ“s.
 - Naranja o dorado: vida de Kosmelys.
 
-### Ornamentación
+### OrnamentaciÃ³n
 
 Se pueden incorporar:
 - Bordes dorados finos.
 - Patrones de grecas griegas.
-- Pequeños símbolos divinos.
+- PequeÃ±os sÃ­mbolos divinos.
 - Detalles decorativos discretos.
 
 Evitar:
 - Marcos excesivamente grandes.
 - Ventanas demasiado opacas.
 - Efectos visuales innecesarios.
-- Texto demasiado pequeño.
-- Exceso de ornamentación.
+- Texto demasiado pequeÃ±o.
+- Exceso de ornamentaciÃ³n.
 
 La prioridad es mantener una interfaz legible y elegante.
 
@@ -2771,9 +2771,9 @@ Los personajes deben seguir siendo los protagonistas visuales.
 
 ---
 
-## 16. IMPLEMENTACIÓN TÉCNICA EN PHASER
+## 16. IMPLEMENTACIÃ“N TÃ‰CNICA EN PHASER
 
-Antes de escribir código, inspecciona el proyecto actual.
+Antes de escribir cÃ³digo, inspecciona el proyecto actual.
 
 Identifica:
 - Escena principal de combate.
@@ -2782,8 +2782,8 @@ Identifica:
 - Sistema de objetivos.
 - Controles de teclado.
 - Controles del mouse.
-- Cámaras.
-- Gestión de sprites.
+- CÃ¡maras.
+- GestiÃ³n de sprites.
 - Sistema de carga de recursos.
 - Paneles existentes.
 - Animaciones de ataque y defensa.
@@ -2806,23 +2806,23 @@ Localiza los archivos:
 
 Busca sus extensiones y rutas reales.
 
-Los tres bocetos son referencias de diseño, mientras que los cinco iconos son recursos que se mostrarán en el juego.
+Los tres bocetos son referencias de diseÃ±o, mientras que los cinco iconos son recursos que se mostrarÃ¡n en el juego.
 
 No inventar rutas ni cambiar sus nombres innecesariamente.
 Preserve the supplied filenames exactly. In particular, map the Ignis idle to its actual `hazel__fuego_base.png` filename and the Glacio jump to `hazelo_hielo_salto.png`; retain logical animation keys in configuration rather than renaming these files.
 
-### Organización de la interfaz
+### OrganizaciÃ³n de la interfaz
 
 Recomiendo separar los sistemas de:
 
 1. Cola de turnos.
 2. Indicadores de vida de bosses.
 3. Panel de estado de aliados.
-4. Menú de habilidades.
-5. Selección de objetivos.
-6. Transiciones de cámara.
+4. MenÃº de habilidades.
+5. SelecciÃ³n de objetivos.
+6. Transiciones de cÃ¡mara.
 
-Pueden implementarse como componentes o funciones independientes según la estructura existente.
+Pueden implementarse como componentes o funciones independientes segÃºn la estructura existente.
 
 Evitar reescribir el sistema completo cuando sea posible reutilizar componentes actuales.
 
@@ -2837,7 +2837,7 @@ Gestionar claramente los estados:
 - `DEFENSE_PHASE`
 - `BATTLE_END`
 
-Estos nombres son orientativos. Si ya existe una máquina de estados, integrarse en ella en lugar de crear otra que entre en conflicto.
+Estos nombres son orientativos. Si ya existe una mÃ¡quina de estados, integrarse en ella en lugar de crear otra que entre en conflicto.
 
 ### Seguridad de interacciones
 
@@ -2846,14 +2846,14 @@ Estos nombres son orientativos. Si ya existe una máquina de estados, integrarse
 - Bloquear acciones incompatibles durante las transiciones.
 - Eliminar o desactivar correctamente los listeners que dejen de utilizarse.
 - Evitar que Escape provoque varias cancelaciones.
-- No permitir confirmar un objetivo mientras la cámara todavía está cambiando si eso genera errores.
-- No permitir acciones después de finalizar el combate.
+- No permitir confirmar un objetivo mientras la cÃ¡mara todavÃ­a estÃ¡ cambiando si eso genera errores.
+- No permitir acciones despuÃ©s de finalizar el combate.
 
-### Resolución
+### ResoluciÃ³n
 
-Trabajar sobre la resolución base de 1920 × 1080.
+Trabajar sobre la resoluciÃ³n base de 1920 Ã— 1080.
 
-Mantener proporciones, posiciones relativas y legibilidad si cambia el tamaño de la ventana.
+Mantener proporciones, posiciones relativas y legibilidad si cambia el tamaÃ±o de la ventana.
 
 No deformar los sprites ni los iconos.
 
@@ -2863,15 +2863,15 @@ No deformar los sprites ni los iconos.
 
 Este es el comportamiento que quiero observar al jugar.
 
-### PASO 1 — EMPIEZA EL TURNO DE DEXIOS
+### PASO 1 â€” EMPIEZA EL TURNO DE DEXIOS
 
-- La cola de turnos muestra a Dexios en primera posición.
-- La cámara se acerca cinematográficamente a Dexios.
-- Aparece el menú de habilidades.
+- La cola de turnos muestra a Dexios en primera posiciÃ³n.
+- La cÃ¡mara se acerca cinematogrÃ¡ficamente a Dexios.
+- Aparece el menÃº de habilidades.
 
 La apariencia debe seguir `boceto_elegir_ataque`.
 
-### PASO 2 — SELECCIONO UNA HABILIDAD
+### PASO 2 â€” SELECCIONO UNA HABILIDAD
 
 Pulso la tecla `2`.
 
@@ -2881,52 +2881,52 @@ Comprueba sus requisitos.
 
 Si necesita seleccionar un objetivo, pasa a la siguiente fase.
 
-### PASO 3 — ZOOM A LOS BOSSES
+### PASO 3 â€” ZOOM A LOS BOSSES
 
-- El menú de habilidades desaparece.
-- La cámara se desplaza hacia Ióbrontēs y Kosmelys.
+- El menÃº de habilidades desaparece.
+- La cÃ¡mara se desplaza hacia IÃ³brontÄ“s y Kosmelys.
 - Ambos aparecen grandes.
-- Aparece la flecha de selección.
+- Aparece la flecha de selecciÃ³n.
 
 La apariencia debe seguir `boceto_objetivo`.
 
-### PASO 4 — ELIJO UN OBJETIVO
+### PASO 4 â€” ELIJO UN OBJETIVO
 
 Puedo pulsar:
 
-- `1` para Ióbrontēs.
+- `1` para IÃ³brontÄ“s.
 - `2` para Kosmelys.
 
-También puedo hacer clic directamente en cualquiera de ellos.
+TambiÃ©n puedo hacer clic directamente en cualquiera de ellos.
 
-### PASO 5 — OPCIÓN DE RETROCEDER
+### PASO 5 â€” OPCIÃ“N DE RETROCEDER
 
 Si no quiero realizar ese ataque, pulso Escape o hago clic en Back.
 
 Entonces:
-- Se cancela la selección.
-- La cámara regresa a Dexios.
-- Reaparece el menú de habilidades.
+- Se cancela la selecciÃ³n.
+- La cÃ¡mara regresa a Dexios.
+- Reaparece el menÃº de habilidades.
 - No he gastado recursos ni perdido el turno.
 
-### PASO 6 — CONFIRMO EL ATAQUE
+### PASO 6 â€” CONFIRMO EL ATAQUE
 
 Si confirmo un enemigo:
-- Desaparece la interfaz de selección.
-- La cámara presenta la acción.
+- Desaparece la interfaz de selecciÃ³n.
+- La cÃ¡mara presenta la acciÃ³n.
 - Dexios realiza su ataque correspondiente.
 - Se ejecutan las animaciones existentes.
-- Se calculan los daños.
+- Se calculan los daÃ±os.
 - Se actualizan las barras.
 - Termina el turno.
 
-### PASO 7 — SIGUIENTE TURNO
+### PASO 7 â€” SIGUIENTE TURNO
 
 - La cola avanza.
 - Se identifica al siguiente personaje.
-- Si es aliado, se activa su selección de habilidades.
+- Si es aliado, se activa su selecciÃ³n de habilidades.
 - Si es enemigo, se ejecuta su comportamiento.
-- El combate continúa normalmente.
+- El combate continÃºa normalmente.
 
 ---
 
@@ -2937,12 +2937,12 @@ No modificar las reglas existentes del juego.
 Especialmente:
 
 - Orden de turnos.
-- Estadísticas.
-- Vida máxima.
-- Maná máximo.
+- EstadÃ­sticas.
+- Vida mÃ¡xima.
+- ManÃ¡ mÃ¡ximo.
 - Caos de Dexios.
 - Habilidades individuales.
-- Daños.
+- DaÃ±os.
 - Costes.
 - Estados alterados.
 - Parrys.
@@ -2951,101 +2951,101 @@ Especialmente:
 - Evasiones.
 - Contraataques.
 - Animaciones de los sprites.
-- Mecánicas especiales de los bosses.
+- MecÃ¡nicas especiales de los bosses.
 - Condiciones de victoria.
 - Condiciones de derrota.
 - Audio.
 - Reinicio del combate.
 
-Si una modificación visual requiere cambiar parte del código existente, conservar su comportamiento original.
+Si una modificaciÃ³n visual requiere cambiar parte del cÃ³digo existente, conservar su comportamiento original.
 
 La nueva interfaz debe utilizar los sistemas del combate, no sustituirlos por sistemas paralelos incompatibles.
 
 ---
 
-## 19. ORDEN RECOMENDADO DE IMPLEMENTACIÓN
+## 19. ORDEN RECOMENDADO DE IMPLEMENTACIÃ“N
 
-Quiero que realices el rediseño de forma ordenada.
+Quiero que realices el rediseÃ±o de forma ordenada.
 
-### Etapa 1 — Analizar el proyecto
+### Etapa 1 â€” Analizar el proyecto
 
-Examinar la estructura del código y localizar los recursos.
+Examinar la estructura del cÃ³digo y localizar los recursos.
 
-Determinar qué sistemas pueden reutilizarse.
+Determinar quÃ© sistemas pueden reutilizarse.
 
-### Etapa 2 — Implementar la interfaz general
+### Etapa 2 â€” Implementar la interfaz general
 
 Utilizar `boceto_combate`.
 
 Crear:
 - Cola de turnos.
-- Información de bosses.
+- InformaciÃ³n de bosses.
 - Panel de estado de aliados.
-- Distribución general.
+- DistribuciÃ³n general.
 
 Comprobar que todas las barras muestran valores reales.
 
-### Etapa 3 — Selección de habilidades
+### Etapa 3 â€” SelecciÃ³n de habilidades
 
 Utilizar `boceto_elegir_ataque`.
 
 Implementar:
 - Zoom al aliado.
-- Menú translúcido.
+- MenÃº translÃºcido.
 - Controles 1, 2 y 3.
 - Botones interactivos.
 
-### Etapa 4 — Selección de objetivos
+### Etapa 4 â€” SelecciÃ³n de objetivos
 
 Utilizar `boceto_objetivo`.
 
 Implementar:
 - Zoom a los bosses.
-- Flecha de selección.
+- Flecha de selecciÃ³n.
 - Teclas 1 y 2.
-- Selección con mouse.
+- SelecciÃ³n con mouse.
 - Escape.
-- Botón Back.
+- BotÃ³n Back.
 
-### Etapa 5 — Integración con el combate
+### Etapa 5 â€” IntegraciÃ³n con el combate
 
 Conectar los sistemas nuevos a:
 - Habilidades existentes.
 - Consumo de recursos.
 - Turnos.
-- Daño.
+- DaÃ±o.
 - Animaciones.
 - Estados de derrota.
 
-### Etapa 6 — Pruebas
+### Etapa 6 â€” Pruebas
 
 Comprobar al menos:
 
 - Turnos de los tres aliados.
 - Turnos de ambos bosses.
-- Selección de las tres habilidades.
-- Selección de Ióbrontēs.
-- Selección de Kosmelys.
-- Cancelación mediante Escape.
-- Cancelación mediante Back.
+- SelecciÃ³n de las tres habilidades.
+- SelecciÃ³n de IÃ³brontÄ“s.
+- SelecciÃ³n de Kosmelys.
+- CancelaciÃ³n mediante Escape.
+- CancelaciÃ³n mediante Back.
 - Clics del mouse.
-- Actualización de las barras.
-- Actualización de los seis turnos.
+- ActualizaciÃ³n de las barras.
+- ActualizaciÃ³n de los seis turnos.
 - Comportamiento cuando un personaje muere.
 - Comportamiento cuando un boss muere.
 - Defensas durante los turnos enemigos.
 - Condiciones de victoria y derrota.
 - Posicionamiento de la UI durante todos los zooms.
-- Restauración correcta de la cámara.
+- RestauraciÃ³n correcta de la cÃ¡mara.
 
-### Etapa 7 — Acabados visuales
+### Etapa 7 â€” Acabados visuales
 
-Cuando todo funcione, añadir:
+Cuando todo funcione, aÃ±adir:
 - Transiciones suaves.
 - Resaltados.
 - Bordes decorativos.
-- Pequeñas animaciones de los paneles.
-- Ajustes de espaciado, tipografía y proporciones.
+- PequeÃ±as animaciones de los paneles.
+- Ajustes de espaciado, tipografÃ­a y proporciones.
 
 ---
 
@@ -3053,27 +3053,27 @@ Cuando todo funcione, añadir:
 
 Quiero que el sistema de combate tenga tres presentaciones principales:
 
-**1. Vista general — `boceto_combate`**
+**1. Vista general â€” `boceto_combate`**
 
 Muestra todo el combate, los enemigos, los aliados, las barras y la cola de turnos.
 
-**2. Elección de habilidades — `boceto_elegir_ataque`**
+**2. ElecciÃ³n de habilidades â€” `boceto_elegir_ataque`**
 
-Zoom cinematográfico al personaje activo con un menú translúcido de tres habilidades seleccionables mediante teclado o mouse.
+Zoom cinematogrÃ¡fico al personaje activo con un menÃº translÃºcido de tres habilidades seleccionables mediante teclado o mouse.
 
-**3. Elección de objetivo — `boceto_objetivo`**
+**3. ElecciÃ³n de objetivo â€” `boceto_objetivo`**
 
-Zoom cinematográfico a los dos dioses, con una flecha indicadora del objetivo, selección mediante teclado o mouse y opción Back para regresar.
+Zoom cinematogrÃ¡fico a los dos dioses, con una flecha indicadora del objetivo, selecciÃ³n mediante teclado o mouse y opciÃ³n Back para regresar.
 
 Los iconos de los personajes deben obtenerse de los archivos indicados anteriormente y de los retratos suministrados de Hazel para sus dos formas.
 
-**La prioridad es que esta nueva interfaz funcione correctamente dentro del combate que ya existe, que respete mis bocetos y que haga mucho más cinematográfica la experiencia del jugador.**
+**La prioridad es que esta nueva interfaz funcione correctamente dentro del combate que ya existe, que respete mis bocetos y que haga mucho mÃ¡s cinematogrÃ¡fica la experiencia del jugador.**
 
-No quiero que reconstruyas todo el juego ni que cambies sus mecánicas.
+No quiero que reconstruyas todo el juego ni que cambies sus mecÃ¡nicas.
 
-Quiero una nueva presentación visual profesional, dinámica y funcional sobre el sistema ya implementado.
+Quiero una nueva presentaciÃ³n visual profesional, dinÃ¡mica y funcional sobre el sistema ya implementado.
 
-# LA DEXÍADA — VISUAL, UI AND GAMEPLAY CORRECTIONS
+# LA DEXÃADA â€” VISUAL, UI AND GAMEPLAY CORRECTIONS
 
 Apply the following corrections to the existing Phaser combat prototype and update `DESIGN.md` accordingly.
 
@@ -3141,7 +3141,7 @@ Sahira's and Hazel's names currently overlap.
 
 Each name must appear in a readable position associated with its character, without overlapping another name, character sprite, or interface element.
 
-## 2. HAZEL — GLACIO DEFENSIVE ANIMATION BUG
+## 2. HAZEL â€” GLACIO DEFENSIVE ANIMATION BUG
 
 Hazel currently displays an Ignis defensive sprite for a fraction of a second when attempting to defend in Glacio mode.
 
@@ -3174,7 +3174,7 @@ Do not change Hazel's existing defensive mechanics.
 
 She still receives full damage from an imperfect block and avoids directional damage only through a perfect parry.
 
-## 3. HAZEL — ARMOR BREAK COMPATIBILITY
+## 3. HAZEL â€” ARMOR BREAK COMPATIBILITY
 
 Hazel currently cannot consume Furai's Armor Break mark.
 
@@ -3233,7 +3233,7 @@ Hazel must still transform to Ignis normally.
 - Preserve the existing rule that only the first hit of a multi-hit ability receives the Armor Break multiplier.
 - Do not modify Armor Break's existing duration or stacking rules.
 
-## 4. UNIVERSAL GAME FONT — ARCHEOLOGICAPS
+## 4. UNIVERSAL GAME FONT â€” ARCHEOLOGICAPS
 
 Apply the supplied font:
 
@@ -3243,7 +3243,7 @@ The font family is:
 
 `Archeologicaps`
 
-Use it as the universal typeface throughout La Dexíada.
+Use it as the universal typeface throughout La DexÃ­ada.
 
 Store the font in the project's public font assets directory, for example:
 
@@ -3281,29 +3281,29 @@ Maintain the existing text colors and visual hierarchy.
 
 Adjust font sizes, spacing, and container dimensions where necessary to prevent overflow or clipping.
 
-## 5. FURAI — RESOURCE LABEL CORRECTION
+## 5. FURAI â€” RESOURCE LABEL CORRECTION
 
 In Furai's HUD, change the resource label to:
 
-**ESPÍRITU**
+**ESPÃRITU**
 
 Do not display:
 
 - E. ESPIRITUAL
-- ENERGÍA ESPIRITUAL
+- ENERGÃA ESPIRITUAL
 - ESPIRITUAL
 
 The displayed label must be exactly:
 
-`ESPÍRITU`
+`ESPÃRITU`
 
 Keep the existing resource bar, values, colors, functionality, and resource calculations unchanged.
 
 Apply the Archeologicaps font to this label.
 
-Make sure the accented character Í renders correctly.
+Make sure the accented character Ã renders correctly.
 
-## 6. HAZEL — ELEMENTAL STATUS INDICATOR
+## 6. HAZEL â€” ELEMENTAL STATUS INDICATOR
 
 Improve the visual presentation of Hazel's elemental form indicator in her HUD.
 
@@ -3341,7 +3341,7 @@ Do not create a Mana bar for Hazel.
 
 Her HUD must continue displaying her Health and current elemental form.
 
-## 7. SAHIRA — ALLY SELECTION MENU LAYOUT
+## 7. SAHIRA â€” ALLY SELECTION MENU LAYOUT
 
 There is a layout problem when Sahira selects an ally for:
 
@@ -3384,7 +3384,7 @@ Do not use fixed positioning that only works for three allies.
 
 Use a layout system that calculates the required height and distributes the selection options vertically.
 
-If the available screen space becomes insufficient, the panel may reposition itself or use an internal scroll area, but the preferred presentation at 1920 × 1080 is to display all four allies simultaneously.
+If the available screen space becomes insufficient, the panel may reposition itself or use an internal scroll area, but the preferred presentation at 1920 Ã— 1080 is to display all four allies simultaneously.
 
 ### Input and Targeting
 
@@ -3396,7 +3396,7 @@ Incapacitated characters remain unavailable as healing or shield targets accordi
 
 Do not alter the abilities' healing amounts, resource costs, or protection mechanics.
 
-## 8. BOSS HEALTH BARS — ALWAYS VISIBLE DURING PLAYER ATTACKS
+## 8. BOSS HEALTH BARS â€” ALWAYS VISIBLE DURING PLAYER ATTACKS
 
 There is an interface problem where Iobrontes's and Kosmelys's Health bars disappear while a playable character performs an attack.
 
@@ -3460,15 +3460,15 @@ After implementing these corrections, verify the following:
 8. Area attacks evaluate Armor Break independently for each boss, and multi-hit attacks double only the first successful hit.
 9. Portal Shield redirection does not consume Armor Break when the boss takes no damage.
 10. Archeologicaps is loaded before any Phaser scene creates text and is used by all game text.
-11. Furai's resource label reads `ESPÍRITU`, including the accented `Í`.
+11. Furai's resource label reads `ESPÃRITU`, including the accented `Ã`.
 12. Hazel's `IGNIS` and `GLACIO` labels are centered, legible, and update after a successful shift.
 13. All four ally targets fit inside the selection panel and remain keyboard- and mouse-selectable.
 14. Both boss Health bars remain visible and update during player actions, including each hit in a multi-hit attack.
 15. Healing, shielding, resource calculations, turn order, defensive timing, boss behavior, and existing damage rules remain unchanged.
 
-Combat sprites for Dexios, Furai, Sahira, Hazel, Iobrontes, and Kosmelys are generated as transparent 1536 × 1536 PNGs in `assets/normalized/`; the original artwork remains untouched. Run `.\scripts\normalize-character-sprites.ps1` to reproduce them. Normalized frames share the configured 1320 ground baseline and reference visible height in `GAME_CONFIG`, so Phaser uses one character scale without rescanning alpha bounds at runtime. The party spacing follows `bocetos/boceto_combate.jpeg`; compact numeric HUD values use a readable UI font, while decorative text retains Archeologicaps. Per-frame exceptions live in `GAME_CONFIG.sprite.frameScale` (Dexios and Hazel Ignis/Glacio defense frames at 50% or 110%). Hazel's attack frames are `hazel_fuego_dance` and `hazel_hielo_shards`, held for `GAME_CONFIG.timing.hazelAttackPoseMs` before returning to idle. Pressing H on the welcome scene opens `escena_pruebahazel` (`src/hazel-test-scene.ts`), a sandbox with Hazel's forms, abilities, targeting, jump, and free W/A/S/D dodge poses against two refilling boss dummies. Pressing S opens `escena_sahira_prueba` (`src/sahira-test-scene.ts`), the equivalent sandbox for Sahira's Jackal Strike, Hippopotamus Healing and Shield (self-targeted, with the real use limits), jump, and dodges. Pressing D opens `escena_dexios_prueba` (`src/dexios-test-scene.ts`) for Dexios' three attacks with mana/chaos costs, chaos gained from damage, jump, and dodges. Pressing F opens `escena_furai_prueba` (`src/furai-test-scene.ts`) for Furai's Tiger Spear, Tiger Fang (spirit cost), Armor Break, spirit gain, jump, and dodges.
+Combat sprites for Dexios, Furai, Sahira, Hazel, Iobrontes, and Kosmelys are generated as transparent 1536 Ã— 1536 PNGs in `assets/normalized/`; the original artwork remains untouched. Run `.\scripts\normalize-character-sprites.ps1` to reproduce them. Normalized frames share the configured 1320 ground baseline and reference visible height in `GAME_CONFIG`, so Phaser uses one character scale without rescanning alpha bounds at runtime. The party spacing follows `bocetos/boceto_combate.jpeg`; compact numeric HUD values use a readable UI font, while decorative text retains Archeologicaps. Per-frame exceptions live in `GAME_CONFIG.sprite.frameScale` (Dexios and Hazel Ignis/Glacio defense frames at 50% or 110%). Hazel's attack frames are `hazel_fuego_dance` and `hazel_hielo_shards`, held for `GAME_CONFIG.timing.hazelAttackPoseMs` before returning to idle. Pressing H on the welcome scene opens `escena_pruebahazel` (`src/hazel-test-scene.ts`), a sandbox with Hazel's forms, abilities, targeting, jump, and free W/A/S/D dodge poses against two refilling boss dummies. Pressing S opens `escena_sahira_prueba` (`src/sahira-test-scene.ts`), the equivalent sandbox for Sahira's Jackal Strike, Hippopotamus Healing and Shield (self-targeted, with the real use limits), jump, and dodges. Pressing D opens `escena_dexios_prueba` (`src/dexios-test-scene.ts`) for Dexios' three attacks with mana/chaos costs, chaos gained from damage, jump, and dodges. Pressing F opens `escena_furai_prueba` (`src/furai-test-scene.ts`) for Furai's Tiger Spear, Tiger Fang (spirit cost), Armor Break, spirit gain, jump, and dodges.
 
-# LA DEXÍADA — CHARACTER SPRITE NORMALIZATION AND UI FIXES
+# LA DEXÃADA â€” CHARACTER SPRITE NORMALIZATION AND UI FIXES
 
 ## IMPORTANT INSTRUCTIONS
 
@@ -3495,19 +3495,19 @@ Make a backup or use version control so the original assets and implementation c
 
 ---
 
-# 1. NORMALIZE CHARACTER SPRITES TO 1536 × 1536
+# 1. NORMALIZE CHARACTER SPRITES TO 1536 Ã— 1536
 
 The current game suffers from inconsistent character scaling because the supplied sprites have different canvas dimensions, transparent margins, and visible character bounds.
 
 Normalize the major combat character frames using a consistent transparent canvas measuring:
 
-**1536 × 1536 pixels**
+**1536 Ã— 1536 pixels**
 
 This applies to:
 - Dexios
 - Furai
 - Sahira
-- Hazel  — Ignis and Glacio
+- Hazel  â€” Ignis and Glacio
 - Iobrontes
 - Kosmelys
 
@@ -3520,7 +3520,7 @@ For each character sprite:
 3. Determine the appropriate character bounds.
 4. Scale the visible character proportionally to a consistent reference size for that character.
 5. Preserve the original aspect ratio.
-6. Position the artwork inside a transparent 1536 × 1536 canvas.
+6. Position the artwork inside a transparent 1536 Ã— 1536 canvas.
 7. Maintain consistent alignment between frames belonging to the same character.
 8. Export the normalized sprite as a new PNG.
 
@@ -3580,7 +3580,7 @@ Use a configurable reference such as:
 
 `groundBaselineY = 1320`
 
-within the 1536 × 1536 canvas.
+within the 1536 Ã— 1536 canvas.
 
 This value is a starting reference and may be adjusted.
 
@@ -3597,7 +3597,7 @@ After normalization:
 - Use one primary scale configuration per character.
 - Preserve a consistent ground origin.
 - Use configurable frame-specific offsets only when necessary.
-- Do not automatically assume that all 1536 × 1536 images must have the same displayed size.
+- Do not automatically assume that all 1536 Ã— 1536 images must have the same displayed size.
 - Do not apply a second alpha-bounds normalization that reverses the normalization performed on the images.
 
 All normalizing and scaling operations must be deterministic and reproducible.
@@ -3773,9 +3773,9 @@ Dynamic numbers must continue updating normally.
 
 The name of Furai's resource must be displayed exactly as:
 
-**ESPÍRITU**
+**ESPÃRITU**
 
-Remove longer variations such as "Energía espiritual".
+Remove longer variations such as "EnergÃ­a espiritual".
 
 Preserve the existing resource values and mechanics.
 
@@ -3896,7 +3896,7 @@ If sprite normalization creates excessive memory usage or rendering problems, do
 
 Verify all of the following:
 
-1. All character frames use consistent 1536 × 1536 transparent canvases where applicable.
+1. All character frames use consistent 1536 Ã— 1536 transparent canvases where applicable.
 2. Original assets are preserved.
 3. Normalized sprites are loaded correctly by Phaser.
 4. Character proportions are stable across animations.
@@ -3906,7 +3906,7 @@ Verify all of the following:
 8. Hazel uses the correct Glacio or Ignis defensive sprite immediately.
 9. Health, Mana, Chaos, Spirit, damage, and cost numbers are readable.
 10. Archeologicaps remains applied to decorative text.
-11. Furai's resource label reads ESPÍRITU.
+11. Furai's resource label reads ESPÃRITU.
 12. Hazel's elemental status is larger and centered.
 13. Sahira's ally selection menu contains four correctly arranged options.
 14. Both boss Health bars remain visible during player attacks.
@@ -3949,3 +3949,1113 @@ Preserve the game's existing functionality.
 After each completed stage, report what was changed and whether the build succeeded.
 
 If a stage cannot be completed safely, stop and explain the blocker instead of continuing with potentially destructive modifications.
+
+# LA DEXÃADA â€” OFFENSIVE ACTION COMMAND SYSTEM
+## Implementation Specification â€” Timing Minigames and Cinematic Attack Introductions
+
+### CRITICAL INSTRUCTIONS
+
+The current Phaser combat prototype is functional. This update introduces character-specific offensive and support action commands, inspired by the interactive timing mechanics of turn-based RPGs.
+
+**DO NOT IMPLEMENT HEIR MODE.**
+
+Heir Mode is postponed until the final transformation sprites for Iobrontes and Kosmelys are available.
+
+Do not add second boss phases, restore boss Health automatically, double boss damage, or change boss appearances.
+
+**DO NOT REBUILD THE GAME FROM SCRATCH.**
+
+Preserve all currently functional systems, including:
+
+- Four playable characters: Dexios, Furai, Sahira, and Hazel.
+- Both existing bosses and their current Health values.
+- The fixed turn order.
+- Boss attacks and probabilities.
+- Directional defense and perfect-parry mechanics.
+- Character statistics and resource costs.
+- Armor Break and Hippopotamus Shield.
+- Hazel's Ignis/Glacio transformations.
+- Victory and defeat conditions.
+- Existing character positions and sprite scaling.
+- Music, sounds, HUD, and camera behavior.
+
+This update applies only to player-selected ability presentations, action-command minigames, and their interaction with existing damage and support systems.
+
+The rules below supersede any previous generic offensive timing implementation.
+
+---
+
+# 1. CINEMATIC ABILITY INTRODUCTION
+
+Every playable-character ability must begin with a cinematic presentation.
+
+## 1.1. Presentation Strip
+
+A horizontal black strip with decorative golden borders enters the screen from the left.
+
+It must have a fast, visually appealing sliding animation that conveys speed.
+
+### Dimensions
+
+Target game resolution: 1920 Ã— 1080.
+
+The strip must:
+
+- Span the entire horizontal width of the game screen.
+- Be centered vertically.
+- Occupy 40% of the screen height.
+- Extend 20% above and 20% below the screen's vertical center.
+
+At 1920 Ã— 1080, the visible strip is approximately 432 pixels tall.
+
+Its vertical bounds are approximately Y = 324 to Y = 756.
+
+The dimensions must scale proportionally with the game's actual viewport.
+
+### Animation Sequence
+
+1. The player confirms an ability and any required target.
+2. The strip slides rapidly into view from the left.
+3. The corresponding attack illustration appears inside the strip.
+4. The strip remains fully visible for exactly 1 second.
+5. The strip exits rapidly to the right using a matching speed effect.
+6. The normal battlefield becomes fully visible.
+7. The ability-specific action command begins.
+8. The player performs the action command, if one is required.
+9. The ability animation, projectile, effect, and damage resolution begin after the action-command result is determined.
+
+The one-second hold starts only after the strip has finished entering.
+
+The attack must not execute during the introduction.
+
+## 1.2. Attack Illustration
+
+Each ability uses its own supplied cinematic illustration.
+
+Scale the illustration proportionally so its visible height fits the approximately 40%-screen-height strip.
+
+Preserve its aspect ratio.
+
+Do not stretch, deform, or crop important character details.
+
+The supplied attack illustration is separate from the battlefield animation sprite.
+
+Use the attack illustration in the cinematic strip and preserve the normal action frames for the subsequent attack animation.
+
+## 1.3. Rendering
+
+The strip must appear above the battlefield but must not permanently remove any existing HUD elements.
+
+After it exits:
+
+- Restore the full battlefield.
+- Keep character and boss HUD data synchronized.
+- Show the action command near the selected target.
+- Prevent any lingering black overlays.
+- Preserve the cinematic camera system.
+
+Both boss Health bars must remain visible during the actual attack execution and damage resolution.
+
+Do not interrupt the active battle music.
+
+---
+
+# 2. UNIVERSAL ACTION-COMMAND RESULTS
+
+The following rules apply to ordinary damaging abilities unless explicitly overridden by an ability-specific rule.
+
+| Result | Damage Multiplier | Feedback |
+|---|---:|---|
+| FAIL | 0.50Ã— | FAIL |
+| NORMAL | 1.00Ã— | NORMAL |
+| PERFECT | 1.20Ã— | GOLPE CRÃTICO |
+
+### Fail
+
+A completely failed action command causes the attack to deal 50% of its established damage.
+
+The attack still executes unless its ability-specific rules explicitly state otherwise.
+
+### Normal
+
+A normally completed action command deals 100% of the original ability damage.
+
+### Perfect
+
+A perfectly completed action command deals 120% of the original ability damage.
+
+Display:
+
+`GOLPE CRÃTICO`
+
+Every time the player achieves an individual Perfect result, play:
+
+`assets/sfx/perfect_block.mp3`
+
+The sound must play once per individual successful Perfect timing event.
+
+Do not accidentally play multiple copies for the same event.
+
+## 2.1. Numerical Calculation
+
+Use the currently configured base damage for each ability.
+
+Examples:
+
+| Base Damage | Fail | Normal | Perfect |
+|---|---:|---:|---:|
+| 10 | 5 | 10 | 12 |
+| 15 | 7.5 | 15 | 18 |
+| 20 | 10 | 20 | 24 |
+| 30 | 15 | 30 | 36 |
+| 60 | 30 | 60 | 72 |
+| 70 | 35 | 70 | 84 |
+
+Use the game's existing damage-rounding convention for noninteger results, or define one centralized integer-rounding rule if necessary.
+
+Never let different abilities use inconsistent rounding.
+
+## 2.2. Multi-Hit Attacks
+
+When an ability has multiple independently timed hits:
+
+- Evaluate every hit separately.
+- Apply the corresponding multiplier to that hit.
+- Allow mixed results within a single attack.
+- Apply damage only during attack execution, not during the timing minigame.
+- Update the target's Health after each resolved hit.
+- Play the Perfect sound for each perfect hit.
+
+For example, Tiger Fang may produce one Normal hit and one Perfect hit.
+
+The damage must reflect those separate outcomes.
+
+## 2.3. Abilities Without a Timing Test
+
+Abilities marked as having no action-command test still display their cinematic introduction if an illustration is provided.
+
+After the introduction, execute the existing ability normally.
+
+Do not apply an automatic Perfect bonus.
+
+These abilities retain their original 100% effect.
+
+---
+
+# 3. DEXIOS â€” ACTION COMMANDS
+
+## 3.1. Triple Lightning
+
+Cinematic illustration:
+
+`dexios_ataque_amarillo`
+
+Action command:
+
+**No timing test.**
+
+After the cinematic introduction, execute Triple Lightning normally.
+
+Preserve:
+
+- Three separate lightning strikes.
+- Five base damage per strike.
+- Fifteen total base damage.
+- Existing lightning effects and sounds.
+- Existing Armor Break compatibility.
+
+No offensive timing multiplier applies to this ability.
+
+## 3.2. Electric Arc
+
+Cinematic illustration:
+
+`dexios_ataque_blanco`
+
+Action command:
+
+**Three sequential contracting-circle timing events.**
+
+Each event displays a circular timing indicator around the selected enemy.
+
+The circle contracts toward its target over approximately 1.2 seconds.
+
+Let T represent the timing circle's intended impact moment.
+
+### Timing Windows
+
+| Timing | Result |
+|---|---|
+| T âˆ’ 1.1 s to T âˆ’ 0.7 s | FAIL |
+| T âˆ’ 0.7 s to T âˆ’ 0.3 s | NORMAL |
+| T âˆ’ 0.3 s to T + 0.1 s | PERFECT |
+
+Required key:
+
+`W`
+
+### Sequence
+
+1. The first circle appears on the selected boss.
+2. The player presses W within a timing window.
+3. The first result is recorded.
+4. The second circle appears.
+5. The player presses W again.
+6. The second result is recorded.
+7. The third circle appears.
+8. The player presses W for the third time.
+9. The third result is recorded.
+10. After all three timing events, Dexios executes Electric Arc.
+
+Each timing result affects its corresponding lightning strike independently.
+
+### Damage Distribution
+
+The existing Electric Arc has 30 total base damage.
+
+For this implementation, distribute this as three strikes of 10 base damage each.
+
+For example:
+
+- Strike 1: FAIL = 5.
+- Strike 2: NORMAL = 10.
+- Strike 3: PERFECT = 12.
+
+Total: 27 damage.
+
+Preserve the existing overall resource cost and attack identity.
+
+**Specification clarification:** The source description mentions three timing circles but also says W is pressed twice. For now, implement three W inputs for three circles and clearly report this provisional interpretation. Do not introduce any additional attacks beyond these three.
+
+## 3.3. Chaotic Lightning
+
+Cinematic illustration:
+
+`dexios_ataque_rojo`
+
+Action command:
+
+**Three consecutive randomized directional inputs.**
+
+The required keys are randomly selected from:
+
+`W`, `A`, `S`, `D`
+
+Each input receives its own two-second countdown.
+
+### Sequence
+
+1. Display the first random directional key on the selected enemy.
+2. Start a two-second timer.
+3. The player presses the matching key.
+4. If correct, record the timing result and display the next random key.
+5. Repeat until all three keys have been resolved.
+
+The same direction may appear more than once.
+
+### Timing Results
+
+For each key:
+
+- Correct input during the first second: PERFECT.
+- Correct input during the second second: NORMAL.
+- Failure to complete the input within two seconds: FAIL.
+
+A wrong key also fails the sequence.
+
+### Overall Result
+
+**PERFECT:** All three inputs are completed as Perfect.
+
+**NORMAL:** All three inputs are completed successfully, but at least one is Normal.
+
+**FAIL:** Any required input is failed.
+
+The entire action command must finish before the attack animation executes.
+
+### Special Failure Rule
+
+Chaotic Lightning has a unique failure consequence.
+
+If the action command fails:
+
+- Do not damage either boss.
+- Deal 30 damage to every conscious playable character, including Dexios.
+- Display a red electrical impact effect on each affected ally.
+- Play the existing electrical attack sound.
+- Show the failed-action feedback.
+- Resolve the resulting incapacitations and resource changes through the existing combat system.
+
+The failure effect represents Dexios losing control of his Chaos energy.
+
+Do not additionally apply the ordinary 50% failed-attack damage to a boss.
+
+Do not accidentally stack the ordinary 20 self-damage of Chaotic Lightning on top of the special 30-damage party failure. The failure replaces that normal self-damage consequence.
+
+On NORMAL or PERFECT, preserve Chaotic Lightning's existing Chaos cost and its normal self-damage rule.
+
+Use the 100% or 120% multiplier for damage against the chosen boss.
+
+Keep existing Armor Break interactions.
+
+---
+
+# 4. FURAI â€” ACTION COMMANDS
+
+## 4.1. Tiger Spear
+
+Cinematic illustration:
+
+`furai_ataque_lanza`
+
+Action command:
+
+**No timing test.**
+
+Execute the attack normally after the cinematic introduction.
+
+Preserve:
+
+- Existing base damage.
+- Existing Spirit generation.
+- Existing animation and sound.
+- Existing Armor Break compatibility.
+
+## 4.2. Tiger Fang
+
+Cinematic illustration:
+
+`furai_ataque_tigre`
+
+Action command:
+
+**Two sequential contracting-circle timing events.**
+
+Use the same timing windows as Electric Arc.
+
+### First Strike
+
+Required key:
+
+`A`
+
+### Second Strike
+
+Required key:
+
+`D`
+
+Each strike has an independent result.
+
+Timing windows:
+
+- FAIL: T âˆ’ 1.1 to T âˆ’ 0.7.
+- NORMAL: T âˆ’ 0.7 to T âˆ’ 0.3.
+- PERFECT: T âˆ’ 0.3 to T + 0.1.
+
+After both tests, execute the two-hit attack.
+
+Apply each multiplier only to its corresponding hit.
+
+Keep the established two-hit damage values and Spirit cost.
+
+Do not multiply the entire ability twice.
+
+## 4.3. Armor Break
+
+Cinematic illustration:
+
+`furai_ataque_break`
+
+Action command:
+
+**Three-second horizontal circle control.**
+
+### Visual Layout
+
+Display a vertical rectangle centered on the selected enemy.
+
+Rectangle dimensions:
+
+- Width: L.
+- Height: 2L.
+- Initial L: 100 pixels.
+
+Therefore, the starting dimensions are approximately:
+
+100 Ã— 200 pixels.
+
+Inside the rectangle, place a circle with diameter:
+
+`0.2L`
+
+With L = 100, the circle diameter is 20 pixels.
+
+The circle begins near the center of the rectangle.
+
+It moves horizontally, initially choosing either left or right randomly.
+
+### Controls
+
+`A` changes the circle's movement toward the left.
+
+`D` changes the circle's movement toward the right.
+
+These keys modify its movement direction rather than teleporting the circle.
+
+The challenge is to keep the circle inside the rectangle for three seconds.
+
+### Failure
+
+If any part of the circle crosses the rectangle's horizontal boundary, the challenge fails.
+
+Do not apply Armor Break.
+
+### Success
+
+If the player keeps the circle inside the rectangle for all three seconds, the challenge succeeds.
+
+Apply the existing Armor Break tiger mark to the selected enemy.
+
+This test has only two outcomes:
+
+- SUCCESS: Armor Break applies normally.
+- FAIL: Armor Break does not apply.
+
+There is no 120% Perfect version of Armor Break.
+
+### Movement Configuration
+
+The supplied reference specifies a starting movement speed of:
+
+`0.2L per second`
+
+With L = 100, this equals 20 pixels per second.
+
+Make the speed configurable and preserve the requested three-second duration.
+
+Do not silently replace the mechanic with a different minigame.
+
+If the configured speed makes the challenge impossible to fail from its starting position, report this balancing issue and propose a configurable speed adjustment rather than changing the rule without explanation.
+
+---
+
+# 5. SAHIRA â€” ACTION COMMANDS
+
+## 5.1. Jackal Strike
+
+Cinematic illustration:
+
+`sahira_ataque_chacal`
+
+Action command:
+
+**No timing test.**
+
+Execute normally.
+
+Preserve unlimited uses and existing damage.
+
+## 5.2. Hippopotamus Healing
+
+Cinematic illustration:
+
+`sahira_ataque_hipo`
+
+Action command:
+
+**No timing test.**
+
+After the ally is selected and the introduction finishes, execute the healing ability normally.
+
+Preserve:
+
+- Full healing.
+- Existing use limits.
+- Existing conscious-target restriction.
+- Existing healing animation and sound.
+
+Do not add a timing penalty to healing.
+
+## 5.3. Hippopotamus Shield
+
+Action command:
+
+**Moving circle synchronization.**
+
+No dedicated cinematic illustration is specified for this ability.
+
+Use the standard introduction layout with its ability name and any existing appropriate shield illustration if one is already supplied. Do not invent new artwork.
+
+### Visual Setup
+
+After selecting an ally, display a stationary circle centered on that ally.
+
+Stationary circle radius:
+
+`R = 100 pixels`
+
+A second, moving circle travels from left to right.
+
+Moving circle radius:
+
+`0.5R = 50 pixels`
+
+Starting movement speed:
+
+`0.2R per second`
+
+Required input:
+
+`Space`
+
+### Outcome â€” Perfect
+
+If Space is pressed when the moving circle is fully inside the stationary circle without touching its borders:
+
+- Apply Hippopotamus Shield with 2 charges.
+- Display PERFECT.
+- Play `perfect_block.mp3`.
+
+### Outcome â€” Normal
+
+If at least 50% of the moving circle is inside the stationary circle, but it intersects or touches the stationary circle's boundary:
+
+- Apply Hippopotamus Shield with 1 charge.
+- Display NORMAL.
+
+### Outcome â€” Fail
+
+If Space is pressed when the moving circle is outside the valid overlap area, or the opportunity expires:
+
+- Apply no shield.
+- Display FAIL.
+
+The game's existing Hippopotamus Shield effect must support a variable number of charges.
+
+Do not change the defensive behavior of an individual charge.
+
+Keep the shield's existing ability-use limit.
+
+### Important
+
+Use geometric circle overlap when evaluating the input, not only the distance between their centers.
+
+Make the movement speed, starting position, and timeout configurable.
+
+Ensure the minigame has a reachable success window and finishes within a reasonable duration.
+
+Preserve the supplied initial speed as the starting specification; flag any balance issue rather than silently modifying it.
+
+---
+
+# 6. HAZEL LANCASTER â€” ACTION COMMANDS
+
+Hazel's abilities use her current Ignis or Glacio mode.
+
+Do not alter the existing form-switching mechanics.
+
+## 6.1. Flame Dance
+
+Cinematic illustration:
+
+`hazel_fuego_ataque_dance`
+
+Action command:
+
+**Four-key directional sequence.**
+
+Display the following sequence over the selected enemy area:
+
+`W â†’ A â†’ S â†’ D`
+
+The player has two seconds total to complete all four inputs in the correct order.
+
+The countdown begins when the sequence becomes interactive.
+
+### Success
+
+All four inputs are entered correctly before two seconds expire.
+
+Result:
+
+- Execute Flame Dance.
+- Deal 100% of its established damage to each living boss.
+
+### Failure
+
+Any incorrect input, or failure to complete all four inputs before the timer expires.
+
+Result:
+
+- Execute the failure animation or feedback.
+- Deal 0 damage.
+
+There is no 120% Perfect damage bonus.
+
+This ability has only SUCCESS and FAIL outcomes.
+
+Preserve its existing area-of-effect targeting and elemental effects.
+
+## 6.2. Figure Shards
+
+Cinematic illustration:
+
+`hazel_hielo_ataque_shards`
+
+Action command:
+
+**Rapid S-key pressing.**
+
+Display a counter starting at:
+
+`10`
+
+Show the required key:
+
+`S`
+
+The player must press S ten times within three seconds.
+
+Every valid S press reduces the counter by one.
+
+### Success
+
+The counter reaches zero before the three-second timer expires.
+
+Result:
+
+- Execute Figure Shards.
+- Deal 100% of its established damage to the selected living boss.
+
+### Failure
+
+The counter does not reach zero before the timer expires.
+
+Result:
+
+- Deal 0 damage.
+- Display FAIL.
+
+There is no 120% Perfect bonus.
+
+Only count genuine keydown presses, not continuous automatic key repetition from holding the key.
+
+Preserve the existing ice-shard animation and effects.
+
+## 6.3. Glacio Shift
+
+Cinematic illustration:
+
+`hazel_ataque_cambio`
+
+Action command:
+
+**No timing test.**
+
+After the cinematic presentation:
+
+1. Execute the transformation animation.
+2. Change Hazel from Ignis to Glacio.
+3. Launch the existing `hielo_debil` projectile.
+4. Deal the established 10 damage to one selected living boss.
+5. Update Hazel's HUD, portrait, and idle frame.
+
+Preserve its existing transformation behavior.
+
+## 6.4. Ignis Shift
+
+No separate cinematic illustration or timing test is specified.
+
+Reuse `hazel_ataque_cambio` for the cinematic introduction if that is the existing shared transformation illustration.
+
+Do not create new artwork.
+
+Action command:
+
+**No timing test.**
+
+After the introduction:
+
+1. Execute the transformation animation.
+2. Change Hazel from Glacio to Ignis.
+3. Launch the existing `fuego_debil` projectile toward each living boss.
+4. Deal the established 5 damage to each target.
+5. Update Hazel's HUD, portrait, and idle frame.
+
+Preserve existing area-of-effect and Portal Shield behavior.
+
+---
+
+# 7. ACTION-COMMAND UI
+
+The minigame interface must visually integrate with the current La DexÃ­ada combat presentation.
+
+## 7.1. Positioning
+
+Most action commands appear around the selected target.
+
+The UI must:
+
+- Remain fully visible.
+- Avoid covering important character sprites unnecessarily.
+- Avoid overlapping boss Health bars.
+- Adapt to the current camera position.
+- Respect the screen boundaries.
+- Maintain correct visual layering.
+
+Use screen-space overlays or suitable camera transformations where necessary.
+
+## 7.2. Input Handling
+
+Use the existing keyboard-input architecture.
+
+The system must prevent one key press from activating multiple actions.
+
+For example, pressing W during Electric Arc must not also trigger a defensive animation.
+
+Each action command must own its input events while active.
+
+Do not allow:
+
+- Duplicate input registration.
+- Held-key repeat exploits.
+- Simultaneous minigames.
+- Actions from inactive characters.
+- New ability selection during an unresolved action command.
+
+## 7.3. Timing Synchronization
+
+Timing must use actual elapsed time rather than unreliable frame counts.
+
+The minigames should remain consistent if the game briefly drops frames.
+
+Use the Phaser time or update system consistently.
+
+Keep all timing values configurable.
+
+## 7.4. Visual Feedback
+
+Display a clear result after each action command:
+
+- FAIL
+- NORMAL
+- PERFECT
+- GOLPE CRÃTICO
+- SUCCESS, when appropriate
+
+Use the established UI fonts and styling.
+
+Do not change the game's existing typography configuration.
+
+When a Perfect event occurs, play `perfect_block.mp3`.
+
+Avoid overlapping the sound repeatedly for one single event.
+
+---
+
+# 8. INTEGRATION WITH EXISTING COMBAT MECHANICS
+
+## 8.1. Damage Processing
+
+All new offensive results must use the existing centralized damage-processing system.
+
+Preserve:
+
+- Target validation.
+- Armor Break multipliers.
+- Boss Health limits.
+- Defensive boss effects.
+- Portal Shield redirection.
+- Chaos generation.
+- Victory and defeat checks.
+- Damage numbers and hit effects.
+
+Do not create a separate damage system for action commands.
+
+The action command determines the result multiplier or success state.
+
+The existing combat system applies the final effects.
+
+## 8.2. Armor Break
+
+Armor Break continues to double the first eligible hit against the marked boss.
+
+The timing multiplier must affect only the corresponding successful hit.
+
+For example:
+
+If Tiger Fang hits a boss carrying Armor Break, only its first strike receives Armor Break's doubling effect.
+
+Its two timing results are applied independently.
+
+A failed hit that still causes 50% damage remains an eligible damaging hit.
+
+An attack that causes zero damage must not consume Armor Break.
+
+Preserve boss-specific Armor Break behavior for area-of-effect abilities.
+
+## 8.3. Resource Costs
+
+Do not change the existing resource costs, use limits, or resource-generation values.
+
+The system should determine affordability before starting an action.
+
+Once the player confirms an ability, use the existing execution and cost-consumption rules.
+
+A failed offensive action command does not automatically refund the ability's cost.
+
+Chaotic Lightning's special failure must not cause duplicate costs or duplicate self-damage.
+
+For abilities whose failure prevents the effect entirely, preserve the configured use-consumption behavior and prevent duplicate charges.
+
+## 8.4. Portal Shield
+
+The new action-command system must remain compatible with Kosmelys's Portal Shield.
+
+First evaluate the action command.
+
+Then resolve the completed ability through the existing targeting, redirection, and damage pipeline.
+
+Do not redirect the visual timing minigame itself.
+
+Do not allow attacks to damage both the original and redirected target accidentally.
+
+## 8.5. Multi-Hit Ability Execution
+
+A multi-hit ability must collect its required timing results before executing the attack.
+
+Once the tests finish:
+
+1. Play the attack animation.
+2. Release its corresponding projectile or effect.
+3. Resolve each hit sequentially.
+4. Apply the recorded damage modifier for that hit.
+5. Update the boss Health bar.
+6. Advance to the next hit.
+7. Finish the action only after every hit resolves.
+
+The next character's turn must not begin until the entire action is complete.
+
+## 8.6. No Gameplay Changes Outside These Requirements
+
+Do not modify:
+
+- Boss AI.
+- Boss attack probabilities.
+- Defensive timing windows.
+- Enemy projectile behavior.
+- Existing boss Health.
+- Current victory conditions.
+- Character turn positions.
+- Character movement or battlefield layout.
+- Existing audio sequencing.
+- Character sprite normalization.
+- Camera zoom configuration.
+
+---
+
+# 9. CONFIGURATION SYSTEM
+
+Create configurable action-command definitions rather than writing independent hard-coded timing systems for every ability.
+
+Suggested command types:
+
+- NONE
+- CIRCLE_TIMING
+- DIRECTION_SEQUENCE
+- HORIZONTAL_CONTROL
+- CIRCLE_OVERLAP
+- RAPID_PRESS
+
+Each ability configuration should reference:
+
+- Cinematic illustration asset.
+- Command type.
+- Required keys.
+- Duration.
+- Timing windows.
+- Number of repetitions.
+- Result multipliers or success effects.
+- Feedback labels.
+- Sound-effect references.
+
+The system must support adding new abilities and new command types later without rewriting the existing combat engine.
+
+Avoid unnecessary architectural changes beyond this feature.
+
+---
+
+# 10. SAFE IMPLEMENTATION ORDER
+
+This is a significant update.
+
+Implement it in small, independently testable stages.
+
+### Stage 1 â€” Cinematic Strip
+
+- Implement the reusable black-and-gold presentation strip.
+- Add its left-entry and right-exit animations.
+- Load and display each available attack illustration.
+- Connect it to the existing ability-confirmation flow.
+- Verify that no existing abilities break.
+
+Build and test before proceeding.
+
+### Stage 2 â€” Timing Engine
+
+- Implement the configurable action-command controller.
+- Add timing windows.
+- Add keyboard input isolation.
+- Add result evaluation.
+- Add the 50% / 100% / 120% damage multipliers.
+- Add Perfect feedback and sound.
+
+Build and test before proceeding.
+
+### Stage 3 â€” Dexios
+
+Implement:
+
+- Triple Lightning without a test.
+- Electric Arc with sequential W timing.
+- Chaotic Lightning with three randomized directional inputs and special failure.
+
+Test each ability independently.
+
+### Stage 4 â€” Furai
+
+Implement:
+
+- Tiger Spear without a test.
+- Tiger Fang with A/D timing.
+- Armor Break with the horizontal control challenge.
+
+Verify Spirit generation and Armor Break.
+
+### Stage 5 â€” Sahira
+
+Implement:
+
+- Jackal Strike without a test.
+- Hippopotamus Healing without a test.
+- Hippopotamus Shield with the moving-circle challenge.
+
+Verify the variable number of shield charges and ability-use limits.
+
+### Stage 6 â€” Hazel
+
+Implement:
+
+- Flame Dance directional sequence.
+- Figure Shards rapid S pressing.
+- Glacio Shift without a test.
+- Ignis Shift without a test.
+
+Verify both transformations and all attack targets.
+
+### Stage 7 â€” Integration Testing
+
+Verify the complete combat loop with the new commands.
+
+Do not continue to the next stage when the current stage fails to build or causes a gameplay regression.
+
+---
+
+# 11. ACCEPTANCE TESTS
+
+Verify all of the following:
+
+1. Every playable ability displays its cinematic introduction.
+2. The black-and-gold strip occupies 40% of screen height.
+3. The strip enters from the left and exits to the right.
+4. The corresponding attack illustration is correctly scaled.
+5. The strip remains fully visible for one second.
+6. Action commands begin after the strip disappears.
+7. Damage and support effects execute only after their action command finishes.
+8. Ordinary failed attacks deal 50% damage.
+9. Normal attacks deal 100% damage.
+10. Perfect attacks deal 120% damage.
+11. Critical-hit feedback appears correctly.
+12. Perfect timing plays `perfect_block.mp3`.
+13. Electric Arc evaluates its three timing events independently.
+14. Tiger Fang evaluates its two timing events independently.
+15. Chaotic Lightning uses three sequential random directional inputs.
+16. Chaotic Lightning's failure damages the party for 30 each without damaging a boss.
+17. Armor Break's circle-control minigame lasts three seconds.
+18. Failed Armor Break does not apply its tiger mark.
+19. Hippopotamus Shield awards 0, 1, or 2 charges according to the circle-overlap result.
+20. Flame Dance requires W, A, S, D within two seconds.
+21. Figure Shards requires ten S presses within three seconds.
+22. Hazel's Shift actions still transform her correctly.
+23. Abilities without action commands execute normally.
+24. Multi-hit damage calculations remain consistent.
+25. Armor Break interacts correctly with timing multipliers.
+26. Portal Shield still redirects attacks correctly.
+27. Character resource costs and use limits remain unchanged.
+28. Boss Health bars update correctly after damage.
+29. No duplicate input or damage events occur.
+30. The fixed turn order remains unchanged.
+31. All current enemy attacks remain functional.
+32. All existing defensive mechanics remain functional.
+33. The game still reaches its normal victory and defeat conditions.
+34. The production build succeeds.
+35. The browser game remains fully playable.
+
+---
+
+# 12. UPDATE DESIGN.md
+
+Once each stage is implemented and tested, update the relevant sections of `DESIGN.md`.
+
+Document:
+
+- Cinematic attack-introduction rules.
+- The 40%-height presentation strip.
+- Character-specific action commands.
+- Timing windows and required keys.
+- Damage multipliers.
+- Special failure rules.
+- Variable Hippopotamus Shield charges.
+- Perfect and critical-hit feedback.
+- Integration with Armor Break and Portal Shield.
+- New asset references.
+- Action-command configuration requirements.
+
+Integrate this information into the existing sections rather than appending contradictory duplicate specifications.
+
+Do not add Heir Mode to the implementation or to this update.
+
+---
+
+# FINAL REQUIREMENTS
+
+The current prototype already works.
+
+**Preserve its functionality while introducing the new offensive action-command system.**
+
+Do not recreate existing systems unnecessarily.
+
+Do not generate missing artwork.
+
+Do not implement Heir Mode.
+
+Work in controlled stages, test each stage, and report the changed files and results.
+
+If a specification is ambiguous or a minigame's parameters produce unintended behavior, report the issue clearly instead of silently changing the requested rules.
+
+---
+
+# IMPLEMENTATION NOTES â€” ACTION COMMANDS
+
+Implemented in `src/action-commands.ts` (config, runner, multipliers) and wired in `src/combat-scene.ts` (`runCommand`).
+
+- Every player ability shows the black-and-gold strip (40% of screen height, enters from the left, 1 s hold, exits to the right) using `assets/cinematics/*.png`. Hippopotamus Shield reuses `sahira_ataque_hipo`; both Hazel shifts reuse `hazel_ataque_cambio`.
+- Results: FAIL x0.5, NORMAL x1, PERFECT x1.2, rounded with `Math.round` (`applyResultMultiplier`). Perfect plays `perfect_block.mp3` once per event and shows "GOLPE CRÃTICO" at impact.
+- Electric Arc is now 3 hits x 10 damage (30 total), one W circle per hit. Tiger Fang: A then D circles, one per hit.
+- Chaotic Lightning: 3 random WASD keys, 2 s each (Perfect in the first second). Failure: no boss damage, 30 damage to every conscious hero, no self-damage. The existing self-damage is 10 (not 20); it is unchanged on NORMAL/PERFECT.
+- Armor Break: 3 s horizontal-control challenge (L=100, speed doubled to 0.4L/s on request); failure applies no mark. At 40 px/s the ball leaves the rectangle after 1 s without input, so it is failable.
+- Hippopotamus Shield: Space on the moving circle; geometric overlap gives 2 charges (fully inside), 1 charge (>= 50% overlap) or 0. Speed was doubled to 0.4R/s on request; from offset -150 px the perfect window opens after 2.5 s and the timeout is 15 s (configurable, balance flag).
+- Flame Dance: W-A-S-D within 2 s (success = 100%, fail = 0). Figure Shards: 10 S presses in 3 s (success = 100%, fail = 0). Wrong-key input is ignored in circle commands.
+- Armor Break and Portal Shield still resolve through the existing damage pipeline; the command is evaluated first and is never redirected.
+

@@ -45,6 +45,14 @@ import {
   PROJECTILE_TRAVEL_MS,
 } from './combat-rules';
 import stripBlackMattes from './strip-black-matte';
+import {
+  ActionCommandRunner,
+  applyResultMultiplier,
+  CINEMATIC_ASSETS,
+  cinematicTextureKey,
+  CommandOutcome,
+  HitResult,
+} from './action-commands';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
@@ -234,6 +242,8 @@ export default class CombatScene extends Phaser.Scene {
   private cosmicTargetCharacter: CharacterId | null = null;
   private cosmicFuraiPerfectParries = 0;
   private cosmicProjectile?: Phaser.GameObjects.Image;
+  private commandRunner?: ActionCommandRunner;
+  private hitResults: HitResult[] = [];
 
   private readonly practiceId: CharacterId | null;
 
@@ -257,6 +267,9 @@ export default class CombatScene extends Phaser.Scene {
     });
     Object.entries(ICON_ASSETS).forEach(([id, asset]) => {
       loadImage(`icon_${id}`, asset);
+    });
+    (Object.keys(CINEMATIC_ASSETS) as Array<keyof typeof CINEMATIC_ASSETS>).forEach((key) => {
+      loadImage(cinematicTextureKey(key), CINEMATIC_ASSETS[key]);
     });
   }
 
@@ -324,6 +337,14 @@ export default class CombatScene extends Phaser.Scene {
     this.overlayCamera = this.cameras.add(0, 0, WIDTH, HEIGHT);
     this.overlayCamera.ignore([...battlefieldObjects, ...hudObjects]);
     this.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, this.ignoreInOverlay, this);
+    this.hitResults = [];
+    this.commandRunner = new ActionCommandRunner(
+      this,
+      (object) => this.promoteToOverlay(object),
+      () => this.soundscape.play('perfect_block'),
+      WIDTH,
+      HEIGHT,
+    );
 
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
     this.input.on('pointerdown', this.startAudio, this);
@@ -333,6 +354,8 @@ export default class CombatScene extends Phaser.Scene {
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
       this.input.off('pointerdown', this.startAudio, this);
       this.input.off('pointerdown', this.handleUiPointer, this);
+      this.commandRunner?.destroy();
+      this.commandRunner = undefined;
       this.soundscape.destroy();
     });
 
@@ -3248,7 +3271,11 @@ export default class CombatScene extends Phaser.Scene {
     ) {
       this.targetingAbility = null;
       this.phase = 'action';
-      this.returnCameraToArena(() => this.executeHazelAreaAbility(ability));
+      this.returnCameraToArena(() => this.runCommand(
+        ability,
+        this.livingBossesAnchor(),
+        (outcome) => this.executeHazelAreaAbility(ability, outcome),
+      ));
       return;
     }
 
@@ -3331,20 +3358,113 @@ export default class CombatScene extends Phaser.Scene {
     this.getBossSprite(boss).clearTint();
     this.selectedBoss = null;
     this.phase = 'action';
-    this.returnCameraToArena(() => this.executeBossTargetedAbility(boss, ability, character));
+    this.returnCameraToArena(() => this.runCommand(
+      ability,
+      this.characterAnchor(boss),
+      (outcome) => this.executeBossTargetedAbility(boss, ability, character, outcome),
+    ));
+  }
+
+  private characterAnchor(id: CharacterId | BossId): { x: number; y: number } {
+    const config = GAME_CONFIG.characters[id];
+    return { x: config.x, y: config.feetY - config.displayHeight * 0.5 };
+  }
+
+  private livingBossesAnchor(): { x: number; y: number } {
+    const living = (['iobrontes', 'kosmelys'] as const)
+      .filter((boss) => this.state.bosses[boss].health > 0)
+      .map((boss) => this.characterAnchor(boss));
+    if (living.length === 0) {
+      return { x: WIDTH / 2, y: HEIGHT / 2 };
+    }
+    return {
+      x: living.reduce((sum, point) => sum + point.x, 0) / living.length,
+      y: living.reduce((sum, point) => sum + point.y, 0) / living.length,
+    };
+  }
+
+  // Franja cinemática + comando de acción; el efecto se ejecuta al terminar.
+  private runCommand(
+    ability: Ability,
+    anchor: { x: number; y: number },
+    onResult: (outcome: CommandOutcome) => void,
+  ): void {
+    if (!this.commandRunner) {
+      onResult({ results: Array(Math.max(1, ability.hits)).fill('normal'), success: true, charges: 0 });
+      return;
+    }
+    this.promptText.setText(`${ability.name}…`);
+    this.commandRunner.run(ability.id, anchor, (outcome) => {
+      if (this.phase !== 'action' || this.result) {
+        return;
+      }
+      onResult(outcome);
+    }, ability.hits);
+  }
+
+  private failChaoticLightning(character: CharacterId, ability: Ability): void {
+    spendCost(this.state.party[character], ability);
+    this.soundscape.play(ability.sound);
+    this.showFloatingText(
+      'FAIL · CHAOS DESCONTROLADO',
+      WIDTH / 2,
+      HEIGHT * 0.3,
+      '#ff7b7b',
+    );
+    PLAYABLE_CHARACTERS
+      .filter((id) => this.state.party[id].health > 0)
+      .forEach((id) => {
+        const damage = damagePartyMember(this.state, id, 30, false);
+        const config = GAME_CONFIG.characters[id];
+        this.createImpact(config.x, config.feetY - config.displayHeight * 0.55, COLORS.red, 1.2);
+        this.setActorFrame(id, this.getActorFrames(id).hit, 550);
+        this.showFloatingText(
+          `-${damage}`,
+          config.x,
+          config.feetY - config.displayHeight * 0.7,
+          '#ff9c9c',
+        );
+      });
+    this.promptText.setText('Dexios pierde el control de su Chaos: todo el grupo recibe 30 de daño.');
+    this.refreshHud();
+    if (this.finishIfBattleEnded()) {
+      return;
+    }
+    this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
   }
 
   private executeBossTargetedAbility(
     boss: BossId,
     ability: Ability,
     character: CharacterId,
+    outcome: CommandOutcome,
   ): void {
     if (character === 'hazel') {
-      this.executeHazelTargetedAbility(boss, ability);
+      this.executeHazelTargetedAbility(boss, ability, outcome);
       return;
     }
+    if (ability.id === 'chaotic-lightning' && !outcome.success) {
+      this.failChaoticLightning(character, ability);
+      return;
+    }
+    this.hitResults = outcome.results;
     spendCost(this.state.party[character], ability);
     this.portalRedirectTarget = null;
+    if (ability.id === 'armor-break' && !outcome.success) {
+      this.showFloatingText(
+        'ARMOR BREAK FALLIDO',
+        GAME_CONFIG.characters[boss].x,
+        GAME_CONFIG.characters[boss].feetY - GAME_CONFIG.characters[boss].displayHeight - 20,
+        '#ff7b7b',
+      );
+      this.setActorFrame(character, 'furai_romper', GAME_CONFIG.timing.spritePoseMs);
+      this.promptText.setText('Armor Break falló: no se aplica la marca.');
+      this.refreshHud();
+      this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => {
+        this.finishPlayerAction();
+      });
+      return;
+    }
     if (
       boss === 'kosmelys'
       && ability.damage > 0
@@ -3390,10 +3510,32 @@ export default class CombatScene extends Phaser.Scene {
     this.performAbilityHit(character, ability, 0);
   }
 
-  private executeHazelTargetedAbility(boss: BossId, ability: Ability): void {
+  private executeHazelTargetedAbility(
+    boss: BossId,
+    ability: Ability,
+    outcome: CommandOutcome,
+  ): void {
     spendCost(this.state.party.hazel, ability);
     this.portalRedirectTarget = null;
     this.phase = 'action';
+    if (!outcome.success) {
+      const target = GAME_CONFIG.characters[boss];
+      this.showFloatingText(
+        'FALLO · 0',
+        target.x,
+        target.feetY - target.displayHeight * 0.7,
+        '#ff7b7b',
+      );
+      this.setActorFrame('hazel', this.getActorFrames('hazel').hit, 550);
+      this.promptText.setText(`${ability.name} falló: no causa daño.`);
+      this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
+        if (this.phase !== 'action' || this.result) {
+          return;
+        }
+        this.finishHazelAbility(ability);
+      });
+      return;
+    }
     if (ability.id === 'glacio-shift') {
       this.soundscape.play('shift');
       this.setActorFrame('hazel', 'hazel_cambio');
@@ -3422,12 +3564,34 @@ export default class CombatScene extends Phaser.Scene {
     });
   }
 
-  private executeHazelAreaAbility(ability: Ability): void {
+  private executeHazelAreaAbility(ability: Ability, outcome: CommandOutcome): void {
     if (this.phase !== 'action' || this.result) {
       return;
     }
     spendCost(this.state.party.hazel, ability);
     this.portalRedirectTarget = null;
+    if (!outcome.success) {
+      (['iobrontes', 'kosmelys'] as const)
+        .filter((boss) => this.state.bosses[boss].health > 0)
+        .forEach((boss) => {
+          const target = GAME_CONFIG.characters[boss];
+          this.showFloatingText(
+            'FALLO · 0',
+            target.x,
+            target.feetY - target.displayHeight * 0.7,
+            '#ff7b7b',
+          );
+        });
+      this.setActorFrame('hazel', this.getActorFrames('hazel').hit, 550);
+      this.promptText.setText(`${ability.name} falló: no causa daño.`);
+      this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
+        if (this.phase !== 'action' || this.result) {
+          return;
+        }
+        this.finishHazelAbility(ability);
+      });
+      return;
+    }
     if (ability.id === 'ignis-shift') {
       this.soundscape.play('shift');
       this.setActorFrame('hazel', 'hazel_cambio');
@@ -3700,21 +3864,31 @@ export default class CombatScene extends Phaser.Scene {
         let retaliationDamage = 0;
         let retaliationShielded = false;
         let redirectedShielded = false;
+        const hitResult = this.hitResults[hitIndex] ?? 'normal';
+        const hitDamage = applyResultMultiplier(ability.damage, hitResult);
         if (this.portalRedirectTarget) {
           redirectedShielded = consumeShieldHit(this.state, this.portalRedirectTarget);
           resolvedDamage = redirectedShielded
             ? 0
-            : damagePartyMember(this.state, this.portalRedirectTarget, ability.damage);
+            : damagePartyMember(this.state, this.portalRedirectTarget, hitDamage);
         } else if (boss === 'iobrontes') {
-          const result = this.resolveIobrontesDamage(ability.damage, character, true);
+          const result = this.resolveIobrontesDamage(hitDamage, character, true);
           resolvedDamage = result.damage;
           empowered = result.empowered;
           retaliationDamage = result.retaliationDamage;
           retaliationShielded = result.retaliationShielded;
         } else {
-          const result = damageBossWithArmorBreak(this.state, boss, ability.damage);
+          const result = damageBossWithArmorBreak(this.state, boss, hitDamage);
           resolvedDamage = result.damage;
           empowered = result.empowered;
+        }
+        if (hitResult === 'perfect') {
+          this.showFloatingText(
+            'GOLPE CRÍTICO',
+            targetConfig.x,
+            targetConfig.feetY - targetConfig.displayHeight * 0.85 - hitIndex * 32,
+            '#8dffb0',
+          );
         }
         const multiplier = empowered ? 2 : 1;
         if (ability.id === 'tiger-spear' && resolvedDamage > 0) {
@@ -3828,7 +4002,7 @@ export default class CombatScene extends Phaser.Scene {
     this.phase = 'action';
     this.allyTargetingAbility = null;
     spendCost(this.state.party.sahira, ability);
-    this.returnCameraToArena(() => {
+    this.returnCameraToArena(() => this.runCommand(ability, this.characterAnchor(target), () => {
       this.setActorFrame('sahira', 'sahira_cura', 850);
       const restored = healPartyMember(this.state, target);
       this.soundscape.play(ability.sound);
@@ -3847,7 +4021,7 @@ export default class CombatScene extends Phaser.Scene {
       this.promptText.setText(`${GAME_CONFIG.characters[target].name} recupera toda su salud.`);
       this.refreshHud();
       this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
-    });
+    }));
   }
 
   private selectAllyTarget(target: CharacterId): void {
@@ -3879,20 +4053,34 @@ export default class CombatScene extends Phaser.Scene {
     this.phase = 'action';
     this.allyTargetingAbility = null;
     spendCost(this.state.party.sahira, ability);
-    this.returnCameraToArena(() => {
-      this.state.party[target].shieldHits = 2;
+    this.returnCameraToArena(() => this.runCommand(ability, this.characterAnchor(target), (outcome) => {
+      if (outcome.charges <= 0) {
+        this.setActorFrame('sahira', this.getActorFrames('sahira').hit, 550);
+        this.showFloatingText(
+          'ESCUDO FALLIDO',
+          GAME_CONFIG.characters[target].x,
+          GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight * 0.7,
+          '#ff7b7b',
+        );
+        this.promptText.setText('Hippopotamus Shield falló: no se aplica ningún escudo.');
+        this.refreshHud();
+        this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+        return;
+      }
+      const charges = outcome.charges;
+      this.state.party[target].shieldHits = charges;
       this.setActorFrame('sahira', 'sahira_cura', 850);
       this.soundscape.play(ability.sound);
       this.showFloatingText(
-        'ESCUDO HIPOPÓTAMO · 2 GOLPES',
+        `ESCUDO HIPOPÓTAMO · ${charges} ${charges === 1 ? 'GOLPE' : 'GOLPES'}`,
         GAME_CONFIG.characters[target].x,
         GAME_CONFIG.characters[target].feetY - GAME_CONFIG.characters[target].displayHeight * 0.7,
         '#a8ffbd',
       );
-      this.promptText.setText(`${GAME_CONFIG.characters[target].name} queda protegido de sus dos próximos ataques.`);
+      this.promptText.setText(`${GAME_CONFIG.characters[target].name} queda protegido de sus ${charges === 1 ? 'próximo ataque' : 'dos próximos ataques'}.`);
       this.refreshHud();
       this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
-    });
+    }));
   }
 
   private finishPlayerAction(): void {
@@ -4032,6 +4220,10 @@ export default class CombatScene extends Phaser.Scene {
           return;
         }
       }
+    }
+    if (this.commandRunner?.isActive()) {
+      this.commandRunner.handleKey(event);
+      return;
     }
     if (key === 'r' && this.phase === 'ended') {
       this.scene.restart();
