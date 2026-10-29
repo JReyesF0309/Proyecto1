@@ -74,6 +74,7 @@ export default class HazelTestScene extends Phaser.Scene {
     this.createBosses();
     this.createTexts();
     this.refresh();
+    this.soundscape.start();
 
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

@@ -195,11 +195,14 @@ export default class CombatScene extends Phaser.Scene {
   private portalEffects: Phaser.GameObjects.Image[] = [];
   private soundscape!: Soundscape;
   private uiCamera!: Phaser.Cameras.Scene2D.Camera;
+  private overlayCamera!: Phaser.Cameras.Scene2D.Camera;
   private audioText!: Phaser.GameObjects.Text;
   private actionPanel!: Phaser.GameObjects.Graphics;
   private targetArrow!: Phaser.GameObjects.Text;
+  private enemyTargetArrows!: Phaser.GameObjects.Graphics;
   private backButton!: Phaser.GameObjects.Container;
   private spaceKeyBadge!: Phaser.GameObjects.Container;
+  private sahiraSpaceHint?: Phaser.GameObjects.Text;
   private cameraTransitioning = false;
   private previousTurnWasBoss = false;
   private readonly hazelEffectObjects: Phaser.GameObjects.Image[] = [];
@@ -302,11 +305,15 @@ export default class CombatScene extends Phaser.Scene {
     this.uiCamera = this.cameras.add(0, 0, WIDTH, HEIGHT);
     this.cameras.main.ignore(hudObjects);
     this.uiCamera.ignore(battlefieldObjects);
+    this.overlayCamera = this.cameras.add(0, 0, WIDTH, HEIGHT);
+    this.overlayCamera.ignore([...battlefieldObjects, ...hudObjects]);
+    this.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, this.ignoreInOverlay, this);
 
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
     this.input.on('pointerdown', this.startAudio, this);
     this.input.on('pointerdown', this.handleUiPointer, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, this.ignoreInOverlay, this);
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
       this.input.off('pointerdown', this.startAudio, this);
       this.input.off('pointerdown', this.handleUiPointer, this);
@@ -314,10 +321,12 @@ export default class CombatScene extends Phaser.Scene {
     });
 
     this.refreshHud();
+    this.startAudio();
     this.startTurn();
   }
 
   update(): void {
+    this.updateEnemyTargetArrows();
     if (this.phase === 'target-boss') {
       this.positionBossTargetHud();
     }
@@ -339,18 +348,11 @@ export default class CombatScene extends Phaser.Scene {
       const elapsed = this.time.now - this.jumpWindowStartedAt;
       const progress = Phaser.Math.Clamp(elapsed / GAME_CONFIG.timing.jumpWindowMs, 0, 1);
       this.timingRing.clear();
-      this.timingRing.lineStyle(8, 0xffffff, 0.95);
       PLAYABLE_CHARACTERS.forEach((id) => {
         if (this.state.party[id].health <= 0) {
           return;
         }
-        const character = GAME_CONFIG.characters[id];
-        this.timingRing.strokeEllipse(
-          character.x,
-          character.feetY - character.displayHeight * 0.53,
-          Phaser.Math.Linear(character.displayHeight * 0.78, 118, progress),
-          Phaser.Math.Linear(character.displayHeight * 1.02, 175, progress),
-        );
+        this.drawTimingRing(this.timingRing, id, progress, false);
       });
       return;
     }
@@ -363,19 +365,8 @@ export default class CombatScene extends Phaser.Scene {
     const inDefenseWindow = elapsed >= DEFENSE_WINDOW_START_MS && elapsed <= DEFENSE_WINDOW_END_MS;
     const isPerfectWindow =
       elapsed >= PERFECT_PARRY_WINDOW_START_MS && elapsed <= DEFENSE_WINDOW_END_MS;
-    const ringColor = isPerfectWindow ? 0xffffff : inDefenseWindow ? COLORS.yellow : 0xbdb6cf;
     const target = GAME_CONFIG.characters[this.targetCharacter];
-    const width = Phaser.Math.Linear(target.displayHeight * 0.78, 118, progress);
-    const height = Phaser.Math.Linear(target.displayHeight * 1.02, 175, progress);
-    this.timingRing.clear();
-    this.timingRing.lineStyle(isPerfectWindow ? 8 : 5, ringColor, isPerfectWindow ? 1 : 0.8);
-    this.timingRing.strokeEllipse(
-      target.x,
-      target.feetY - target.displayHeight * 0.53,
-      width,
-      height,
-    );
-    this.timingRing.setAlpha(isPerfectWindow ? 0.8 + Math.sin(this.time.now / 45) * 0.2 : 1);
+    this.drawTimingRing(this.timingRing, this.targetCharacter, progress);
 
     if (!this.responseDirection) {
       const timingLabel = isPerfectWindow
@@ -390,6 +381,78 @@ export default class CombatScene extends Phaser.Scene {
       this.createImpact(target.x, target.feetY - target.displayHeight * 0.52, COLORS.purple, 1.1);
       this.showFloatingText('IMPACTO', target.x, target.feetY - target.displayHeight - 20, '#ead8ff');
     }
+  }
+
+  private ignoreInOverlay(object: Phaser.GameObjects.GameObject): void {
+    this.overlayCamera?.ignore(object);
+  }
+
+  // Muestra el objeto solo en la cámara superpuesta, por encima de la interfaz.
+  private promoteToOverlay<T extends Phaser.GameObjects.GameObject>(object: T): T {
+    this.cameras.main.ignore(object);
+    this.uiCamera.ignore(object);
+    object.cameraFilter &= ~this.overlayCamera.id;
+    return object;
+  }
+
+  private updateEnemyTargetArrows(): void {
+    const main = this.cameras.main;
+    this.overlayCamera.setZoom(main.zoom).setScroll(main.scrollX, main.scrollY);
+    const arrows = this.enemyTargetArrows;
+    arrows.clear();
+    const targets = new Set<CharacterId>();
+    if (this.phase === 'meteor-rain') {
+      this.meteorEvents.forEach((event) => {
+        if (!event.resolved) {
+          targets.add(event.target);
+        }
+      });
+    } else if (
+      this.targetCharacter
+      && (this.phase === 'casting' || this.phase === 'windup'
+        || this.phase === 'projectile' || this.phase === 'cosmic-rays')
+    ) {
+      targets.add(this.targetCharacter);
+    }
+    const bob = Math.sin(this.time.now / 140) * 8;
+    targets.forEach((id) => {
+      const character = GAME_CONFIG.characters[id];
+      const x = character.x;
+      const tipY = character.feetY - character.displayHeight - 8 + bob;
+      arrows.fillStyle(0x9dffb0, 1);
+      arrows.lineStyle(5, 0x171326, 1);
+      arrows.beginPath();
+      arrows.moveTo(x - 24, tipY - 40);
+      arrows.lineTo(x + 24, tipY - 40);
+      arrows.lineTo(x, tipY);
+      arrows.closePath();
+      arrows.fillPath();
+      arrows.strokePath();
+    });
+  }
+
+  private drawTimingRing(
+    graphics: Phaser.GameObjects.Graphics,
+    id: CharacterId,
+    progress: number,
+    clear = true,
+  ): void {
+    if (clear) {
+      graphics.clear();
+    }
+    // Sahira siempre bloquea, así que solo necesita la dirección.
+    if (id === 'sahira' || progress >= 1) {
+      return;
+    }
+    const character = GAME_CONFIG.characters[id];
+    const remaining = 1 - Math.max(0, progress);
+    graphics.lineStyle(6, 0xffffff, 0.95);
+    graphics.strokeEllipse(
+      character.x,
+      character.feetY - character.displayHeight * 0.53,
+      character.displayHeight * 0.78 * remaining,
+      character.displayHeight * 1.02 * remaining,
+    );
   }
 
   private createArena(): void {
@@ -477,6 +540,7 @@ export default class CombatScene extends Phaser.Scene {
       stroke: '#171326',
       strokeThickness: 6,
     }).setOrigin(0.5, 1).setDepth(18).setVisible(false);
+    this.enemyTargetArrows = this.add.graphics().setDepth(19);
     this.missingBossLabels = {
       iobrontes: this.createMissingBossLabel('iobrontes'),
       kosmelys: this.createMissingBossLabel('kosmelys'),
@@ -603,7 +667,7 @@ export default class CombatScene extends Phaser.Scene {
       fontFamily: GAME_FONT_FAMILY,
       fontSize: '28px',
       fontStyle: 'bold',
-      color: '#ffffff',
+      color: '#9dffb0',
       stroke: '#171326',
       strokeThickness: 6,
       align: 'center',
@@ -1339,10 +1403,15 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     const target = GAME_CONFIG.characters[this.selectedBoss];
-    this.targetArrow.setPosition(
-      target.x,
-      target.feetY - target.displayHeight - 8,
-    );
+    const left = this.selectedBoss === 'iobrontes';
+    const offset = target.displayHeight * 0.3;
+    this.targetArrow
+      .setText(left ? '▶' : '◀')
+      .setOrigin(0.5, 0.5)
+      .setPosition(
+        target.x + (left ? -offset : offset),
+        target.feetY - target.displayHeight * 0.55,
+      );
   }
 
   private createBackButton(layout: typeof GAME_CONFIG.actionHud): Phaser.GameObjects.Container {
@@ -1733,7 +1802,7 @@ export default class CombatScene extends Phaser.Scene {
         source.height * GAME_CONFIG.kosmelysAttacks.cosmicProjectileScale,
       )
       .setDepth(12);
-    this.uiCamera.ignore(this.cosmicProjectile);
+    this.promoteToOverlay(this.cosmicProjectile);
     const initialVector = midpoint.clone().subtract(start);
     this.cosmicProjectile.setRotation(Math.atan2(initialVector.y, initialVector.x));
     const halfDuration = this.cosmicMidpointMs;
@@ -1829,14 +1898,7 @@ export default class CombatScene extends Phaser.Scene {
       0,
       1,
     );
-    this.timingRing.clear();
-    this.timingRing.lineStyle(perfect ? 8 : 5, perfect ? 0xffffff : COLORS.violet, 0.9);
-    this.timingRing.strokeEllipse(
-      target.x,
-      target.feetY - target.displayHeight * 0.53,
-      Phaser.Math.Linear(target.displayHeight * 0.78, 118, progress),
-      Phaser.Math.Linear(target.displayHeight * 1.02, 175, progress),
-    );
+    this.drawTimingRing(this.timingRing, this.targetCharacter, progress);
     if (this.responseDirection === null) {
       this.targetText.setText(
         perfect
@@ -2027,7 +2089,8 @@ export default class CombatScene extends Phaser.Scene {
       },
     ).setOrigin(0.5).setDepth(17);
     const ring = this.add.graphics().setDepth(10);
-    this.uiCamera.ignore([sprite, warning, ring]);
+    this.uiCamera.ignore([warning, ring]);
+    this.promoteToOverlay(sprite);
     this.meteorEvents.push({
       id,
       attackId:
@@ -2092,13 +2155,9 @@ export default class CombatScene extends Phaser.Scene {
         && elapsed >= event.normalBlockEndsAtMs;
       event.ring.clear();
       if (activeWindow) {
-        event.ring.lineStyle(perfectWindow ? 8 : 5, perfectWindow ? 0xffffff : 0xffd65c, 0.9);
-        event.ring.strokeEllipse(
-          target.x,
-          target.feetY - target.displayHeight * 0.53,
-          target.displayHeight * (0.78 - progress * 0.28),
-          target.displayHeight * (1.02 - progress * 0.38),
-        );
+        const ringProgress = (elapsed - event.defenseOpensAtMs)
+          / (event.preparationMs + event.travelMs - event.defenseOpensAtMs);
+        this.drawTimingRing(event.ring, event.target, ringProgress);
         this.targetText.setText(
           event.target === 'sahira'
             ? 'SAHIRA · W PARA CUBRIRSE'
@@ -2510,6 +2569,23 @@ export default class CombatScene extends Phaser.Scene {
   private beginJumpWindow(): void {
     this.phase = 'jump-window';
     this.spaceKeyBadge.setVisible(true);
+    if (this.state.party.sahira.health > 0) {
+      const sahira = GAME_CONFIG.characters.sahira;
+      this.sahiraSpaceHint = this.add.text(
+        sahira.x,
+        sahira.feetY - sahira.displayHeight - 20,
+        'SPACE',
+        {
+          fontFamily: GAME_FONT_FAMILY,
+          fontSize: '24px',
+          fontStyle: 'bold',
+          color: '#f5d47d',
+          backgroundColor: '#352719',
+          padding: { x: 14, y: 8 },
+        },
+      ).setOrigin(0.5).setDepth(17);
+      this.uiCamera.ignore(this.sahiraSpaceHint);
+    }
     this.jumpWindowStartedAt = this.time.now;
     this.targetText.setText('PULSA [ SPACE ] · SALTO EN EQUIPO');
     const boss = GAME_CONFIG.characters.iobrontes;
@@ -2588,6 +2664,8 @@ export default class CombatScene extends Phaser.Scene {
     }
     this.phase = 'resolving';
     this.spaceKeyBadge.setVisible(false);
+    this.sahiraSpaceHint?.destroy();
+    this.sahiraSpaceHint = undefined;
     this.timingRing.clear();
     this.targetText.setText('');
     if (this.activeBolt) {
@@ -2759,7 +2837,7 @@ export default class CombatScene extends Phaser.Scene {
     this.strokePolyline(bolt, points);
     bolt.lineStyle(6, 0xf8edff, 1);
     this.strokePolyline(bolt, points);
-    return bolt;
+    return this.promoteToOverlay(bolt);
   }
 
   private strokePolyline(

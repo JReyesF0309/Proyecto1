@@ -98,7 +98,7 @@ export default class WelcomeScene extends Phaser.Scene {
   }
 
   private createWelcomeText(): void {
-    this.add.text(WIDTH / 2, 48, 'LA DEXÍADA', {
+    this.add.text(WIDTH / 2, 48, 'THE DEXIAD', {
       fontFamily: FONT,
       fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
