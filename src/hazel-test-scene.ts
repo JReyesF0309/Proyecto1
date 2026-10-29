@@ -274,15 +274,25 @@ export default class HazelTestScene extends Phaser.Scene {
     this.cancelJump();
     this.setHazelFrame(this.frames.jump, GAME_CONFIG.timing.jumpPoseMs);
     const scale = GAME_CONFIG.sprite.frameScale[this.frames.jump] ?? 1;
+    const { startLift, peakLift } = GAME_CONFIG.sprite.jump;
+    const height = HAZEL.displayHeight * scale;
+    const half = GAME_CONFIG.timing.jumpPoseMs / 2;
+    this.hazel.setY(HAZEL.feetY - height * startLift);
     this.jumpTween = this.tweens.add({
       targets: this.hazel,
-      y: HAZEL.feetY - HAZEL.displayHeight * scale * 0.5,
-      duration: GAME_CONFIG.timing.jumpPoseMs / 2,
+      y: HAZEL.feetY - height * peakLift,
+      duration: half,
       ease: 'Sine.easeOut',
-      yoyo: true,
       onComplete: () => {
-        this.jumpTween = undefined;
-        this.hazel.setY(HAZEL.feetY);
+        this.jumpTween = this.tweens.add({
+          targets: this.hazel,
+          y: HAZEL.feetY,
+          duration: half,
+          ease: 'Sine.easeIn',
+          onComplete: () => {
+            this.jumpTween = undefined;
+          },
+        });
       },
     });
   }

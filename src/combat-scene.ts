@@ -2550,26 +2550,33 @@ export default class CombatScene extends Phaser.Scene {
           this.getActorFrames(id).jump,
           GAME_CONFIG.timing.jumpPoseMs,
         );
-        if (id === 'hazel') {
-          this.liftHazelJump();
-        }
+        this.liftJump(id);
       }
     });
     this.targetText.setText('¡SALTO!');
   }
 
-  private liftHazelJump(): void {
-    const sprite = this.actorSprites.hazel;
-    const config = GAME_CONFIG.characters.hazel;
-    const jumpFrame = this.getActorFrames('hazel').jump;
-    const scale = GAME_CONFIG.sprite.frameScale[jumpFrame] ?? 1;
+  private liftJump(id: CharacterId): void {
+    const sprite = this.actorSprites[id];
+    const config = GAME_CONFIG.characters[id];
+    const scale = GAME_CONFIG.sprite.frameScale[this.getActorFrames(id).jump] ?? 1;
+    const { startLift, peakLift } = GAME_CONFIG.sprite.jump;
+    const height = config.displayHeight * scale;
+    const half = GAME_CONFIG.timing.jumpPoseMs / 2;
+    sprite.setY(config.feetY - height * startLift);
     this.tweens.add({
       targets: sprite,
-      y: config.feetY - config.displayHeight * scale * 0.5,
-      duration: GAME_CONFIG.timing.jumpPoseMs / 2,
+      y: config.feetY - height * peakLift,
+      duration: half,
       ease: 'Sine.easeOut',
-      yoyo: true,
-      onComplete: () => sprite.setY(config.feetY),
+      onComplete: () => {
+        this.tweens.add({
+          targets: sprite,
+          y: config.feetY,
+          duration: half,
+          ease: 'Sine.easeIn',
+        });
+      },
     });
   }
 

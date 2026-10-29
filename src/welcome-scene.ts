@@ -17,6 +17,15 @@ export default class WelcomeScene extends Phaser.Scene {
   private readonly onHazelTest = (): void => {
     this.scene.start('escena_pruebahazel');
   };
+  private readonly onSahiraTest = (): void => {
+    this.scene.start('escena_sahira_prueba');
+  };
+  private readonly onDexiosTest = (): void => {
+    this.scene.start('escena_dexios_prueba');
+  };
+  private readonly onFuraiTest = (): void => {
+    this.scene.start('escena_furai_prueba');
+  };
   private welcomeMusic?: Phaser.Sound.BaseSound;
 
   constructor() {
@@ -44,10 +53,16 @@ export default class WelcomeScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-ENTER', this.onEnter, this);
     this.input.keyboard?.on('keydown-H', this.onHazelTest, this);
+    this.input.keyboard?.on('keydown-S', this.onSahiraTest, this);
+    this.input.keyboard?.on('keydown-D', this.onDexiosTest, this);
+    this.input.keyboard?.on('keydown-F', this.onFuraiTest, this);
     this.input.on('pointerdown', this.onEnter, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ENTER', this.onEnter, this);
       this.input.keyboard?.off('keydown-H', this.onHazelTest, this);
+      this.input.keyboard?.off('keydown-S', this.onSahiraTest, this);
+      this.input.keyboard?.off('keydown-D', this.onDexiosTest, this);
+      this.input.keyboard?.off('keydown-F', this.onFuraiTest, this);
       this.input.off('pointerdown', this.onEnter, this);
       this.welcomeMusic?.stop();
     });
@@ -105,7 +120,7 @@ export default class WelcomeScene extends Phaser.Scene {
     this.add.text(
       WIDTH / 2,
       164,
-      'Welcome, warrior, to a turn-based RPG with real-time defense.\nRespond to each attack according to its direction.',
+      'Welcome, warrior, to a turn-based RPG\nwith real-time defense.\nRespond to each attack according to its direction.',
       {
         fontFamily: FONT,
         fontSize: WELCOME_FONT_SIZE,
@@ -116,7 +131,7 @@ export default class WelcomeScene extends Phaser.Scene {
       },
     ).setOrigin(0.5, 0).setDepth(2);
 
-    this.add.text(WIDTH / 2, 293, 'DEFEND IN THE DIRECTION OF THE ATTACK', {
+    this.add.text(WIDTH / 2, 335, 'DEFEND IN THE DIRECTION OF THE ATTACK', {
       fontFamily: FONT,
       fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
@@ -127,7 +142,7 @@ export default class WelcomeScene extends Phaser.Scene {
 
     this.add.text(
       WIDTH / 2,
-      484,
+      545,
       'Use it when an attack targets the entire party.',
       {
         fontFamily: FONT,
@@ -136,11 +151,11 @@ export default class WelcomeScene extends Phaser.Scene {
         align: 'center',
       },
     ).setOrigin(0.5).setDepth(2);
-    this.createTargetSelectionInstructions(WIDTH / 2, 520);
+    this.createTargetSelectionInstructions(WIDTH / 2, 590, 640);
 
     this.add.text(
       WIDTH / 2,
-      568,
+      690,
       'A shrinking circle reveals the timing.\nBlock normally, or strike at the perfect moment.',
       {
         fontFamily: FONT,
@@ -154,7 +169,7 @@ export default class WelcomeScene extends Phaser.Scene {
 
     this.add.text(
       WIDTH / 2,
-      665,
+      795,
       'Face two formidable bosses with four heroes.\nEach hero has a distinct strategy and mechanics',
       {
         fontFamily: FONT,
@@ -166,7 +181,7 @@ export default class WelcomeScene extends Phaser.Scene {
       },
     ).setOrigin(0.5, 0).setDepth(2);
 
-    this.add.text(WIDTH / 2, 855, 'MAY THE GODS GUIDE YOU, WARRIOR', {
+    this.add.text(WIDTH / 2, 920, 'MAY THE GODS GUIDE YOU, WARRIOR', {
       fontFamily: FONT,
       fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',
@@ -180,7 +195,7 @@ export default class WelcomeScene extends Phaser.Scene {
     const keyWidth = 68;
     const keyHeight = 62;
     const centerX = WIDTH / 2;
-    const keyY = 361;
+    const keyY = 402;
     const keyGap = 18;
     const keySpacing = keyWidth + keyGap;
     ['W', 'A', 'S', 'D'].forEach((key, index) => {
@@ -193,7 +208,7 @@ export default class WelcomeScene extends Phaser.Scene {
       );
     });
 
-    const spaceY = 442;
+    const spaceY = 480;
     const spaceWidth = 220;
     const spaceHeight = 48;
     this.add.graphics()
@@ -214,15 +229,19 @@ export default class WelcomeScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
   }
 
-  private createTargetSelectionInstructions(centerX: number, y: number): void {
+  private createTargetSelectionInstructions(centerX: number, textY: number, keysY: number): void {
+    let y = textY;
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
       fontFamily: FONT,
       fontSize: WELCOME_FONT_SIZE,
       color: WHITE,
     };
+    this.add.text(centerX, y, 'You can choose between attacks and objectives', textStyle)
+      .setOrigin(0.5).setDepth(2);
+    y = keysY;
     const gap = 5;
     const parts: Array<{ type: 'text' | 'key'; value: string }> = [
-      { type: 'text', value: 'You can choose between attacks and objectives with ' },
+      { type: 'text', value: 'with ' },
       { type: 'key', value: '1' },
       { type: 'text', value: ', ' },
       { type: 'key', value: '2' },
