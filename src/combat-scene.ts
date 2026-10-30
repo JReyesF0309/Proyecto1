@@ -3,6 +3,7 @@ import {
   BossId,
   CharacterId,
   Direction,
+  EB_GARAMOND_FONT_FAMILY,
   GAME_CONFIG,
   GAME_FONT_FAMILY,
   ICON_ASSETS,
@@ -1221,15 +1222,25 @@ export default class CombatScene extends Phaser.Scene {
         : ability.id === 'hippopotamus-shield'
           ? `  ·  USOS ${this.state.sahiraAbilityUses.shield}/${SAHIRA_ABILITY_USE_LIMITS.shield}`
           : '';
-    const detail = this.add.text(15, 42, `${ability.detail}  ·  ${costLabel}${usesLabel}`, {
-      fontFamily: UI_FONT_FAMILY,
-      fontSize: '12px',
+    const description = this.add.text(15, 42, ability.detail, {
+      fontFamily: EB_GARAMOND_FONT_FAMILY,
+      fontSize: '14px',
       color: '#d0c2dc',
     });
+    const resourceDetail = this.add.text(
+      description.x + description.width + 8,
+      42,
+      `${costLabel}${usesLabel}`,
+      {
+        fontFamily: UI_FONT_FAMILY,
+        fontSize: '12px',
+        color: '#d0c2dc',
+      },
+    );
     const available = this.activeCharacter !== null
       && canUseAbility(this.state, this.activeCharacter, ability)
       && !this.cameraTransitioning;
-    const button = this.add.container(0, y, [background, number, name, detail])
+    const button = this.add.container(0, y, [background, number, name, description, resourceDetail])
       .setSize(width, 76)
       .setAlpha(available && this.phase === 'player' ? 1 : 0.42);
     button.setInteractive(

@@ -81,6 +81,7 @@ import kosmelysCover from '../assets/kosmelys/kosmelys_portada.png';
 
 export const GAME_FONT_FAMILY = 'Archeologicaps';
 export const UI_FONT_FAMILY = 'Arial';
+export const EB_GARAMOND_FONT_FAMILY = 'EB Garamond';
 export const NORMALIZED_SPRITE_KEYS = [
   'dexios_abajo', 'dexios_arriba', 'dexios_ataque', 'dexios_base', 'dexios_blanco',
   'dexios_derecha', 'dexios_herido', 'dexios_izquierda', 'dexios_salto', 'dexios_rojo',

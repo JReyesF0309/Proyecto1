@@ -1,5 +1,11 @@
 import Phaser from 'phaser';
-import { COVER_ASSETS, GAME_CONFIG, GAME_FONT_FAMILY, UI_FONT_FAMILY } from './game-config';
+import {
+  COVER_ASSETS,
+  EB_GARAMOND_FONT_FAMILY,
+  GAME_CONFIG,
+  GAME_FONT_FAMILY,
+  UI_FONT_FAMILY,
+} from './game-config';
 import stripBlackMattes from './strip-black-matte';
 import welcomeMusicUrl from '../assets/music/start.mp3';
 
@@ -8,6 +14,7 @@ const HEIGHT = GAME_CONFIG.canvas.height;
 const WHITE = '#fffaf0';
 const GOLD = 0xe7bd65;
 const FONT = GAME_FONT_FAMILY;
+const DESCRIPTION_FONT = EB_GARAMOND_FONT_FAMILY;
 const WELCOME_FONT_SIZE = '27px';
 
 export default class WelcomeScene extends Phaser.Scene {
@@ -102,7 +109,7 @@ export default class WelcomeScene extends Phaser.Scene {
       164,
       'Welcome, warrior, to a turn-based RPG\nwith real-time defense.\nRespond to each attack according to its direction.',
       {
-        fontFamily: FONT,
+        fontFamily: DESCRIPTION_FONT,
         fontSize: WELCOME_FONT_SIZE,
         color: WHITE,
         align: 'center',
@@ -125,7 +132,7 @@ export default class WelcomeScene extends Phaser.Scene {
       545,
       'Use it when an attack targets the entire party.',
       {
-        fontFamily: FONT,
+        fontFamily: DESCRIPTION_FONT,
         fontSize: WELCOME_FONT_SIZE,
         color: WHITE,
         align: 'center',
@@ -138,7 +145,7 @@ export default class WelcomeScene extends Phaser.Scene {
       690,
       'A shrinking circle reveals the timing.\nBlock normally, or strike at the perfect moment.',
       {
-        fontFamily: FONT,
+        fontFamily: DESCRIPTION_FONT,
         fontSize: WELCOME_FONT_SIZE,
         color: WHITE,
         align: 'center',
@@ -212,7 +219,7 @@ export default class WelcomeScene extends Phaser.Scene {
   private createTargetSelectionInstructions(centerX: number, textY: number, keysY: number): void {
     let y = textY;
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontFamily: FONT,
+      fontFamily: DESCRIPTION_FONT,
       fontSize: WELCOME_FONT_SIZE,
       color: WHITE,
     };

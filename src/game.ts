@@ -5,7 +5,7 @@ import HazelTestScene from './hazel-test-scene';
 import SahiraTestScene from './sahira-test-scene';
 import DexiosTestScene from './dexios-test-scene';
 import FuraiTestScene from './furai-test-scene';
-import { GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
+import { EB_GARAMOND_FONT_FAMILY, GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
 import WelcomeScene from './welcome-scene';
 
 const config: Phaser.Types.Core.GameConfig = {
@@ -29,5 +29,9 @@ const config: Phaser.Types.Core.GameConfig = {
 await document.fonts.load(`16px "${GAME_FONT_FAMILY}"`);
 if (!document.fonts.check(`16px "${GAME_FONT_FAMILY}"`)) {
   throw new Error(`No se pudo cargar la fuente ${GAME_FONT_FAMILY}`);
+}
+await document.fonts.load(`16px "${EB_GARAMOND_FONT_FAMILY}"`);
+if (!document.fonts.check(`16px "${EB_GARAMOND_FONT_FAMILY}"`)) {
+  throw new Error(`No se pudo cargar la fuente ${EB_GARAMOND_FONT_FAMILY}`);
 }
 new Phaser.Game(config);
