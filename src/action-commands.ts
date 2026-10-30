@@ -94,14 +94,26 @@ export interface DirectionSequenceCommand {
   graded: boolean;
 }
 
+export interface HoldBarCommand {
+  type: 'HOLD_BAR';
+  keys: [string, string];
+  fillMs: number;
+  // Ventanas relativas a T (fillMs) al soltar.
+  normalStartMs: number;
+  perfectStartMs: number;
+  endMs: number;
+  timeoutMs: number;
+}
+
 export interface HorizontalControlCommand {
   type: 'HORIZONTAL_CONTROL';
   leftKey: string;
   rightKey: string;
   durationMs: number;
-  lengthPx: number;
-  ballDiameterRatio: number;
-  speedRatio: number;
+  widthPx: number;
+  heightPx: number;
+  ballRadiusPx: number;
+  speedPxPerSec: number;
 }
 
 export interface CircleOverlapCommand {
@@ -128,6 +140,7 @@ export type ActionCommand =
   | { type: 'NONE' }
   | CircleTimingCommand
   | DirectionSequenceCommand
+  | HoldBarCommand
   | HorizontalControlCommand
   | CircleOverlapCommand
   | RapidPressCommand;
@@ -150,7 +163,15 @@ export const ABILITY_COMMANDS: Record<string, AbilityCommandConfig> = {
   'triple-lightning': { illustration: 'dexios_ataque_amarillo', command: { type: 'NONE' } },
   'electric-arc': {
     illustration: 'dexios_ataque_blanco',
-    command: { type: 'CIRCLE_TIMING', keys: ['w', 'w', 'w'], ...ARC_TIMING },
+    command: {
+      type: 'HOLD_BAR',
+      keys: ['a', 'd'],
+      fillMs: 1500,
+      normalStartMs: -700,
+      perfectStartMs: -300,
+      endMs: 100,
+      timeoutMs: 8000,
+    },
   },
   'chaotic-lightning': {
     illustration: 'dexios_ataque_rojo',
@@ -177,9 +198,10 @@ export const ABILITY_COMMANDS: Record<string, AbilityCommandConfig> = {
       leftKey: 'a',
       rightKey: 'd',
       durationMs: 3000,
-      lengthPx: 100,
-      ballDiameterRatio: 0.2,
-      speedRatio: 0.4,
+      widthPx: 280,
+      heightPx: 120,
+      ballRadiusPx: 10,
+      speedPxPerSec: 78,
     },
   },
   'jackal-strike': { illustration: 'sahira_ataque_chacal', command: { type: 'NONE' } },
@@ -191,7 +213,7 @@ export const ABILITY_COMMANDS: Record<string, AbilityCommandConfig> = {
       key: ' ',
       stationaryRadiusPx: 100,
       movingRadiusRatio: 0.5,
-      speedRatio: 0.4,
+      speedRatio: 1.28,
       startOffsetPx: -150,
       timeoutMs: 15000,
       normalOverlap: 0.5,
@@ -446,6 +468,9 @@ export class ActionCommandRunner {
       case 'DIRECTION_SEQUENCE':
         this.runDirectionSequence(command, at, finish);
         break;
+      case 'HOLD_BAR':
+        this.runHoldBar(command, at, finish);
+        break;
       case 'HORIZONTAL_CONTROL':
         this.runHorizontalControl(command, at, finish);
         break;
@@ -654,16 +679,93 @@ export class ActionCommandRunner {
     render();
   }
 
+  private runHoldBar(
+    cfg: HoldBarCommand,
+    at: { x: number; y: number },
+    finish: (outcome: CommandOutcome) => void,
+  ): void {
+    const graphics = this.track(this.scene.add.graphics().setDepth(3050));
+    this.makeText(at.x, at.y - 60, `Mantén ${keyLabel(cfg.keys[0])} + ${keyLabel(cfg.keys[1])} y suelta en la zona`, 26, '#e6e6e6');
+    const keyboard = this.scene.input.keyboard;
+    const pressed = cfg.keys.map((key) => keyboard?.addKey(key.toUpperCase(), false));
+    const barW = 500;
+    const barH = 36;
+    const left = at.x - barW / 2;
+    const top = at.y;
+    const startedAt = performance.now();
+    let holdStart: number | null = null;
+    let ended = false;
+    const release = (): void => {
+      pressed.forEach((key) => {
+        if (key) {
+          keyboard?.removeKey(key, true);
+        }
+      });
+      pressed.length = 0;
+    };
+    const conclude = (result: HitResult): void => {
+      ended = true;
+      release();
+      graphics.clear();
+      this.showResult(result, at.x, at.y);
+      this.delay(550, () => finish({ results: [result], success: result !== 'fail', charges: 0 }));
+    };
+    const both = (): boolean => pressed.length > 0 && pressed.every((key) => key?.isDown);
+    this.frame = () => {
+      if (ended) {
+        return;
+      }
+      const now = performance.now();
+      const isHolding = both();
+      if (holdStart === null) {
+        if (isHolding) {
+          holdStart = now;
+        } else if (now - startedAt >= cfg.timeoutMs) {
+          conclude('fail');
+          return;
+        }
+      } else {
+        const relative = now - holdStart - cfg.fillMs;
+        if (!isHolding) {
+          conclude(
+            relative < cfg.normalStartMs ? 'fail'
+              : relative < cfg.perfectStartMs ? 'normal' : 'perfect',
+          );
+          return;
+        }
+        if (relative > cfg.endMs) {
+          conclude('fail');
+          return;
+        }
+      }
+      const held = holdStart === null ? 0 : now - holdStart;
+      const ratio = Phaser.Math.Clamp(held / cfg.fillMs, 0, 1);
+      const zone = (from: number, to: number, color: number): void => {
+        graphics.fillStyle(color, 0.35).fillRect(left + barW * (from / cfg.fillMs), top, barW * ((to - from) / cfg.fillMs), barH);
+      };
+      graphics.clear();
+      graphics.fillStyle(0x000000, 0.6).fillRect(left - 4, top - 4, barW + 8, barH + 8);
+      zone(cfg.fillMs + cfg.normalStartMs, cfg.fillMs + cfg.perfectStartMs, 0xfff0a5);
+      zone(cfg.fillMs + cfg.perfectStartMs, cfg.fillMs, 0x8dffb0);
+      const relative = held - cfg.fillMs;
+      const color = relative >= cfg.perfectStartMs ? 0x8dffb0
+        : relative >= cfg.normalStartMs ? 0xfff0a5 : 0xff7b7b;
+      graphics.fillStyle(color, 1).fillRect(left, top + 4, barW * ratio, barH - 8);
+      graphics.lineStyle(4, 0xffffff, 1).strokeRect(left, top, barW, barH);
+    };
+    this.keyHandler = null;
+  }
+
   private runHorizontalControl(
     cfg: HorizontalControlCommand,
     at: { x: number; y: number },
     finish: (outcome: CommandOutcome) => void,
   ): void {
     const graphics = this.track(this.scene.add.graphics().setDepth(3050));
-    const timerText = this.makeText(at.x, at.y - cfg.lengthPx - 40, '', 28, '#ffffff');
-    this.makeText(at.x, at.y + cfg.lengthPx + 36, `${keyLabel(cfg.leftKey)} ← →  ${keyLabel(cfg.rightKey)}`, 26, '#e6e6e6');
-    const radius = (cfg.lengthPx * cfg.ballDiameterRatio) / 2;
-    const speed = cfg.lengthPx * cfg.speedRatio;
+    const timerText = this.makeText(at.x, at.y - cfg.heightPx / 2 - 40, '', 28, '#ffffff');
+    this.makeText(at.x, at.y + cfg.heightPx / 2 + 36, `${keyLabel(cfg.leftKey)} ← →  ${keyLabel(cfg.rightKey)}`, 26, '#e6e6e6');
+    const radius = cfg.ballRadiusPx;
+    const speed = cfg.speedPxPerSec;
     let offset = 0;
     let direction = Math.random() < 0.5 ? -1 : 1;
     const startedAt = performance.now();
@@ -695,7 +797,7 @@ export class ActionCommandRunner {
       offset += direction * speed * ((now - last) / 1000);
       last = now;
       const elapsed = now - startedAt;
-      if (Math.abs(offset) + radius > cfg.lengthPx / 2) {
+      if (Math.abs(offset) + radius > cfg.widthPx / 2) {
         conclude(false);
         return;
       }
@@ -706,9 +808,9 @@ export class ActionCommandRunner {
       timerText.setText(((cfg.durationMs - elapsed) / 1000).toFixed(1));
       graphics.clear();
       graphics.fillStyle(0x000000, 0.55)
-        .fillRect(at.x - cfg.lengthPx / 2, at.y - cfg.lengthPx, cfg.lengthPx, cfg.lengthPx * 2);
+        .fillRect(at.x - cfg.widthPx / 2, at.y - cfg.heightPx / 2, cfg.widthPx, cfg.heightPx);
       graphics.lineStyle(5, 0xd47cff, 1)
-        .strokeRect(at.x - cfg.lengthPx / 2, at.y - cfg.lengthPx, cfg.lengthPx, cfg.lengthPx * 2);
+        .strokeRect(at.x - cfg.widthPx / 2, at.y - cfg.heightPx / 2, cfg.widthPx, cfg.heightPx);
       graphics.fillStyle(0xfff0a5, 1).fillCircle(at.x + offset, at.y, radius);
       graphics.lineStyle(3, 0xffffff, 1).strokeCircle(at.x + offset, at.y, radius);
     };
