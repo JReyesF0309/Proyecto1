@@ -5059,3 +5059,385 @@ Implemented in `src/action-commands.ts` (config, runner, multipliers) and wired 
 - Flame Dance: W-A-S-D within 2 s (success = 100%, fail = 0). Figure Shards: 10 S presses in 3 s (success = 100%, fail = 0). Wrong-key input is ignored in circle commands.
 - Armor Break and Portal Shield still resolve through the existing damage pipeline; the command is evaluated first and is never redirected.
 
+# LA DEXÍADA — CHARACTER INTRODUCTION SCREENS
+
+## 1. GENERAL REQUIREMENTS
+
+Add a cinematic character introduction panel that appears automatically when the player enters each character's existing tutorial/trial scene.
+
+This applies to:
+
+- Dexios
+- Furai
+- Sahira
+- Hazel Lancaster
+
+The introduction must appear before the tutorial begins.
+
+**IMPORTANT:** Preserve all existing tutorials, combat mechanics, abilities, controls, character positions, animations, and gameplay systems.
+
+Do not rebuild the tutorial scenes.
+
+## 2. INTRODUCTION PANEL DESIGN
+
+### Dimensions and Appearance
+
+Create a centered rectangular panel occupying approximately:
+
+- 80% of the screen width.
+- 80% of the screen height.
+
+At 1920 × 1080, the panel should measure approximately 1536 × 864 pixels.
+
+Panel appearance:
+
+- Black background.
+- 90% opacity.
+- Elegant golden borders.
+- Greek-inspired visual styling consistent with La Dexíada.
+- Optional subtle entrance and exit fading animations.
+
+The panel must remain above all battlefield elements and tutorial controls while active.
+
+### Layout
+
+Divide the panel into two main sections.
+
+**LEFT SECTION — CHARACTER ILLUSTRATION**
+
+Display the character's corresponding full-body illustration.
+
+- The complete character must be visible.
+- Scale proportionally to fit the available panel height, approximately 80% of the game's screen height.
+- Preserve the illustration's original aspect ratio.
+- Do not stretch, deform, or crop the character.
+- Use the actual visible artwork bounds when accounting for transparent margins.
+- Center the character horizontally within the illustration section.
+- Allow sufficient padding to keep the sprite within the golden borders.
+
+Important: Some reference sprites contain floating character-name labels. These labels must not appear in the introduction screen.
+
+If these names are separate game text objects, hide them while the introduction is visible.
+
+If the labels are embedded in the images, create cleaned copies for the introductions without modifying or overwriting the original source files. Do not alter the character artwork itself.
+
+**RIGHT SECTION — CHARACTER INFORMATION**
+
+Display:
+
+1. Character title.
+2. Character subtitle.
+3. Character description.
+
+The title and subtitle must use the existing `Archeologicaps` font.
+
+The description must use a readable font with proper lowercase characters, preferably the secondary EB Garamond font if it is already installed.
+
+Keep a consistent layout across all four introductions.
+
+Use sufficient text wrapping, line spacing, internal margins, and vertical spacing.
+
+**Texts must never overlap each other, the character illustration, or the panel borders.**
+
+Do not scale text down excessively to fit. Adjust the text column or spacing when necessary.
+
+## 3. DEXIOS INTRODUCTION
+
+**Sprite:** `dexios.png`
+
+**Text color:** Red.
+
+**Title:** Dexios
+
+**Subtitle:** The unstable Thunderbolt
+
+**Description:**
+
+Dexios is a balanced fighter and potion-maker (not yet in this prototype). He gathers chaotic energy as he receives damage, which he can use to perform Chaotic Lightning, a very powerful attack that also inflicts self-damage.
+
+If he blocks normally, he receives only 5 damage. However, if his timing is perfect, he prevents all incoming damage and deals 5 damage back to the attacker for each successfully parried hit.
+
+### Presentation
+
+- Display Dexios's full-body illustration on the left.
+- Display his name prominently in red.
+- Display the subtitle directly below his name.
+- Place the description below the subtitle.
+- Use a bright, readable shade of red with sufficient contrast against the black panel.
+- Preserve the original Dexios artwork.
+
+## 4. FURAI INTRODUCTION
+
+**Sprite:** `furai.png`
+
+**Text color:** Purple.
+
+**Title:** Furai
+
+**Subtitle:** The errant Tiger
+
+**Description:**
+
+Furai is a quick fighter. He gathers Spirit by attacking with Tiger Spear and performing counterattacks, allowing him to use his other two abilities. One of these abilities can strengthen his allies' attacks.
+
+If he blocks normally, he receives only 5 damage. However, if his timing is perfect, he prevents all incoming damage. If he perfectly blocks every attack in an enemy's attack sequence, he performs a powerful counterattack dealing 20 damage.
+
+### Presentation
+
+- Display Furai's full-body illustration on the left.
+- Use purple for his title and thematic text.
+- Keep the description readable against the dark background.
+- Preserve the existing character artwork.
+
+## 5. SAHIRA INTRODUCTION
+
+**Sprite:** `sahira.png`
+
+**Text color:** Green.
+
+**Title:** Sahira
+
+**Subtitle:** The desheran Champion
+
+**Description:**
+
+Sahira is a tank fighter. She does not deal much damage, but she has more Health than her allies and possesses abilities that can either heal or protect them.
+
+Her support abilities have a limited number of uses, so choose carefully when to activate them.
+
+As long as she blocks in the correct direction during the defensive window, she prevents all incoming damage.
+
+### Presentation
+
+- Display Sahira's full-body illustration on the left.
+- Use green for her title and thematic text.
+- Organize her description in readable paragraphs.
+- Preserve the existing artwork and visual identity.
+
+## 6. HAZEL LANCASTER INTRODUCTION
+
+Hazel's introduction includes an additional interactive visual feature.
+
+### Sprites
+
+**Ignis form:** `Hazel_fuego.png`
+
+**Glacio form:** `Hazel_hielo.png`
+
+Verify the exact filename capitalization and extensions in the assets directory.
+
+### Title
+
+Hazel
+
+### Subtitle
+
+The elegant striker
+
+### Main Description
+
+**Text color:** Yellow.
+
+Hazel is a highly offensive fighter. She does not have many Health points and must perform Perfect Parries to prevent incoming damage.
+
+She has two elemental forms and can switch between them using a transformation ability.
+
+### Ignis Description
+
+**Text color:** Orange.
+
+**Text:**
+
+Ignis: Her flame ballet form can deal great damage to all enemies.
+
+### Glacio Description
+
+**Text color:** Light blue / Cyan.
+
+**Text:**
+
+Glacio: Her ice figure-skating form can deal huge damage to a single opponent.
+
+### Layout
+
+Display the following on the right side:
+
+1. Hazel — title in Archeologicaps.
+2. The elegant striker — subtitle in Archeologicaps.
+3. Main description in yellow.
+4. Ignis description in orange.
+5. Glacio description in light blue.
+
+Keep the descriptions in clearly separated paragraphs.
+
+Do not overlap or combine the colored descriptions.
+
+### Interactive Elemental Illustration
+
+Below Hazel's full-body illustration, add a button that switches the displayed illustration between Ignis and Glacio.
+
+Also allow the player to switch illustrations by pressing:
+
+`H`
+
+Display the H key indicator in gold, following the existing game's visual style for keyboard instructions.
+
+Example button label:
+
+`[H] CAMBIAR FORMA`
+
+### Expected Behavior
+
+Hazel's introduction initially displays her Ignis illustration.
+
+When the player presses H or clicks the button:
+
+- Replace `Hazel_fuego.png` with `Hazel_hielo.png`.
+- Preserve the illustration's overall position and display scale.
+- Use a subtle transition if desired.
+
+When H is pressed again:
+
+- Replace `Hazel_hielo.png` with `Hazel_fuego.png`.
+
+The player may switch between the two illustrations as many times as desired.
+
+**This is only an illustration-preview feature inside the introduction panel.**
+
+It must not change Hazel's actual battle form, combat state, Health, abilities, HUD, or resources.
+
+The text on the right must remain visible in both illustration modes.
+
+The transformation-preview button must remain inside the golden introduction panel.
+
+## 7. CONTINUE BUTTON AND TUTORIAL TRANSITION
+
+Every character introduction must include a clear Continue button.
+
+Suggested label:
+
+`CONTINUAR`
+
+Place it toward the bottom-right of the introduction panel.
+
+When the player clicks Continue or presses Enter:
+
+1. Close the introduction panel.
+2. Restore the normal tutorial interface.
+3. Enable the existing tutorial controls.
+4. Begin or resume the character's tutorial exactly as currently implemented.
+
+While the introduction panel is open:
+
+- Prevent unintended combat actions.
+- Pause or block tutorial inputs.
+- Avoid advancing the tutorial automatically.
+- Prevent multiple introduction windows from appearing simultaneously.
+
+For Hazel, H must control only the illustration preview while her introduction is open.
+
+Do not allow the H key to trigger unrelated gameplay actions.
+
+## 8. TYPOGRAPHY AND RESPONSIVE LAYOUT
+
+Use Archeologicaps for:
+
+- Character titles.
+- Character subtitles.
+- Continue button labels.
+- The H key indicator.
+
+Use a readable secondary font for longer descriptions.
+
+At the target resolution of 1920 × 1080, recommended initial sizes are:
+
+- Character name: 52–64 px.
+- Subtitle: 30–36 px.
+- Description: 24–28 px.
+- Button label: 26–30 px.
+
+These sizes are adjustable according to actual font metrics.
+
+### Important Layout Requirements
+
+- Use actual text measurement and wrapping.
+- Do not position each paragraph at arbitrary fixed coordinates that may cause overlap.
+- Use a consistent vertical layout for all information blocks.
+- Keep all content inside the introduction panel.
+- Prevent text clipping.
+- Prevent descriptions from covering the character sprite.
+- Ensure Hazel's three colored description sections fit correctly.
+- Ensure the Continue button never covers the descriptions.
+
+The four introduction screens must remain visually consistent despite their differing amounts of text.
+
+## 9. TECHNICAL IMPLEMENTATION
+
+Create a reusable character introduction component rather than four completely separate implementations.
+
+Store the content in a configurable object containing:
+
+- Character ID.
+- Sprite paths.
+- Title.
+- Subtitle.
+- Description text.
+- Text colors.
+- Optional secondary descriptions.
+- Optional interactive illustration-switching settings.
+
+The component should receive the character ID and display the corresponding information automatically.
+
+Reuse the current game's asset-loading and UI systems.
+
+Do not create duplicate scenes if the existing tutorial architecture can support an opening overlay.
+
+Ensure illustrations are loaded before the panel becomes visible.
+
+Avoid visible sprite flickering or layout shifting.
+
+## 10. ACCEPTANCE TESTING
+
+Verify:
+
+1. Dexios's introduction appears immediately upon entering his tutorial.
+2. Furai's introduction appears immediately upon entering his tutorial.
+3. Sahira's introduction appears immediately upon entering her tutorial.
+4. Hazel's introduction appears immediately upon entering her tutorial.
+5. Every panel occupies approximately 80% of the screen width and height.
+6. Every panel has a 90%-opaque black background and golden borders.
+7. Character illustrations are fully visible and proportionally scaled.
+8. Floating reference names do not appear.
+9. Titles and subtitles use Archeologicaps.
+10. All descriptions use a readable font with lowercase characters.
+11. Dexios's text follows the red theme.
+12. Furai's text follows the purple theme.
+13. Sahira's text follows the green theme.
+14. Hazel's main description is yellow.
+15. Hazel's Ignis description is orange.
+16. Hazel's Glacio description is light blue.
+17. Hazel's illustration-switching button works with mouse input.
+18. Pressing H switches Hazel's displayed illustration correctly.
+19. The H key indicator is displayed in gold.
+20. Switching illustrations does not modify Hazel's actual combat form.
+21. No text overlaps any other element.
+22. Every Continue button opens the existing tutorial correctly.
+23. Pressing Enter closes each introduction and opens the existing tutorial.
+24. All existing tutorial interactions continue to work.
+25. The production build succeeds.
+
+## 11. DESIGN DOCUMENT
+
+Update `DESIGN.md` to document the new character introduction system.
+
+Include the panel appearance, typography, character descriptions, artwork references, and Hazel's interactive illustration preview.
+
+Do not duplicate existing sections unnecessarily.
+
+## FINAL REQUIREMENT
+
+Implement only the new tutorial character-introduction panels.
+
+Do not modify gameplay mechanics, combat balancing, action commands, boss attacks, or character progression.
+
+Preserve the game's current functional state.

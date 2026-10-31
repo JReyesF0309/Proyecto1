@@ -54,6 +54,10 @@ import {
   CommandOutcome,
   HitResult,
 } from './action-commands';
+import CharacterIntroduction, {
+  createCharacterIntroductionTextures,
+  preloadCharacterIntroductionAssets,
+} from './character-introduction';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
@@ -245,6 +249,7 @@ export default class CombatScene extends Phaser.Scene {
   private cosmicProjectile?: Phaser.GameObjects.Image;
   private commandRunner?: ActionCommandRunner;
   private hitResults: HitResult[] = [];
+  private characterIntroduction?: CharacterIntroduction;
 
   private readonly practiceId: CharacterId | null;
 
@@ -272,6 +277,9 @@ export default class CombatScene extends Phaser.Scene {
     (Object.keys(CINEMATIC_ASSETS) as Array<keyof typeof CINEMATIC_ASSETS>).forEach((key) => {
       loadImage(cinematicTextureKey(key), CINEMATIC_ASSETS[key]);
     });
+    if (this.practiceId) {
+      preloadCharacterIntroductionAssets(this);
+    }
   }
 
   create(): void {
@@ -324,6 +332,9 @@ export default class CombatScene extends Phaser.Scene {
         key !== 'arena' && !NORMALIZED_SPRITE_KEY_SET.has(key),
       ),
     );
+    if (this.practiceId) {
+      createCharacterIntroductionTextures(this.textures);
+    }
     this.createArena();
     this.createCharacters();
     this.createIndicators();
@@ -355,6 +366,8 @@ export default class CombatScene extends Phaser.Scene {
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
       this.input.off('pointerdown', this.startAudio, this);
       this.input.off('pointerdown', this.handleUiPointer, this);
+      this.characterIntroduction?.destroy();
+      this.characterIntroduction = undefined;
       this.commandRunner?.destroy();
       this.commandRunner = undefined;
       this.soundscape.destroy();
@@ -867,6 +880,15 @@ export default class CombatScene extends Phaser.Scene {
     this.turnText.setPosition(700, 18).setOrigin(0.5, 0);
     this.promptText.setPosition(700, 50).setOrigin(0.5, 0);
     this.beginPracticeTurn(id);
+    this.characterIntroduction = new CharacterIntroduction(
+      this,
+      id,
+      this.uiCamera,
+      this.overlayCamera,
+      () => {
+        this.characterIntroduction = undefined;
+      },
+    );
   }
 
   private beginPracticeTurn(id: CharacterId): void {
@@ -1631,6 +1653,9 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private handleUiPointer(pointer: Phaser.Input.Pointer): void {
+    if (this.characterIntroduction?.isBlockingInput) {
+      return;
+    }
     if (this.phase === 'target-boss' && !this.cameraTransitioning) {
       const backBounds = this.backButton.getBounds();
       if (backBounds.contains(pointer.x, pointer.y)) {
@@ -4206,6 +4231,10 @@ export default class CombatScene extends Phaser.Scene {
     if (key === 'm') {
       this.soundscape.toggle();
       this.updateAudioLabel();
+      return;
+    }
+    if (this.characterIntroduction?.isBlockingInput) {
+      this.characterIntroduction.handleKeyDown(event);
       return;
     }
     if (this.practiceId) {
