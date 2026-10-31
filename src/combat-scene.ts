@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {
   BossId,
+  BossPhase,
   CharacterId,
   Direction,
   EB_GARAMOND_FONT_FAMILY,
@@ -34,7 +35,6 @@ import {
   healPartyMember,
   MAX_CHAOS,
   MAX_HEALTH,
-  MAX_BOSS_HEALTH,
   MAX_MANA,
   MAX_SPIRIT,
   PERFECT_PARRY_DAMAGE,
@@ -42,8 +42,6 @@ import {
   resolveDefense,
   SAHIRA_ABILITY_USE_LIMITS,
   spendCost,
-  WIND_UP_MS,
-  PROJECTILE_TRAVEL_MS,
 } from './combat-rules';
 import stripBlackMattes from './strip-black-matte';
 import {
@@ -58,6 +56,11 @@ import CharacterIntroduction, {
   createCharacterIntroductionTextures,
   preloadCharacterIntroductionAssets,
 } from './character-introduction';
+import {
+  TUTORIAL_MESSAGES,
+  TUTORIAL_POPUP_SCENE_KEY,
+  TutorialMessageId,
+} from './tutorial-popups';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
@@ -88,6 +91,7 @@ type CombatPhase =
   | 'projectile'
   | 'cosmic-rays'
   | 'meteor-rain'
+  | 'transforming'
   | 'jump-window'
   | 'resolving'
   | 'ended';
@@ -95,6 +99,14 @@ type Ability =
   | (typeof GAME_CONFIG.abilities)[Exclude<CharacterId, 'hazel'>][number]
   | (typeof GAME_CONFIG.abilities.hazel.ignis)[number]
   | (typeof GAME_CONFIG.abilities.hazel.glacio)[number];
+type IobrontesPhaseConfig =
+  | typeof GAME_CONFIG.bossPhases.iobrontes.normal
+  | typeof GAME_CONFIG.bossPhases.iobrontes.heir;
+type KosmelysPhaseConfig =
+  | typeof GAME_CONFIG.bossPhases.kosmelys.normal
+  | typeof GAME_CONFIG.bossPhases.kosmelys.heir;
+type CombatMode = keyof typeof GAME_CONFIG.combatModes;
+type CombatModeConfig = typeof GAME_CONFIG.combatModes[CombatMode];
 const PARTY_UI_ORDER = ['dexios', 'furai', 'sahira', 'hazel'] as const;
 const ALLY_TARGET_ORDER = ['furai', 'dexios', 'sahira', 'hazel'] as const;
 
@@ -230,10 +242,14 @@ export default class CombatScene extends Phaser.Scene {
   private hasImpacted = false;
   private targetCharacter: CharacterId | null = null;
   private lightningIndex = 0;
+  private lightningStrikeCount = 3;
   private perfectParries = 0;
   private partyJumped = false;
+  private watchThunderSweepIndex = 0;
+  private watchThunderSweepCount = 1;
   private meteorEvents: MeteorEvent[] = [];
   private meteorSequence = 0;
+  private meteorCountForAttack = 5;
   private meteorFuraiTargeted = false;
   private meteorFuraiAllPerfect = true;
   private cosmicDirection: Direction | null = null;
@@ -244,19 +260,86 @@ export default class CombatScene extends Phaser.Scene {
   private cosmicPerfectWindowStartsAtMs = 0;
   private previousCosmicInitialDirection: Direction | null = null;
   private cosmicProjectileIndex = 0;
+  private cosmicProjectileCount = 2;
   private cosmicTargetCharacter: CharacterId | null = null;
   private cosmicFuraiPerfectParries = 0;
   private cosmicProjectile?: Phaser.GameObjects.Image;
   private commandRunner?: ActionCommandRunner;
   private hitResults: HitResult[] = [];
   private characterIntroduction?: CharacterIntroduction;
+  private readonly tutorialMessagesSeen: Record<TutorialMessageId, boolean> = {
+    introduction: false,
+    lightningChain: false,
+    watchTheThunder: false,
+    divineRetribution: false,
+    cosmicRays: false,
+    meteorRain: false,
+    portalShield: false,
+  };
 
   private readonly practiceId: CharacterId | null;
+  private readonly modeConfig: CombatModeConfig;
+  private readonly combatTiming: Record<keyof typeof GAME_CONFIG.timing, number>;
+
+  private get defenseWindowStartMs(): number {
+    return DEFENSE_WINDOW_START_MS * this.modeConfig.combatTimingMultiplier;
+  }
+
+  private get perfectParryWindowStartMs(): number {
+    return PERFECT_PARRY_WINDOW_START_MS * this.modeConfig.combatTimingMultiplier;
+  }
+
+  private get defenseWindowEndMs(): number {
+    return DEFENSE_WINDOW_END_MS * this.modeConfig.combatTimingMultiplier;
+  }
+
+  private combatDuration(durationMs: number): number {
+    return durationMs * this.modeConfig.combatTimingMultiplier;
+  }
+
+  private applyBossDamageModifier(damage: number): number {
+    return Math.ceil(damage * this.modeConfig.bossDamageMultiplier);
+  }
 
   // Con practiceId la escena funciona como escena de prueba de ese personaje.
-  constructor(key = 'escena_combate_dificil', practiceId: CharacterId | null = null) {
+  constructor(
+    key = 'escena_combate_dificil',
+    practiceId: CharacterId | null = null,
+    combatMode: CombatMode = 'standard',
+  ) {
     super({ key });
     this.practiceId = practiceId;
+    this.modeConfig = GAME_CONFIG.combatModes[combatMode];
+    const multiplier = this.modeConfig.combatTimingMultiplier;
+    this.combatTiming = {
+      ...GAME_CONFIG.timing,
+      windUpMs: GAME_CONFIG.timing.windUpMs * multiplier,
+      projectileTravelMs: GAME_CONFIG.timing.projectileTravelMs * multiplier,
+      defenseOpensBeforeImpactMs: GAME_CONFIG.timing.defenseOpensBeforeImpactMs * multiplier,
+      perfectParryStartsBeforeImpactMs: GAME_CONFIG.timing.perfectParryStartsBeforeImpactMs * multiplier,
+      defenseClosesAfterImpactMs: GAME_CONFIG.timing.defenseClosesAfterImpactMs * multiplier,
+      defenseHintLeadMs: GAME_CONFIG.timing.defenseHintLeadMs * multiplier,
+      resultDurationMs: GAME_CONFIG.timing.resultDurationMs * multiplier,
+      nextBoltDelayMs: GAME_CONFIG.timing.nextBoltDelayMs * multiplier,
+      enemyAttackAnnouncementMs: GAME_CONFIG.timing.enemyAttackAnnouncementMs * multiplier,
+      enemyTurnGapMs: GAME_CONFIG.timing.enemyTurnGapMs * multiplier,
+      watchTheThunderCastMs: GAME_CONFIG.timing.watchTheThunderCastMs * multiplier,
+      jumpWindowMs: GAME_CONFIG.timing.jumpWindowMs * multiplier,
+      jumpPoseMs: GAME_CONFIG.timing.jumpPoseMs * multiplier,
+      attackHitIntervalMs: GAME_CONFIG.timing.attackHitIntervalMs * multiplier,
+      hazelAttackPoseMs: GAME_CONFIG.timing.hazelAttackPoseMs * multiplier,
+      attackRecoveryMs: GAME_CONFIG.timing.attackRecoveryMs * multiplier,
+      spritePoseMs: GAME_CONFIG.timing.spritePoseMs * multiplier,
+      cosmicPerfectParryWindowMs: GAME_CONFIG.timing.cosmicPerfectParryWindowMs * multiplier,
+      cosmicWindUpMs: GAME_CONFIG.timing.cosmicWindUpMs * multiplier,
+      meteorPreparationMs: GAME_CONFIG.timing.meteorPreparationMs * multiplier,
+      meteorTravelMs: GAME_CONFIG.timing.meteorTravelMs * multiplier,
+      meteorFollowUpTravelMs: GAME_CONFIG.timing.meteorFollowUpTravelMs * multiplier,
+      meteorDefenseOpensBeforeImpactMs: GAME_CONFIG.timing.meteorDefenseOpensBeforeImpactMs * multiplier,
+      meteorNormalBlockWindowMs: GAME_CONFIG.timing.meteorNormalBlockWindowMs * multiplier,
+      meteorPerfectBlockWindowMs: GAME_CONFIG.timing.meteorPerfectBlockWindowMs * multiplier,
+      portalEffectDurationMs: GAME_CONFIG.timing.portalEffectDurationMs * multiplier,
+    };
   }
 
   preload(): void {
@@ -284,6 +367,9 @@ export default class CombatScene extends Phaser.Scene {
 
   create(): void {
     this.state = createCombatState();
+    Object.keys(this.tutorialMessagesSeen).forEach((id) => {
+      this.tutorialMessagesSeen[id as TutorialMessageId] = false;
+    });
     if (this.practiceId) {
       PLAYABLE_CHARACTERS.forEach((id) => {
         if (id !== this.practiceId) {
@@ -309,7 +395,10 @@ export default class CombatScene extends Phaser.Scene {
     this.responseTime = null;
     this.defenseOutcome = null;
     this.lightningIndex = 0;
+    this.lightningStrikeCount = 3;
     this.perfectParries = 0;
+    this.watchThunderSweepIndex = 0;
+    this.watchThunderSweepCount = 1;
     this.hasImpacted = false;
     this.meteorEvents = [];
     this.portalEffects = [];
@@ -318,6 +407,7 @@ export default class CombatScene extends Phaser.Scene {
     this.meteorFuraiAllPerfect = true;
     this.cosmicProjectile = undefined;
     this.cosmicProjectileIndex = 0;
+    this.cosmicProjectileCount = 2;
     this.cosmicTargetCharacter = null;
     this.cosmicFuraiPerfectParries = 0;
     this.previousCosmicInitialDirection = null;
@@ -356,12 +446,14 @@ export default class CombatScene extends Phaser.Scene {
       () => this.soundscape.play('perfect_block'),
       WIDTH,
       HEIGHT,
+      this.modeConfig.combatTimingMultiplier,
     );
 
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
     this.input.on('pointerdown', this.startAudio, this);
     this.input.on('pointerdown', this.handleUiPointer, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.scene.stop(TUTORIAL_POPUP_SCENE_KEY);
       this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, this.ignoreInOverlay, this);
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
       this.input.off('pointerdown', this.startAudio, this);
@@ -377,6 +469,8 @@ export default class CombatScene extends Phaser.Scene {
     this.startAudio();
     if (this.practiceId) {
       this.setupPractice(this.practiceId);
+    } else if (this.modeConfig === GAME_CONFIG.combatModes.tutorial) {
+      this.showTutorialPopup('introduction', () => this.startTurn());
     } else {
       this.startTurn();
     }
@@ -403,7 +497,7 @@ export default class CombatScene extends Phaser.Scene {
     }
     if (this.phase === 'jump-window') {
       const elapsed = this.time.now - this.jumpWindowStartedAt;
-      const progress = Phaser.Math.Clamp(elapsed / GAME_CONFIG.timing.jumpWindowMs, 0, 1);
+      const progress = Phaser.Math.Clamp(elapsed / this.combatTiming.jumpWindowMs, 0, 1);
       this.timingRing.clear();
       PLAYABLE_CHARACTERS.forEach((id) => {
         if (this.state.party[id].health <= 0) {
@@ -418,10 +512,10 @@ export default class CombatScene extends Phaser.Scene {
     }
 
     const elapsed = this.time.now - this.projectileStartedAt;
-    const progress = Phaser.Math.Clamp(elapsed / PROJECTILE_TRAVEL_MS, 0, 1);
-    const inDefenseWindow = elapsed >= DEFENSE_WINDOW_START_MS && elapsed <= DEFENSE_WINDOW_END_MS;
+    const progress = Phaser.Math.Clamp(elapsed / this.combatTiming.projectileTravelMs, 0, 1);
+    const inDefenseWindow = elapsed >= this.defenseWindowStartMs && elapsed <= this.defenseWindowEndMs;
     const isPerfectWindow =
-      elapsed >= PERFECT_PARRY_WINDOW_START_MS && elapsed <= DEFENSE_WINDOW_END_MS;
+      elapsed >= this.perfectParryWindowStartMs && elapsed <= this.defenseWindowEndMs;
     const target = GAME_CONFIG.characters[this.targetCharacter];
     this.drawTimingRing(this.timingRing, this.targetCharacter, progress);
 
@@ -433,7 +527,7 @@ export default class CombatScene extends Phaser.Scene {
           : 'ESPERA AL MOMENTO DEL IMPACTO';
       this.targetText.setText(timingLabel);
     }
-    if (elapsed >= PROJECTILE_TRAVEL_MS && !this.hasImpacted) {
+    if (elapsed >= this.combatTiming.projectileTravelMs && !this.hasImpacted) {
       this.hasImpacted = true;
       this.createImpact(target.x, target.feetY - target.displayHeight * 0.52, COLORS.purple, 1.1);
       this.showFloatingText('IMPACTO', target.x, target.feetY - target.displayHeight - 20, '#ead8ff');
@@ -970,7 +1064,7 @@ export default class CombatScene extends Phaser.Scene {
     }
     (['iobrontes', 'kosmelys'] as const).forEach((boss) => {
       if (this.state.bosses[boss].health <= 0) {
-        this.state.bosses[boss].health = MAX_BOSS_HEALTH[boss];
+        this.state.bosses[boss].health = this.getBossPhaseConfig(boss).maxHealth;
         this.getBossSprite(boss).setAlpha(1);
       }
     });
@@ -1169,7 +1263,7 @@ export default class CombatScene extends Phaser.Scene {
         layout.barWidth,
         layout.barHeight,
         this.state.bosses[id].health,
-        MAX_BOSS_HEALTH[id],
+        this.getBossPhaseConfig(id).maxHealth,
         hud.accent,
       );
     });
@@ -1372,7 +1466,8 @@ export default class CombatScene extends Phaser.Scene {
     const layout = GAME_CONFIG.bossTargetUi;
     const x = 4 + index * (layout.buttonWidth + layout.buttonGap);
     const y = 36;
-    const alive = this.state.bosses[id].health > 0;
+    const alive = this.state.bosses[id].health > 0
+      && this.state.bosses[id].phase !== 'defeated';
     const selected = this.selectedBoss === id;
     const background = this.add.graphics();
     background.fillStyle(selected ? 0x49376a : COLORS.panelLight, 1);
@@ -1394,7 +1489,7 @@ export default class CombatScene extends Phaser.Scene {
     const health = this.add.text(
       layout.buttonWidth / 2,
       39,
-      `${this.state.bosses[id].health} / ${MAX_BOSS_HEALTH[id]} HP`,
+      `${this.state.bosses[id].health} / ${this.getBossPhaseConfig(id).maxHealth} HP`,
       {
         fontFamily: UI_FONT_FAMILY,
         fontSize: '13px',
@@ -1553,17 +1648,19 @@ export default class CombatScene extends Phaser.Scene {
         layout.barWidth,
         layout.barHeight,
         health,
-        MAX_BOSS_HEALTH[id],
+        this.getBossPhaseConfig(id).maxHealth,
         hud.accent,
       );
-      hud.healthText.setText(`${health} / ${MAX_BOSS_HEALTH[id]}`);
+      hud.healthText.setText(`${health} / ${this.getBossPhaseConfig(id).maxHealth}`);
       hud.label.setColor(health > 0 ? '#f2e5ff' : '#938a98');
       hud.panel.setAlpha(health > 0 ? 1 : 0.56);
       this.getBossSprite(id).setAlpha(health > 0 ? 1 : 0.18);
       hud.selected.setText(
         this.phase === 'target-boss' && health > 0
           ? this.selectedBoss === id ? 'OBJETIVO ACTUAL' : 'DISPONIBLE'
-          : health <= 0 ? 'DERROTADO' : '',
+          : this.state.bosses[id].phase === 'defeated'
+            ? 'DERROTADO'
+            : health <= 0 ? 'TRANSFORMANDO' : '',
       );
     });
     this.updateTurnQueue();
@@ -1584,6 +1681,7 @@ export default class CombatScene extends Phaser.Scene {
       const actor = GAME_CONFIG.partyOrder[orderIndex];
       const active = actor === 'iobrontes' || actor === 'kosmelys'
         ? this.state.bosses[actor].health > 0
+          && this.state.bosses[actor].phase !== 'defeated'
         : this.state.party[actor].health > 0;
       if (active) {
         upcoming.push(actor);
@@ -1597,7 +1695,11 @@ export default class CombatScene extends Phaser.Scene {
         return;
       }
       slot.portrait.setTexture(
-        actor === 'hazel' && this.state.hazelForm === 'glacio' ? 'icon_hazel_glacio' : `icon_${actor}`,
+        actor === 'hazel' && this.state.hazelForm === 'glacio'
+          ? 'icon_hazel_glacio'
+          : actor === 'iobrontes' || actor === 'kosmelys'
+            ? this.getBossIconTextureKey(actor)
+            : `icon_${actor}`,
       );
       slot.portrait.setDisplaySize(index === 0 ? 56 : 50, index === 0 ? 56 : 50);
       slot.label.setText(actor.toUpperCase());
@@ -1738,7 +1840,7 @@ export default class CombatScene extends Phaser.Scene {
             this.announceKosmelysAttack();
           }
         };
-        const gap = this.previousTurnWasBoss ? GAME_CONFIG.timing.enemyTurnGapMs : 0;
+        const gap = this.previousTurnWasBoss ? this.combatTiming.enemyTurnGapMs : 0;
         this.previousTurnWasBoss = false;
         if (gap > 0) {
           this.time.delayedCall(gap, announce);
@@ -1770,6 +1872,21 @@ export default class CombatScene extends Phaser.Scene {
     if (this.result) {
       return;
     }
+    const pendingTransforms = (['iobrontes', 'kosmelys'] as const)
+      .filter((boss) =>
+        this.state.bosses[boss].phase === 'normal'
+        && this.state.bosses[boss].health <= 0);
+    if (pendingTransforms.length > 0) {
+      this.transformPendingBosses(pendingTransforms, 0, () => this.advanceTurnAfterTransform());
+      return;
+    }
+    this.advanceTurnAfterTransform();
+  }
+
+  private advanceTurnAfterTransform(): void {
+    if (this.result) {
+      return;
+    }
     if (this.activeCharacter) {
       this.advanceDivineRetributionTurn();
     }
@@ -1791,6 +1908,139 @@ export default class CombatScene extends Phaser.Scene {
     this.startTurn();
   }
 
+  private showTutorialPopup(
+    messageId: TutorialMessageId,
+    onContinue: () => void,
+  ): void {
+    if (
+      this.modeConfig !== GAME_CONFIG.combatModes.tutorial
+      || this.tutorialMessagesSeen[messageId]
+    ) {
+      onContinue();
+      return;
+    }
+
+    const message = TUTORIAL_MESSAGES[messageId];
+    const count = this.tutorialMessageCount(messageId);
+    this.events.once(Phaser.Scenes.Events.RESUME, () => {
+      this.time.delayedCall(0, () => {
+        this.input.enabled = true;
+        this.tutorialMessagesSeen[messageId] = true;
+        onContinue();
+      });
+    });
+    this.input.enabled = false;
+    this.scene.pause(this.scene.key);
+    this.scene.launch(TUTORIAL_POPUP_SCENE_KEY, {
+      parentSceneKey: this.scene.key,
+      title: message.title,
+      paragraphs: message.paragraphs.map((paragraph) =>
+        paragraph.replace('{count}', count),
+      ),
+      keys: [...message.keys],
+    });
+  }
+
+  private tutorialMessageCount(messageId: TutorialMessageId): string {
+    switch (messageId) {
+      case 'lightningChain':
+        return String(this.getBossPhaseConfig('iobrontes').lightningStrikes);
+      case 'watchTheThunder': {
+        const sweeps = this.getBossPhaseConfig('iobrontes').watchThunderSweeps;
+        return sweeps === 1 ? 'once' : 'twice';
+      }
+      case 'cosmicRays':
+        return String(this.getBossPhaseConfig('kosmelys').cosmicRaysProjectiles);
+      case 'meteorRain':
+        return String(this.getBossPhaseConfig('kosmelys').meteorCount);
+      case 'introduction':
+      case 'divineRetribution':
+      case 'portalShield':
+        return '';
+    }
+  }
+
+  private transformPendingBosses(
+    bosses: BossId[],
+    index: number,
+    onComplete: () => void,
+  ): void {
+    if (this.result) {
+      return;
+    }
+    const boss = bosses[index];
+    if (!boss) {
+      this.attackAnnouncement.setVisible(false);
+      this.cameraTransitioning = false;
+      this.phase = 'resolving';
+      this.cameras.main.pan(WIDTH / 2, HEIGHT / 2, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+      this.cameras.main.zoomTo(1, GAME_CONFIG.camera.returnMs, 'Sine.easeInOut');
+      this.time.delayedCall(GAME_CONFIG.camera.returnMs, onComplete);
+      return;
+    }
+    const bossState = this.state.bosses[boss];
+    if (bossState.phase !== 'normal' || bossState.health > 0) {
+      this.transformPendingBosses(bosses, index + 1, onComplete);
+      return;
+    }
+    const config = GAME_CONFIG.characters[boss];
+    this.phase = 'transforming';
+    this.cameraTransitioning = true;
+    this.attackAnnouncement.setVisible(false);
+    this.cameras.main.pan(
+      config.x,
+      config.feetY - config.displayHeight * 0.53,
+      GAME_CONFIG.camera.focusMs,
+      'Sine.easeInOut',
+    );
+    this.cameras.main.zoomTo(1.2, GAME_CONFIG.camera.focusMs, 'Sine.easeInOut');
+    this.time.delayedCall(GAME_CONFIG.camera.focusMs, () => {
+      if (this.phase !== 'transforming' || this.result) {
+        return;
+      }
+      this.attackAnnouncement.setText('MODO HEREDERO').setVisible(true);
+      this.cameras.main.flash(260, 174, 76, 255, false);
+      this.createImpact(
+        config.x,
+        config.feetY - config.displayHeight * 0.55,
+        COLORS.violet,
+        1.8,
+      );
+      this.showFloatingText(
+        'MODO HEREDERO',
+        config.x,
+        config.feetY - config.displayHeight - 36,
+        '#f0d1ff',
+      );
+      this.time.delayedCall(this.combatDuration(480), () => {
+        if (this.phase !== 'transforming' || this.result) {
+          return;
+        }
+        bossState.phase = 'heir';
+        bossState.health = GAME_CONFIG.bossPhases[boss].heir.maxHealth;
+        bossState.armorBreak = false;
+        if (boss === 'iobrontes') {
+          this.state.divineRetributionTurnsRemaining = 0;
+          this.armorBreakMark.setVisible(false);
+        } else {
+          this.state.kosmelysPortalShieldTurnsRemaining = 0;
+          this.kosmelysArmorBreakMark.setVisible(false);
+          this.portalEffects.forEach((effect) => effect.destroy());
+          this.portalEffects = [];
+        }
+        this.setBossFrame(this.getBossFrames(boss).idle, 0, boss);
+        this.refreshHud();
+        this.time.delayedCall(this.combatDuration(650), () => {
+          if (this.phase !== 'transforming' || this.result) {
+            return;
+          }
+          this.attackAnnouncement.setVisible(false);
+          this.transformPendingBosses(bosses, index + 1, onComplete);
+        });
+      });
+    });
+  }
+
   private startEnemyChain(): void {
     const eligible = PLAYABLE_CHARACTERS
       .filter((id) => this.state.party[id].health > 0);
@@ -1801,6 +2051,7 @@ export default class CombatScene extends Phaser.Scene {
     this.targetCharacter = Phaser.Utils.Array.GetRandom(eligible);
     this.perfectParries = 0;
     this.lightningIndex = 0;
+    this.lightningStrikeCount = this.getBossPhaseConfig('iobrontes').lightningStrikes;
     this.focusCamera(this.targetCharacter);
     this.partyCards[this.targetCharacter].turn.setText('OBJETIVO');
     this.actorNames[this.targetCharacter].setColor('#ffe187');
@@ -1812,11 +2063,24 @@ export default class CombatScene extends Phaser.Scene {
   private announceEnemyAttack(): void {
     const attacks: Array<{
       name: string;
+      tutorialMessage: TutorialMessageId;
       start: () => void;
     }> = [
-      { name: 'LIGHTNING CHAIN', start: () => this.startEnemyChain() },
-      { name: 'WATCH THE THUNDER', start: () => this.startWatchTheThunder() },
-      { name: 'DIVINE RETRIBUTION', start: () => this.startDivineRetribution() },
+      {
+        name: 'LIGHTNING CHAIN',
+        tutorialMessage: 'lightningChain',
+        start: () => this.startEnemyChain(),
+      },
+      {
+        name: 'WATCH THE THUNDER',
+        tutorialMessage: 'watchTheThunder',
+        start: () => this.startWatchTheThunder(),
+      },
+      {
+        name: 'DIVINE RETRIBUTION',
+        tutorialMessage: 'divineRetribution',
+        start: () => this.startDivineRetribution(),
+      },
     ];
     const { enemyAttacks } = GAME_CONFIG;
     const roll = Math.random() * 100;
@@ -1839,35 +2103,46 @@ export default class CombatScene extends Phaser.Scene {
         attack: attacks[2],
       },
     ].find(({ threshold }) => roll < threshold)?.attack ?? attacks[2];
-    this.attackAnnouncement.setText(attack.name).setVisible(true);
-    this.time.delayedCall(GAME_CONFIG.timing.enemyAttackAnnouncementMs, () => {
-      if (this.phase !== 'announcing' || this.result) {
-        return;
-      }
-      this.attackAnnouncement.setVisible(false);
-      attack.start();
+    this.showTutorialPopup(attack.tutorialMessage, () => {
+      this.attackAnnouncement.setText(attack.name).setVisible(true);
+      this.time.delayedCall(this.combatTiming.enemyAttackAnnouncementMs, () => {
+        if (this.phase !== 'announcing' || this.result) {
+          return;
+        }
+        this.attackAnnouncement.setVisible(false);
+        attack.start();
+      });
     });
   }
 
   private announceKosmelysAttack(): void {
     const weights = GAME_CONFIG.kosmelysAttacks;
-    const choices: Array<{ name: string; chance: number; start: () => void }> = [
+    const allChoices: Array<{
+      name: string;
+      chance: number;
+      tutorialMessage: TutorialMessageId;
+      start: () => void;
+    }> = [
       {
         name: 'COSMIC RAYS',
         chance: weights.cosmicRaysChancePercent,
+        tutorialMessage: 'cosmicRays',
         start: () => this.startCosmicRays(),
       },
       {
         name: 'PORTAL SHIELD',
         chance: weights.portalShieldChancePercent,
+        tutorialMessage: 'portalShield',
         start: () => this.startPortalShield(),
       },
       {
         name: 'METEOR RAIN',
         chance: weights.meteorRainChancePercent,
+        tutorialMessage: 'meteorRain',
         start: () => this.startMeteorRain(),
       },
-    ].filter(({ name }) =>
+    ];
+    const choices = allChoices.filter(({ name }) =>
       name !== 'PORTAL SHIELD' || this.state.kosmelysPortalShieldTurnsRemaining === 0);
     const totalChance = choices.reduce((total, choice) => total + choice.chance, 0);
     let roll = Math.random() * totalChance;
@@ -1875,13 +2150,15 @@ export default class CombatScene extends Phaser.Scene {
       roll -= chance;
       return roll < 0;
     }) ?? choices[0];
-    this.attackAnnouncement.setText(attack.name).setVisible(true);
-    this.time.delayedCall(GAME_CONFIG.timing.enemyAttackAnnouncementMs, () => {
-      if (this.phase !== 'announcing' || this.result || !attack) {
-        return;
-      }
-      this.attackAnnouncement.setVisible(false);
-      attack.start();
+    this.showTutorialPopup(attack.tutorialMessage, () => {
+      this.attackAnnouncement.setText(attack.name).setVisible(true);
+      this.time.delayedCall(this.combatTiming.enemyAttackAnnouncementMs, () => {
+        if (this.phase !== 'announcing' || this.result || !attack) {
+          return;
+        }
+        this.attackAnnouncement.setVisible(false);
+        attack.start();
+      });
     });
   }
 
@@ -1896,7 +2173,7 @@ export default class CombatScene extends Phaser.Scene {
     this.turnText.setText('PORTAL SHIELD');
     this.promptText.setText('Kosmelys prepara un portal que redirigirá la siguiente habilidad ofensiva.');
     this.targetText.setText('PORTAL SHIELD · 1 TURNO ALIADO');
-    this.setKosmelysFrame(GAME_CONFIG.characters.kosmelys.frames.shield);
+    this.setKosmelysFrame(this.getBossFrames('kosmelys').shield);
     this.soundscape.play('abrir_portal');
     const config = GAME_CONFIG.characters.kosmelys;
     this.createImpact(
@@ -1905,7 +2182,7 @@ export default class CombatScene extends Phaser.Scene {
       COLORS.violet,
       1.2,
     );
-    this.time.delayedCall(GAME_CONFIG.timing.resultDurationMs, () => {
+    this.time.delayedCall(this.combatTiming.resultDurationMs, () => {
       if (this.phase === 'resolving' && !this.result) {
         this.advanceTurn();
       }
@@ -1921,13 +2198,16 @@ export default class CombatScene extends Phaser.Scene {
     }
     this.phase = 'casting';
     this.cosmicProjectileIndex = 0;
+    this.cosmicProjectileCount = this.getBossPhaseConfig('kosmelys').cosmicRaysProjectiles;
     this.previousCosmicInitialDirection = null;
     const targetId = Phaser.Utils.Array.GetRandom(eligible);
     this.cosmicTargetCharacter = targetId;
     this.cosmicFuraiPerfectParries = 0;
     this.targetCharacter = targetId;
     this.turnText.setText('COSMIC RAYS');
-    this.promptText.setText('Dos rayos cósmicos cambiarán de dirección a mitad de su recorrido.');
+    this.promptText.setText(
+      `${this.cosmicProjectileCount} rayos cósmicos cambiarán de dirección a mitad de su recorrido.`,
+    );
     this.targetText.setText(`OBJETIVO: ${GAME_CONFIG.characters[targetId].name.toUpperCase()} · OBSERVA EL CAMBIO`);
     this.startCosmicProjectile();
   }
@@ -1958,14 +2238,16 @@ export default class CombatScene extends Phaser.Scene {
     this.warningArrow.setText(this.directionPrompt(this.cosmicInitialDirection));
     this.warning.setVisible(true).setAlpha(1);
     this.setKosmelysFrame(
-      GAME_CONFIG.characters.kosmelys.frames.attack[this.cosmicInitialDirection],
+      this.getBossFrames('kosmelys').attack[this.cosmicInitialDirection],
     );
-    this.turnText.setText(`COSMIC RAYS · ${this.cosmicProjectileIndex + 1} / 2`);
+    this.turnText.setText(
+      `COSMIC RAYS · ${this.cosmicProjectileIndex + 1} / ${this.cosmicProjectileCount}`,
+    );
     this.targetText.setText(
       `${this.directionControl(this.cosmicInitialDirection)} · DIRECCIÓN INICIAL`,
     );
     this.time.delayedCall(
-      GAME_CONFIG.timing.cosmicWindUpMs + GAME_CONFIG.timing.defenseHintLeadMs,
+      this.combatTiming.cosmicWindUpMs + this.combatTiming.defenseHintLeadMs,
       () => {
       if (this.phase === 'casting' && !this.result) {
         this.launchCosmicProjectile();
@@ -2011,13 +2293,13 @@ export default class CombatScene extends Phaser.Scene {
     const totalDistance = start.distance(midpoint) + midpoint.distance(endpoint);
     const referenceSpeed =
       GAME_CONFIG.kosmelysAttacks.lightningReferenceDistance
-      / PROJECTILE_TRAVEL_MS
+      / this.combatTiming.projectileTravelMs
       * GAME_CONFIG.kosmelysAttacks.cosmicSpeedRatio;
     this.cosmicTravelDurationMs = Math.round(totalDistance / referenceSpeed);
     this.cosmicMidpointMs = this.cosmicTravelDurationMs / 2;
     this.cosmicPerfectWindowStartsAtMs = Math.max(
       this.cosmicMidpointMs,
-      this.cosmicTravelDurationMs - GAME_CONFIG.timing.cosmicPerfectParryWindowMs,
+      this.cosmicTravelDurationMs - this.combatTiming.cosmicPerfectParryWindowMs,
     );
     const source = this.textures.get('cosmic_effect').getSourceImage();
     this.cosmicProjectile = this.add.image(start.x, start.y, 'cosmic_effect')
@@ -2050,7 +2332,7 @@ export default class CombatScene extends Phaser.Scene {
         this.cosmicRevealed = true;
         this.attackDirection = finalDirection;
         this.setKosmelysFrame(
-          GAME_CONFIG.characters.kosmelys.frames.attack[finalDirection],
+          this.getBossFrames('kosmelys').attack[finalDirection],
         );
         const redirectedStart = this.cosmicPoint(
           this.targetCharacter,
@@ -2164,11 +2446,13 @@ export default class CombatScene extends Phaser.Scene {
         : elapsed !== null && elapsed >= this.cosmicPerfectWindowStartsAtMs
           ? 'perfect'
           : 'blocked';
+    const phaseConfig = this.getBossPhaseConfig('kosmelys');
     let damage = outcome === 'failed' || (outcome === 'blocked' && targetId === 'hazel')
-      ? GAME_CONFIG.kosmelysAttacks.cosmicRaysDamage
+      ? phaseConfig.cosmicRaysDamage
       : outcome === 'blocked' && targetId !== 'sahira'
-        ? GAME_CONFIG.kosmelysAttacks.cosmicBlockedDamage
+        ? phaseConfig.cosmicBlockedDamage
         : 0;
+    damage = this.applyBossDamageModifier(damage);
     const shielded = outcome !== 'perfect'
       && !(targetId === 'sahira' && outcome === 'blocked')
       && consumeShieldHit(this.state, targetId);
@@ -2182,7 +2466,7 @@ export default class CombatScene extends Phaser.Scene {
       if (targetId === 'dexios') {
         const counterDamage = damageBoss(this.state, 'kosmelys', PERFECT_PARRY_DAMAGE);
         this.setKosmelysFrame(
-          GAME_CONFIG.characters.kosmelys.frames.hit,
+          this.getBossFrames('kosmelys').hit,
           GAME_CONFIG.timing.spritePoseMs,
         );
         this.showFloatingText(
@@ -2232,7 +2516,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.finishIfBattleEnded()) {
       return;
     }
-    this.time.delayedCall(GAME_CONFIG.timing.resultDurationMs, () => {
+    this.time.delayedCall(this.combatTiming.resultDurationMs, () => {
       if (this.phase !== 'resolving' || this.result) {
         return;
       }
@@ -2243,11 +2527,11 @@ export default class CombatScene extends Phaser.Scene {
         this.finishKosmelysAttack();
         return;
       }
-      if (this.cosmicProjectileIndex < GAME_CONFIG.kosmelysAttacks.cosmicRaysProjectiles) {
+      if (this.cosmicProjectileIndex < this.cosmicProjectileCount) {
         this.startCosmicProjectile();
       } else if (
         this.cosmicTargetCharacter === 'furai'
-        && this.cosmicFuraiPerfectParries === GAME_CONFIG.kosmelysAttacks.cosmicRaysProjectiles
+        && this.cosmicFuraiPerfectParries === this.cosmicProjectileCount
       ) {
         this.performFuraiKosmelysCounterattack(
           GAME_CONFIG.kosmelysAttacks.cosmicFuraiCounterDamage,
@@ -2262,13 +2546,16 @@ export default class CombatScene extends Phaser.Scene {
   private startMeteorRain(): void {
     this.phase = 'meteor-rain';
     this.meteorSequence += 1;
+    this.meteorCountForAttack = this.getBossPhaseConfig('kosmelys').meteorCount;
     this.meteorEvents = [];
     this.meteorFuraiTargeted = false;
     this.meteorFuraiAllPerfect = true;
     this.turnText.setText('METEOR RAIN');
-    this.promptText.setText('Cinco meteoros caen uno por uno; bloquea con W y busca la parada perfecta.');
+    this.promptText.setText(
+      `${this.meteorCountForAttack} meteoros caen uno por uno; bloquea con W y busca la parada perfecta.`,
+    );
     this.targetText.setText('W · BLOQUEO NORMAL / PARADA PERFECTA');
-    this.setKosmelysFrame(GAME_CONFIG.characters.kosmelys.frames.meteorRain);
+    this.setKosmelysFrame(this.getBossFrames('kosmelys').meteorRain);
     this.startMeteorEvent(1);
   }
 
@@ -2276,7 +2563,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.phase !== 'meteor-rain' || this.result) {
       return;
     }
-    const timing = GAME_CONFIG.timing;
+    const timing = this.combatTiming;
     const preparationMs = followUp ? 0 : timing.meteorPreparationMs;
     const travelMs = followUp ? timing.meteorFollowUpTravelMs : timing.meteorTravelMs;
     const impactAtMs = preparationMs + travelMs;
@@ -2318,7 +2605,7 @@ export default class CombatScene extends Phaser.Scene {
     this.meteorEvents.push({
       id,
       attackId:
-        (this.meteorSequence - 1) * GAME_CONFIG.kosmelysAttacks.meteorCount + id,
+        (this.meteorSequence - 1) * this.meteorCountForAttack + id,
       target,
       startedAt: this.time.now,
       preparationMs,
@@ -2441,13 +2728,14 @@ export default class CombatScene extends Phaser.Scene {
     const damage = shielded
       ? 0
       : outcome === 'failed'
-        ? GAME_CONFIG.kosmelysAttacks.meteorRainDamage
+        ? this.getBossPhaseConfig('kosmelys').meteorRainDamage
         : outcome === 'blocked' && targetId === 'hazel'
-          ? GAME_CONFIG.kosmelysAttacks.meteorRainDamage
+          ? this.getBossPhaseConfig('kosmelys').meteorRainDamage
           : outcome === 'blocked' && targetId !== 'sahira'
-          ? GAME_CONFIG.kosmelysAttacks.meteorBlockedDamage
+          ? this.getBossPhaseConfig('kosmelys').meteorBlockedDamage
           : 0;
-    const actualDamage = damagePartyMember(this.state, targetId, damage);
+    const adjustedDamage = this.applyBossDamageModifier(damage);
+    const actualDamage = damagePartyMember(this.state, targetId, adjustedDamage);
     if (outcome === 'perfect' || outcome === 'blocked') {
       this.setActorFrame(
         targetId,
@@ -2491,14 +2779,14 @@ export default class CombatScene extends Phaser.Scene {
           GAME_CONFIG.kosmelysAttacks.meteorDexiosCounterDamage,
         );
         const boss = GAME_CONFIG.characters.kosmelys;
-        this.setKosmelysFrame(GAME_CONFIG.characters.kosmelys.frames.hit);
-        this.time.delayedCall(GAME_CONFIG.timing.spritePoseMs, () => {
+        this.setKosmelysFrame(this.getBossFrames('kosmelys').hit);
+        this.time.delayedCall(this.combatTiming.spritePoseMs, () => {
           if (
             this.phase === 'meteor-rain'
             && !this.result
             && this.state.bosses.kosmelys.health > 0
           ) {
-            this.setKosmelysFrame(GAME_CONFIG.characters.kosmelys.frames.meteorRain);
+            this.setKosmelysFrame(this.getBossFrames('kosmelys').meteorRain);
           }
         });
         this.createImpact(
@@ -2535,7 +2823,7 @@ export default class CombatScene extends Phaser.Scene {
       this.finishKosmelysAttack();
       return;
     }
-    if (event.id < GAME_CONFIG.kosmelysAttacks.meteorCount) {
+    if (event.id < this.meteorCountForAttack) {
       this.startMeteorEvent(event.id + 1, true);
       return;
     }
@@ -2578,7 +2866,7 @@ export default class CombatScene extends Phaser.Scene {
     );
     this.setActorFrame('furai', furai.frames.attack);
     this.soundscape.play('furai');
-    this.time.delayedCall(300, () => {
+    this.time.delayedCall(this.combatDuration(300), () => {
       if (this.phase !== 'action' || this.result) {
         return;
       }
@@ -2590,7 +2878,10 @@ export default class CombatScene extends Phaser.Scene {
       if (counterDamage > 0) {
         gainFuraiSpirit(this.state, 30);
       }
-      this.setKosmelysFrame(kosmelys.frames.hit, GAME_CONFIG.timing.spritePoseMs);
+      this.setKosmelysFrame(
+        this.getBossFrames('kosmelys').hit,
+        GAME_CONFIG.timing.spritePoseMs,
+      );
       this.createImpact(
         kosmelys.x,
         kosmelys.feetY - kosmelys.displayHeight * 0.55,
@@ -2607,7 +2898,7 @@ export default class CombatScene extends Phaser.Scene {
       if (this.finishIfBattleEnded()) {
         return;
       }
-      this.time.delayedCall(GAME_CONFIG.timing.spritePoseMs, () => {
+      this.time.delayedCall(this.combatTiming.spritePoseMs, () => {
         if (this.result) {
           return;
         }
@@ -2639,11 +2930,11 @@ export default class CombatScene extends Phaser.Scene {
     if (this.state.bosses.kosmelys.health > 0) {
       this.setKosmelysFrame(
         this.state.kosmelysPortalShieldTurnsRemaining > 0
-          ? GAME_CONFIG.characters.kosmelys.frames.shield
-          : GAME_CONFIG.characters.kosmelys.frames.idle,
+          ? this.getBossFrames('kosmelys').shield
+          : this.getBossFrames('kosmelys').idle,
       );
     }
-    this.time.delayedCall(GAME_CONFIG.timing.resultDurationMs, () => {
+    this.time.delayedCall(this.combatTiming.resultDurationMs, () => {
       if (this.phase === 'resolving' && !this.result) {
         this.advanceTurn();
       }
@@ -2657,7 +2948,7 @@ export default class CombatScene extends Phaser.Scene {
     this.turnText.setText('DIVINE RETRIBUTION');
     this.promptText.setText('Iobrontes se cubre con una armadura eléctrica que devuelve el daño.');
     this.targetText.setText('ARMADURA ELÉCTRICA · 2 TURNOS');
-    this.setBossFrame(GAME_CONFIG.characters.iobrontes.frames.divineRetribution);
+    this.setBossFrame(this.getBossFrames('iobrontes').divineRetribution);
     this.soundscape.play('armadura');
     this.createImpact(
       GAME_CONFIG.characters.iobrontes.x,
@@ -2673,7 +2964,7 @@ export default class CombatScene extends Phaser.Scene {
         - GAME_CONFIG.characters.iobrontes.displayHeight - 22,
       '#d8b2ff',
     );
-    this.time.delayedCall(GAME_CONFIG.timing.resultDurationMs, () => {
+    this.time.delayedCall(this.combatTiming.resultDurationMs, () => {
       if (this.phase === 'resolving' && !this.result) {
         this.advanceTurn();
       }
@@ -2686,7 +2977,7 @@ export default class CombatScene extends Phaser.Scene {
     }
     this.state.divineRetributionTurnsRemaining -= 1;
     if (this.state.divineRetributionTurnsRemaining === 0) {
-      this.setBossFrame(GAME_CONFIG.characters.iobrontes.frames.idle);
+      this.setBossFrame(this.getBossFrames('iobrontes').idle);
       this.showFloatingText(
         'ARMADURA DISIPADA',
         GAME_CONFIG.characters.iobrontes.x,
@@ -2721,7 +3012,9 @@ export default class CombatScene extends Phaser.Scene {
       : damagePartyMember(
         this.state,
         attacker,
-        GAME_CONFIG.enemyAttacks.divineRetributionDamage,
+        this.applyBossDamageModifier(
+          this.getBossPhaseConfig('iobrontes').divineRetaliationDamage,
+        ),
       );
     return { damage, retaliationDamage, retaliationShielded, empowered };
   }
@@ -2771,19 +3064,25 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private startWatchTheThunder(): void {
+    this.targetCharacter = null;
+    this.watchThunderSweepIndex = 0;
+    this.watchThunderSweepCount = this.getBossPhaseConfig('iobrontes').watchThunderSweeps;
+    this.promptText.setText('Iobrontes concentra un rayo contra todo el equipo.');
+    this.setBossFrame(this.getBossFrames('iobrontes').watchThunder);
+    this.startWatchThunderSweep();
+  }
+
+  private startWatchThunderSweep(): void {
     this.phase = 'casting';
     this.partyJumped = false;
-    this.targetCharacter = null;
-    this.lightningIndex = 0;
-    this.turnText.setText('WATCH THE THUNDER');
-    this.promptText.setText('Iobrontes concentra un rayo contra todo el equipo.');
-    this.targetText.setText('PREPÁRATE PARA SALTAR');
-    this.setBossFrame(
-      GAME_CONFIG.characters.iobrontes.frames.watchThunder,
-      GAME_CONFIG.timing.watchTheThunderCastMs + GAME_CONFIG.timing.jumpWindowMs,
+    this.turnText.setText(
+      this.watchThunderSweepCount > 1
+        ? `WATCH THE THUNDER · ${this.watchThunderSweepIndex + 1} / ${this.watchThunderSweepCount}`
+        : 'WATCH THE THUNDER',
     );
+    this.targetText.setText('PREPÁRATE PARA SALTAR');
     this.soundscape.play('trueno');
-    this.time.delayedCall(GAME_CONFIG.timing.watchTheThunderCastMs, () => {
+    this.time.delayedCall(this.combatTiming.watchTheThunderCastMs, () => {
       if (this.phase === 'casting' && !this.result) {
         this.beginJumpWindow();
       }
@@ -2831,11 +3130,11 @@ export default class CombatScene extends Phaser.Scene {
     this.tweens.add({
       targets: beam,
       alpha: { from: 0.45, to: 1 },
-      duration: 120,
+      duration: this.combatDuration(120),
       yoyo: true,
       repeat: 1,
     });
-    this.time.delayedCall(GAME_CONFIG.timing.jumpWindowMs, () => {
+    this.time.delayedCall(this.combatTiming.jumpWindowMs, () => {
       this.resolveWatchTheThunder();
     });
   }
@@ -2864,7 +3163,7 @@ export default class CombatScene extends Phaser.Scene {
     const scale = GAME_CONFIG.sprite.frameScale[this.getActorFrames(id).jump] ?? 1;
     const { startLift, peakLift } = GAME_CONFIG.sprite.jump;
     const height = config.displayHeight * scale;
-    const half = GAME_CONFIG.timing.jumpPoseMs / 2;
+    const half = this.combatTiming.jumpPoseMs / 2;
     sprite.setY(config.feetY - height * startLift);
     this.tweens.add({
       targets: sprite,
@@ -2916,7 +3215,9 @@ export default class CombatScene extends Phaser.Scene {
       const damage = damagePartyMember(
         this.state,
         id,
-        GAME_CONFIG.enemyAttacks.watchTheThunderDamage,
+        this.applyBossDamageModifier(
+          this.getBossPhaseConfig('iobrontes').watchThunderDamage,
+        ),
       );
       this.setActorFrame(id, this.getActorFrames(id).hit, 650);
       this.showFloatingText(`-${damage}`, character.x, y - 20, '#ffb7a9');
@@ -2932,8 +3233,13 @@ export default class CombatScene extends Phaser.Scene {
     if (this.finishIfBattleEnded()) {
       return;
     }
-    this.time.delayedCall(GAME_CONFIG.timing.resultDurationMs, () => {
+    this.time.delayedCall(this.combatTiming.resultDurationMs, () => {
       if (this.phase !== 'resolving' || this.result) {
+        return;
+      }
+      if (this.watchThunderSweepIndex + 1 < this.watchThunderSweepCount) {
+        this.watchThunderSweepIndex += 1;
+        this.startWatchThunderSweep();
         return;
       }
       PLAYABLE_CHARACTERS.forEach((id) => {
@@ -2941,6 +3247,11 @@ export default class CombatScene extends Phaser.Scene {
           this.setActorFrame(id, this.getActorFrames(id).idle);
         }
       });
+      this.setBossFrame(
+        this.state.divineRetributionTurnsRemaining > 0
+          ? this.getBossFrames('iobrontes').divineRetribution
+          : this.getBossFrames('iobrontes').idle,
+      );
       this.advanceTurn();
     });
   }
@@ -2965,20 +3276,21 @@ export default class CombatScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.warning,
       alpha: 0.45,
-      duration: 280,
+      duration: this.combatDuration(280),
       yoyo: true,
       repeat: 2,
     });
-    const bossFrame = GAME_CONFIG.characters.iobrontes.frames.attack[this.attackDirection];
+    const bossFrame = this.getBossFrames('iobrontes').attack[this.attackDirection];
     this.setBossFrame(
       bossFrame,
-      WIND_UP_MS + GAME_CONFIG.timing.defenseHintLeadMs + PROJECTILE_TRAVEL_MS + 400,
+      GAME_CONFIG.timing.windUpMs + GAME_CONFIG.timing.defenseHintLeadMs
+        + GAME_CONFIG.timing.projectileTravelMs + 400,
     );
     this.targetText.setText(
-      `${this.directionControl(this.attackDirection)}  ·  GOLPE ${this.lightningIndex + 1} / 3`,
+      `${this.directionControl(this.attackDirection)}  ·  GOLPE ${this.lightningIndex + 1} / ${this.lightningStrikeCount}`,
     );
     this.time.delayedCall(
-      WIND_UP_MS + GAME_CONFIG.timing.defenseHintLeadMs,
+      this.combatTiming.windUpMs + this.combatTiming.defenseHintLeadMs,
       () => this.launchEnemyLightning(),
     );
   }
@@ -3001,7 +3313,7 @@ export default class CombatScene extends Phaser.Scene {
       targets: bolt,
       x: path.end.x,
       y: path.end.y,
-      duration: PROJECTILE_TRAVEL_MS,
+      duration: this.combatTiming.projectileTravelMs,
       ease: 'Linear',
       onComplete: () => {
         bolt.destroy();
@@ -3010,7 +3322,7 @@ export default class CombatScene extends Phaser.Scene {
         }
       },
     });
-    this.time.delayedCall(DEFENSE_WINDOW_END_MS, () => this.resolveEnemyAttack());
+    this.time.delayedCall(this.defenseWindowEndMs, () => this.resolveEnemyAttack());
   }
 
   private lightningPath(targetId: CharacterId, direction: Direction): LightningPath {
@@ -3090,7 +3402,12 @@ export default class CombatScene extends Phaser.Scene {
     this.phase = 'resolving';
     const outcome = this.defenseOutcome ?? 'failed';
     const targetId = this.targetCharacter;
-    const damage = damageForDefense(targetId, outcome);
+    const damage = damageForDefense(
+      targetId,
+      outcome,
+      this.getBossPhaseConfig('iobrontes').damageMultiplier,
+      this.modeConfig.bossDamageMultiplier,
+    );
     const shielded = outcome !== 'perfect'
       && !(targetId === 'sahira' && outcome === 'blocked')
       && consumeShieldHit(this.state, targetId);
@@ -3122,7 +3439,7 @@ export default class CombatScene extends Phaser.Scene {
           COLORS.yellow,
           0.8,
         );
-        this.setBossFrame('iobrontes_herido', 450);
+        this.setBossFrame(this.getBossFrames('iobrontes').hit, 450);
         this.showFloatingText(`-${bossDamage.damage}`, GAME_CONFIG.characters.iobrontes.x, GAME_CONFIG.characters.iobrontes.feetY - 360, '#fff0a5');
       }
       this.promptText.setText('Parada perfecta: daño evitado.');
@@ -3193,7 +3510,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.finishIfBattleEnded()) {
       return;
     }
-    this.time.delayedCall(GAME_CONFIG.timing.resultDurationMs, () => {
+    this.time.delayedCall(this.combatTiming.resultDurationMs, () => {
       if (this.phase !== 'resolving' || this.result) {
         return;
       }
@@ -3203,10 +3520,13 @@ export default class CombatScene extends Phaser.Scene {
         return;
       }
       this.lightningIndex += 1;
-      if (this.state.party[targetId].health <= 0 || this.lightningIndex >= 3) {
+      if (
+        this.state.party[targetId].health <= 0
+        || this.lightningIndex >= this.lightningStrikeCount
+      ) {
         this.finishEnemyChain();
       } else {
-        this.time.delayedCall(GAME_CONFIG.timing.nextBoltDelayMs, () => this.beginLightningBolt());
+        this.time.delayedCall(this.combatTiming.nextBoltDelayMs, () => this.beginLightningBolt());
       }
     });
   }
@@ -3219,16 +3539,18 @@ export default class CombatScene extends Phaser.Scene {
     if (
       this.state.bosses.iobrontes.health > 0
       && target === 'furai'
-      && this.perfectParries === 3
+      && this.perfectParries === this.lightningStrikeCount
       && this.state.party.furai.health > 0
     ) {
       this.phase = 'action';
-      this.promptText.setText('Parry perfecto · Tiger Parry: Furai contraataca tras tres paradas perfectas.');
+      this.promptText.setText(
+        `Parry perfecto · Tiger Parry: Furai contraataca tras ${this.lightningStrikeCount} paradas perfectas.`,
+      );
       this.turnText.setText('TIGER PARRY');
       this.showFloatingText('TIGER PARRY', GAME_CONFIG.characters.furai.x, GAME_CONFIG.characters.furai.feetY - 520, '#ffe187');
       this.setActorFrame('furai', GAME_CONFIG.characters.furai.frames.attack);
       this.soundscape.play('furai');
-      this.time.delayedCall(300, () => {
+      this.time.delayedCall(this.combatDuration(300), () => {
         if (this.phase === 'ended' || this.result) {
           return;
         }
@@ -3242,7 +3564,7 @@ export default class CombatScene extends Phaser.Scene {
           COLORS.yellow,
           1.05,
         );
-        this.setBossFrame('iobrontes_herido', 500);
+        this.setBossFrame(this.getBossFrames('iobrontes').hit, 500);
         this.showDivineRetaliation(
           'furai',
           bossDamage.retaliationDamage,
@@ -3466,7 +3788,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.finishIfBattleEnded()) {
       return;
     }
-    this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+    this.time.delayedCall(this.combatTiming.attackRecoveryMs, () => this.finishPlayerAction());
   }
 
   private executeBossTargetedAbility(
@@ -3496,7 +3818,7 @@ export default class CombatScene extends Phaser.Scene {
       this.setActorFrame(character, 'furai_romper', GAME_CONFIG.timing.spritePoseMs);
       this.promptText.setText('Armor Break falló: no se aplica la marca.');
       this.refreshHud();
-      this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => {
+      this.time.delayedCall(this.combatTiming.attackRecoveryMs, () => {
         this.finishPlayerAction();
       });
       return;
@@ -3527,7 +3849,7 @@ export default class CombatScene extends Phaser.Scene {
       );
       this.promptText.setText(`Armor Break activo contra ${GAME_CONFIG.characters[boss].name}: su siguiente ataque recibe daño doble.`);
       this.refreshHud();
-      this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => {
+      this.time.delayedCall(this.combatTiming.attackRecoveryMs, () => {
         this.finishPlayerAction();
       });
       return;
@@ -3564,7 +3886,7 @@ export default class CombatScene extends Phaser.Scene {
       );
       this.setActorFrame('hazel', this.getActorFrames('hazel').hit, 550);
       this.promptText.setText(`${ability.name} falló: no causa daño.`);
-      this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
+      this.time.delayedCall(this.combatTiming.attackHitIntervalMs, () => {
         if (this.phase !== 'action' || this.result) {
           return;
         }
@@ -3575,7 +3897,7 @@ export default class CombatScene extends Phaser.Scene {
     if (ability.id === 'glacio-shift') {
       this.soundscape.play('shift');
       this.setActorFrame('hazel', 'hazel_cambio');
-      this.time.delayedCall(GAME_CONFIG.timing.spritePoseMs, () => {
+      this.time.delayedCall(this.combatTiming.spritePoseMs, () => {
         if (this.phase !== 'action' || this.result) {
           return;
         }
@@ -3591,7 +3913,7 @@ export default class CombatScene extends Phaser.Scene {
 
     this.soundscape.play('shard');
     this.setActorFrame('hazel', ability.frame);
-    this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
+    this.time.delayedCall(this.combatTiming.attackHitIntervalMs, () => {
       if (this.phase !== 'action' || this.result) {
         return;
       }
@@ -3620,7 +3942,7 @@ export default class CombatScene extends Phaser.Scene {
         });
       this.setActorFrame('hazel', this.getActorFrames('hazel').hit, 550);
       this.promptText.setText(`${ability.name} falló: no causa daño.`);
-      this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
+      this.time.delayedCall(this.combatTiming.attackHitIntervalMs, () => {
         if (this.phase !== 'action' || this.result) {
           return;
         }
@@ -3631,7 +3953,7 @@ export default class CombatScene extends Phaser.Scene {
     if (ability.id === 'ignis-shift') {
       this.soundscape.play('shift');
       this.setActorFrame('hazel', 'hazel_cambio');
-      this.time.delayedCall(GAME_CONFIG.timing.spritePoseMs, () => {
+      this.time.delayedCall(this.combatTiming.spritePoseMs, () => {
         if (this.phase !== 'action' || this.result) {
           return;
         }
@@ -3728,7 +4050,7 @@ export default class CombatScene extends Phaser.Scene {
     const empowered = result.empowered;
     const target = GAME_CONFIG.characters[boss];
     this.showHazelImpact(effect, boss);
-    this.setBossFrame(target.frames.hit, GAME_CONFIG.timing.spritePoseMs, boss);
+    this.setBossFrame(this.getBossFrames(boss).hit, GAME_CONFIG.timing.spritePoseMs, boss);
     this.showFloatingText(
       `-${result.damage}`,
       target.x,
@@ -3751,7 +4073,7 @@ export default class CombatScene extends Phaser.Scene {
       this.finishAbility('hazel', ability);
       return;
     }
-    this.time.delayedCall(GAME_CONFIG.timing.hazelAttackPoseMs, () => {
+    this.time.delayedCall(this.combatTiming.hazelAttackPoseMs, () => {
       if (this.phase !== 'action' || this.result) {
         return;
       }
@@ -3784,7 +4106,7 @@ export default class CombatScene extends Phaser.Scene {
       targets: sprite,
       x: target.x,
       y: target.feetY - target.displayHeight * 0.55,
-      duration: GAME_CONFIG.timing.attackHitIntervalMs,
+      duration: this.combatTiming.attackHitIntervalMs,
       ease: 'Sine.easeIn',
       onComplete: () => {
         this.hazelEffectObjects.splice(this.hazelEffectObjects.indexOf(sprite), 1);
@@ -3813,7 +4135,7 @@ export default class CombatScene extends Phaser.Scene {
       targets: sprite,
       alpha: 0,
       scale: 1.35,
-      duration: 450,
+      duration: this.combatDuration(450),
       onComplete: () => {
         this.hazelEffectObjects.splice(this.hazelEffectObjects.indexOf(sprite), 1);
         sprite.destroy();
@@ -3851,7 +4173,7 @@ export default class CombatScene extends Phaser.Scene {
       angle: GAME_CONFIG.kosmelysAttacks.portalEffectRotationDegrees,
       alpha: GAME_CONFIG.kosmelysAttacks.portalEffectFadeAlpha,
       scale: GAME_CONFIG.kosmelysAttacks.portalEffectScale,
-      duration: GAME_CONFIG.timing.portalEffectDurationMs,
+      duration: this.combatTiming.portalEffectDurationMs,
       onComplete: () => {
         this.portalEffects = this.portalEffects.filter((effect) => effect !== portal);
         portal.destroy();
@@ -3886,7 +4208,7 @@ export default class CombatScene extends Phaser.Scene {
     this.tweens.add({
       targets: actor,
       x: actorConfig.x + 55,
-      duration: 150,
+      duration: this.combatDuration(150),
       yoyo: true,
       ease: 'Sine.easeOut',
       onComplete: () => {
@@ -3932,7 +4254,7 @@ export default class CombatScene extends Phaser.Scene {
         }
         if (!this.portalRedirectTarget) {
           this.setBossFrame(
-            GAME_CONFIG.characters[boss].frames.hit,
+            this.getBossFrames(boss).hit,
             GAME_CONFIG.timing.spritePoseMs,
             boss,
           );
@@ -3978,7 +4300,7 @@ export default class CombatScene extends Phaser.Scene {
           return;
         }
         if (hitIndex + 1 < ability.hits) {
-          this.time.delayedCall(GAME_CONFIG.timing.attackHitIntervalMs, () => {
+          this.time.delayedCall(this.combatTiming.attackHitIntervalMs, () => {
             this.performAbilityHit(character, ability, hitIndex + 1);
           });
           return;
@@ -4006,7 +4328,7 @@ export default class CombatScene extends Phaser.Scene {
     if (this.portalRedirectTarget) {
       this.state.kosmelysPortalShieldTurnsRemaining = 0;
       this.portalRedirectTarget = null;
-      this.setKosmelysFrame(GAME_CONFIG.characters.kosmelys.frames.idle);
+      this.setKosmelysFrame(this.getBossFrames('kosmelys').idle);
       this.showFloatingText(
         'PORTAL SHIELD AGOTADO',
         GAME_CONFIG.characters.kosmelys.x,
@@ -4014,7 +4336,7 @@ export default class CombatScene extends Phaser.Scene {
         '#d8b2ff',
       );
     }
-    this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+    this.time.delayedCall(this.combatTiming.attackRecoveryMs, () => this.finishPlayerAction());
   }
 
   private healCharacter(target: CharacterId): void {
@@ -4056,7 +4378,7 @@ export default class CombatScene extends Phaser.Scene {
       );
       this.promptText.setText(`${GAME_CONFIG.characters[target].name} recupera toda su salud.`);
       this.refreshHud();
-      this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+      this.time.delayedCall(this.combatTiming.attackRecoveryMs, () => this.finishPlayerAction());
     }));
   }
 
@@ -4100,7 +4422,7 @@ export default class CombatScene extends Phaser.Scene {
         );
         this.promptText.setText('Hippopotamus Shield falló: no se aplica ningún escudo.');
         this.refreshHud();
-        this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+        this.time.delayedCall(this.combatTiming.attackRecoveryMs, () => this.finishPlayerAction());
         return;
       }
       const charges = outcome.charges;
@@ -4115,7 +4437,7 @@ export default class CombatScene extends Phaser.Scene {
       );
       this.promptText.setText(`${GAME_CONFIG.characters[target].name} queda protegido de sus ${charges === 1 ? 'próximo ataque' : 'dos próximos ataques'}.`);
       this.refreshHud();
-      this.time.delayedCall(GAME_CONFIG.timing.attackRecoveryMs, () => this.finishPlayerAction());
+      this.time.delayedCall(this.combatTiming.attackRecoveryMs, () => this.finishPlayerAction());
     }));
   }
 
@@ -4131,7 +4453,7 @@ export default class CombatScene extends Phaser.Scene {
     }
     if (this.state.kosmelysPortalShieldTurnsRemaining > 0) {
       this.state.kosmelysPortalShieldTurnsRemaining = 0;
-      this.setKosmelysFrame(GAME_CONFIG.characters.kosmelys.frames.idle);
+      this.setKosmelysFrame(this.getBossFrames('kosmelys').idle);
       this.showFloatingText(
         'PORTAL SHIELD DISIPADO',
         GAME_CONFIG.characters.kosmelys.x,
@@ -4165,10 +4487,10 @@ export default class CombatScene extends Phaser.Scene {
     }
     const windowStart = cosmic
       ? this.cosmicMidpointMs
-      : DEFENSE_WINDOW_START_MS;
+      : this.defenseWindowStartMs;
     const windowEnd = cosmic
       ? this.cosmicTravelDurationMs
-      : DEFENSE_WINDOW_END_MS;
+      : this.defenseWindowEndMs;
     if (elapsed < windowStart || elapsed > windowEnd) {
       return;
     }
@@ -4183,7 +4505,12 @@ export default class CombatScene extends Phaser.Scene {
             ? 'perfect'
             : 'blocked';
     } else {
-      const outcome = resolveDefense(this.attackDirection, direction, elapsed);
+      const outcome = resolveDefense(
+        this.attackDirection,
+        direction,
+        elapsed,
+        this.modeConfig.combatTimingMultiplier,
+      );
       this.defenseOutcome = this.targetCharacter === 'sahira' && outcome === 'perfect'
         ? 'blocked'
         : outcome;
@@ -4322,6 +4649,35 @@ export default class CombatScene extends Phaser.Scene {
     return boss === 'iobrontes' ? this.boss : this.kosmelysBoss;
   }
 
+  private getBossPhaseConfig(boss: 'iobrontes'): IobrontesPhaseConfig;
+  private getBossPhaseConfig(boss: 'kosmelys'): KosmelysPhaseConfig;
+  private getBossPhaseConfig(
+    boss: BossId,
+  ): IobrontesPhaseConfig | KosmelysPhaseConfig;
+  private getBossPhaseConfig(
+    boss: BossId,
+  ): IobrontesPhaseConfig | KosmelysPhaseConfig {
+    const phase: BossPhase = this.state.bosses[boss].phase === 'normal' ? 'normal' : 'heir';
+    return GAME_CONFIG.bossPhases[boss][phase];
+  }
+
+  private getBossFrames(boss: 'iobrontes'): IobrontesPhaseConfig['frames'];
+  private getBossFrames(boss: 'kosmelys'): KosmelysPhaseConfig['frames'];
+  private getBossFrames(
+    boss: BossId,
+  ): IobrontesPhaseConfig['frames'] | KosmelysPhaseConfig['frames'];
+  private getBossFrames(
+    boss: BossId,
+  ): IobrontesPhaseConfig['frames'] | KosmelysPhaseConfig['frames'] {
+    return this.getBossPhaseConfig(boss).frames;
+  }
+
+  private getBossIconTextureKey(boss: BossId): string {
+    return this.state.bosses[boss].phase === 'normal'
+      ? `icon_${boss}`
+      : `icon_${boss}_heir`;
+  }
+
   private directionForKey(key: string): Direction | null {
     switch (key) {
       case 'a': return 'left';
@@ -4369,6 +4725,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private setActorFrame(id: CharacterId, frame: string, durationMs = 0): void {
+    durationMs = this.combatDuration(durationMs);
     const sprite = this.actorSprites[id];
     const config = GAME_CONFIG.characters[id];
     const idleFrame = this.getActorFrames(id).idle;
@@ -4405,6 +4762,7 @@ export default class CombatScene extends Phaser.Scene {
     durationMs = 0,
     bossId: BossId = 'iobrontes',
   ): void {
+    durationMs = this.combatDuration(durationMs);
     const config = GAME_CONFIG.characters[bossId];
     const sprite = bossId === 'iobrontes' ? this.boss : this.kosmelysBoss;
     const generation = bossId === 'iobrontes'
@@ -4432,11 +4790,11 @@ export default class CombatScene extends Phaser.Scene {
         ) {
           const idleFrame = bossId === 'iobrontes'
             ? this.state.divineRetributionTurnsRemaining > 0
-              ? GAME_CONFIG.characters.iobrontes.frames.divineRetribution
-              : GAME_CONFIG.characters.iobrontes.frames.idle
+              ? this.getBossFrames('iobrontes').divineRetribution
+                : this.getBossFrames('iobrontes').idle
             : this.state.kosmelysPortalShieldTurnsRemaining > 0
-              ? GAME_CONFIG.characters.kosmelys.frames.shield
-              : GAME_CONFIG.characters.kosmelys.frames.idle;
+                ? this.getBossFrames('kosmelys').shield
+                : this.getBossFrames('kosmelys').idle;
           this.setBossFrame(idleFrame, 0, bossId);
         }
       });
@@ -4528,7 +4886,7 @@ export default class CombatScene extends Phaser.Scene {
       targets: [glow, flash],
       alpha: 0,
       scale: 1.7,
-      duration: 420,
+      duration: this.combatDuration(420),
       onComplete: () => {
         glow.destroy();
         flash.destroy();
@@ -4550,7 +4908,7 @@ export default class CombatScene extends Phaser.Scene {
       targets: label,
       y: y - 55,
       alpha: 0,
-      duration: 950,
+      duration: this.combatDuration(950),
       onComplete: () => label.destroy(),
     });
   }
@@ -4658,7 +5016,7 @@ export default class CombatScene extends Phaser.Scene {
     if (result === 'victory') {
       this.turnText.setText('VICTORIA');
       this.promptText.setText('La tormenta se disipa sobre el templo.');
-      this.setBossFrame('iobrontes_herido');
+      this.setBossFrame(this.getBossFrames('iobrontes').hit);
       this.cameras.main.flash(450, 205, 168, 255, false);
     } else {
       this.turnText.setText('DERROTA');

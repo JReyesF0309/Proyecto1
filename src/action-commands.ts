@@ -145,6 +145,53 @@ export type ActionCommand =
   | CircleOverlapCommand
   | RapidPressCommand;
 
+const scaleActionCommand = (command: ActionCommand, multiplier: number): ActionCommand => {
+  switch (command.type) {
+    case 'NONE':
+      return command;
+    case 'CIRCLE_TIMING':
+      return {
+        ...command,
+        circleDurationMs: command.circleDurationMs * multiplier,
+        failStartMs: command.failStartMs * multiplier,
+        normalStartMs: command.normalStartMs * multiplier,
+        perfectStartMs: command.perfectStartMs * multiplier,
+        endMs: command.endMs * multiplier,
+        gapMs: command.gapMs * multiplier,
+      };
+    case 'DIRECTION_SEQUENCE':
+      return {
+        ...command,
+        totalTimeMs: command.totalTimeMs * multiplier,
+        perKeyTimeMs: command.perKeyTimeMs * multiplier,
+        perfectWithinMs: command.perfectWithinMs * multiplier,
+      };
+    case 'HOLD_BAR':
+      return {
+        ...command,
+        fillMs: command.fillMs * multiplier,
+        normalStartMs: command.normalStartMs * multiplier,
+        perfectStartMs: command.perfectStartMs * multiplier,
+        endMs: command.endMs * multiplier,
+        timeoutMs: command.timeoutMs * multiplier,
+      };
+    case 'HORIZONTAL_CONTROL':
+      return {
+        ...command,
+        durationMs: command.durationMs * multiplier,
+        speedPxPerSec: command.speedPxPerSec / multiplier,
+      };
+    case 'CIRCLE_OVERLAP':
+      return {
+        ...command,
+        speedRatio: command.speedRatio / multiplier,
+        timeoutMs: command.timeoutMs * multiplier,
+      };
+    case 'RAPID_PRESS':
+      return { ...command, durationMs: command.durationMs * multiplier };
+  }
+};
+
 export interface AbilityCommandConfig {
   illustration: CinematicKey;
   command: ActionCommand;
@@ -283,6 +330,7 @@ export class ActionCommandRunner {
     private readonly playPerfect: () => void,
     private readonly width: number,
     private readonly height: number,
+    private readonly timingMultiplier = 1,
   ) {
     scene.events.on(Phaser.Scenes.Events.UPDATE, this.onUpdate, this);
   }
@@ -331,11 +379,12 @@ export class ActionCommandRunner {
       finish(NO_COMMAND_OUTCOME(hits));
       return;
     }
+    const command = scaleActionCommand(config.command, this.timingMultiplier);
     this.playStrip(config.illustration, () => {
       if (token !== this.token) {
         return;
       }
-      this.startCommand(config.command, anchor, hits, token, finish);
+      this.startCommand(command, anchor, hits, token, finish);
     });
   }
 
@@ -361,7 +410,7 @@ export class ActionCommandRunner {
 
   private delay(ms: number, callback: () => void): void {
     const token = this.token;
-    const timer = this.scene.time.delayedCall(ms, () => {
+    const timer = this.scene.time.delayedCall(ms * this.timingMultiplier, () => {
       if (token === this.token) {
         callback();
       }
@@ -416,7 +465,7 @@ export class ActionCommandRunner {
     this.scene.tweens.add({
       targets: progress,
       t: 1,
-      duration: cfg.enterMs,
+      duration: cfg.enterMs * this.timingMultiplier,
       ease: 'Cubic.easeOut',
       onUpdate: place,
       onComplete: () => {
@@ -427,7 +476,7 @@ export class ActionCommandRunner {
           this.scene.tweens.add({
             targets: progress,
             t: 2,
-            duration: cfg.exitMs,
+            duration: cfg.exitMs * this.timingMultiplier,
             ease: 'Cubic.easeIn',
             onUpdate: place,
             onComplete: () => {
@@ -506,7 +555,7 @@ export class ActionCommandRunner {
       targets: text,
       y: y - 60,
       alpha: 0,
-      duration: 900,
+      duration: 900 * this.timingMultiplier,
       onComplete: () => {
         text.destroy();
         this.objects = this.objects.filter((object) => object !== text);

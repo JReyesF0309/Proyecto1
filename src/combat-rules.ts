@@ -1,4 +1,11 @@
-import { BossId, CharacterId, Direction, GAME_CONFIG, HazelForm } from './game-config';
+import {
+  BossId,
+  BossPhase,
+  CharacterId,
+  Direction,
+  GAME_CONFIG,
+  HazelForm,
+} from './game-config';
 
 export type DefenseOutcome = 'perfect' | 'blocked' | 'failed';
 export type CombatResult = 'victory' | 'defeat';
@@ -14,7 +21,7 @@ export interface CharacterStatus {
 
 export interface CombatState {
   party: Record<CharacterId, CharacterStatus>;
-  bosses: Record<BossId, { health: number; armorBreak: boolean }>;
+  bosses: Record<BossId, { health: number; armorBreak: boolean; phase: BossPhase }>;
   sahiraAbilityUses: {
     healing: number;
     shield: number;
@@ -44,10 +51,10 @@ export const MAX_MANA: Record<CharacterId, number> = {
 };
 
 export const MAX_SPIRIT = GAME_CONFIG.characters.furai.spirit;
-export const SAHIRA_ABILITY_USE_LIMITS = { healing: 2, shield: 10 } as const;
+export const SAHIRA_ABILITY_USE_LIMITS = { healing: 4, shield: 10 } as const;
 export const MAX_CHAOS = 100;
-export const MAX_IOBRONTES_HEALTH = GAME_CONFIG.characters.iobrontes.health;
-export const MAX_KOSMELYS_HEALTH = GAME_CONFIG.characters.kosmelys.health;
+export const MAX_IOBRONTES_HEALTH = GAME_CONFIG.bossPhases.iobrontes.normal.maxHealth;
+export const MAX_KOSMELYS_HEALTH = GAME_CONFIG.bossPhases.kosmelys.normal.maxHealth;
 export const MAX_BOSS_HEALTH: Record<BossId, number> = {
   iobrontes: MAX_IOBRONTES_HEALTH,
   kosmelys: MAX_KOSMELYS_HEALTH,
@@ -73,8 +80,8 @@ export const createCombatState = (): CombatState => ({
     hazel: { health: MAX_HEALTH.hazel, mana: 0, spirit: 0, chaos: 0, shieldHits: 0 },
   },
   bosses: {
-    iobrontes: { health: MAX_IOBRONTES_HEALTH, armorBreak: false },
-    kosmelys: { health: MAX_KOSMELYS_HEALTH, armorBreak: false },
+    iobrontes: { health: MAX_IOBRONTES_HEALTH, armorBreak: false, phase: 'normal' },
+    kosmelys: { health: MAX_KOSMELYS_HEALTH, armorBreak: false, phase: 'normal' },
   },
   sahiraAbilityUses: {
     healing: SAHIRA_ABILITY_USE_LIMITS.healing,
@@ -140,8 +147,15 @@ export const damageBoss = (
   boss: BossId,
   amount: number,
 ): number => {
-  const damage = Math.min(state.bosses[boss].health, Math.max(0, amount));
-  state.bosses[boss].health -= damage;
+  const bossState = state.bosses[boss];
+  if (bossState.phase === 'defeated') {
+    return 0;
+  }
+  const damage = Math.min(bossState.health, Math.max(0, amount));
+  bossState.health -= damage;
+  if (bossState.health <= 0 && bossState.phase === 'heir') {
+    bossState.phase = 'defeated';
+  }
   return damage;
 };
 
@@ -202,36 +216,39 @@ export const resolveDefense = (
   attackDirection: Direction,
   responseDirection: Direction | null,
   responseTimeMs: number | null,
+  timingMultiplier = 1,
 ): DefenseOutcome => {
   if (
     responseDirection !== attackDirection
     || responseTimeMs === null
-    || responseTimeMs < DEFENSE_WINDOW_START_MS
-    || responseTimeMs > DEFENSE_WINDOW_END_MS
+    || responseTimeMs < DEFENSE_WINDOW_START_MS * timingMultiplier
+    || responseTimeMs > DEFENSE_WINDOW_END_MS * timingMultiplier
   ) {
     return 'failed';
   }
-  return responseTimeMs < PERFECT_PARRY_WINDOW_START_MS ? 'blocked' : 'perfect';
+  return responseTimeMs < PERFECT_PARRY_WINDOW_START_MS * timingMultiplier ? 'blocked' : 'perfect';
 };
 
 export const damageForDefense = (
   character: CharacterId,
   outcome: DefenseOutcome,
+  damageMultiplier = 1,
+  sceneDamageMultiplier = 1,
 ): number => {
   if (outcome === 'perfect') {
     return 0;
   }
-  if (outcome === 'blocked') {
-    if (character === 'hazel') {
-      return ENEMY_ATTACK_DAMAGE;
-    }
-    return character === 'sahira' ? 0 : IMPERFECT_BLOCK_DAMAGE;
+  if (outcome === 'blocked' && character === 'sahira') {
+    return 0;
   }
-  return ENEMY_ATTACK_DAMAGE;
+  const baseDamage = outcome === 'blocked'
+    ? character === 'hazel' ? ENEMY_ATTACK_DAMAGE : IMPERFECT_BLOCK_DAMAGE
+    : ENEMY_ATTACK_DAMAGE;
+  return Math.ceil(baseDamage * damageMultiplier * sceneDamageMultiplier);
 };
 
 export const getBattleResult = (state: CombatState): CombatResult | null => {
-  if (Object.values(state.bosses).every((boss) => boss.health <= 0)) {
+  if (Object.values(state.bosses).every((boss) => boss.phase === 'defeated')) {
     return 'victory';
   }
   if (Object.values(state.party).every((character) => character.health <= 0)) {

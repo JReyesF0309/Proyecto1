@@ -6,6 +6,7 @@ import furaiImage from '../assets/select/furai.png';
 import dexiosImage from '../assets/select/dexios.png';
 import sahiraImage from '../assets/select/sahira.png';
 import hazelImage from '../assets/select/hazel_fuego.png';
+import tutorialImage from '../assets/backgrounds/tutorial.png';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
@@ -40,6 +41,20 @@ const COLUMNS = [300, 740, 1180, 1620];
 
 const OPTIONS: SelectOption[] = [
   {
+    id: 'tutorial',
+    image: 'select_tutorial',
+    crop: { x: 0, y: 205, width: 1440, height: 742 },
+    label: 'tutorial',
+    key: 'T',
+    keyEvent: 'keydown-T',
+    scene: 'escena_tutorial',
+    color: WHITE,
+    x: WIDTH / 2 - 400,
+    y: 225,
+    width: 700,
+    height: 360,
+  },
+  {
     id: 'combat',
     image: 'select_gods',
     crop: { x: 0, y: 10, width: 768, height: 395 },
@@ -48,7 +63,7 @@ const OPTIONS: SelectOption[] = [
     keyEvent: 'keydown-ENTER',
     scene: 'escena_combate_dificil',
     color: WHITE,
-    x: WIDTH / 2,
+    x: WIDTH / 2 + 400,
     y: 225,
     width: 700,
     height: 360,
@@ -119,6 +134,7 @@ export default class SelectScene extends Phaser.Scene {
       ['select_dexios', dexiosImage],
       ['select_sahira', sahiraImage],
       ['select_hazel', hazelImage],
+      ['select_tutorial', tutorialImage],
     ];
     images.forEach(([key, asset]) => {
       if (!this.textures.exists(key)) {
@@ -181,7 +197,7 @@ export default class SelectScene extends Phaser.Scene {
     const labelY = option.y + option.height / 2 + 38;
     this.add.text(option.x, labelY, option.label, {
       fontFamily: GAME_FONT_FAMILY,
-      fontSize: option.id === 'combat' ? '40px' : '27px',
+      fontSize: option.id === 'combat' || option.id === 'tutorial' ? '40px' : '27px',
       fontStyle: 'bold',
       letterSpacing: 4,
       color: option.color,
@@ -189,7 +205,11 @@ export default class SelectScene extends Phaser.Scene {
       strokeThickness: 5,
       align: 'center',
     }).setOrigin(0.5).setDepth(3);
-    this.createKeyBadge(option.x, labelY + (option.id === 'combat' ? 62 : 58), option.key);
+    this.createKeyBadge(
+      option.x,
+      labelY + (option.id === 'combat' || option.id === 'tutorial' ? 62 : 58),
+      option.key,
+    );
 
     portrait.setInteractive({ useHandCursor: true });
     portrait.on('pointerover', () => portrait.setScale(1.04));

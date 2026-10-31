@@ -4,7 +4,7 @@ Document Status: Implementation Specification
 Target Platform: PC (Phaser, browser)
 Genre: Turn-Based RPG with Real-Time Directional Defense
 Visual Perspective: 2D character-based combat with foreground/background depth
-Prototype Scope: Four playable characters, two bosses, one arena, and one complete dual-boss combat encounter.
+Prototype Scope: Four playable characters, two bosses, one arena, and standard and tutorial configurations of the dual-boss combat encounter.
 Note to the implementer: This document is intended to be self-contained. Implement the mechanics and values described here without relying on previous versions. Numerical values, timings, character positions, camera settings, and animation references must be stored in configuration files whenever possible.
 ________________________________________
 1. GAME OVERVIEW
@@ -34,6 +34,9 @@ The prototype must:
 12.	Establish a functional system that can later be expanded with more characters and encounters.
 13.	Implement Kosmelys's Cosmic Rays, Portal Shield, and sequential Meteor Rain with their specified targeting, defense, damage, counterattack, probability, and audio behavior.
 14.	Keep the two bosses' health, status, abilities, and turns independent; victory requires defeating both bosses.
+15.	Preserve the standard combat scene and provide a separate tutorial-configured scene with the same combat logic.
+
+The standard scene remains `escena_combate_dificil`. The tutorial scene, `escena_tutorial`, reuses the same combat implementation with a configured 0.75 multiplier on god-origin damage (rounded up with `Math.ceil`) and a 1.5 multiplier on combat and action-command timings. Player-origin damage, boss HP, attack counts, healing amounts, turn order, and the standard scene's damage and timing remain unchanged. `escena_select` presents equally sized 700 × 360 Tutorial and Combat ovals symmetrically at X=560 and X=1360. The left button is labeled `tutorial`, uses `assets/backgrounds/tutorial.png`, and starts a fresh tutorial encounter; the existing `COMBAT START` artwork, label, and destination remain unchanged apart from its position.
 1.3. Out of Scope
 This prototype will not include exploration, interactive dialogue, inventory, character progression, equipment selection, additional bosses beyond Iobrontes and Kosmelys, multiple arenas, or a complete save system.
 Character speed statistics will also be excluded. Turn order will remain fixed throughout the encounter.
@@ -416,7 +419,7 @@ The attack deals 15 damage and produces a visible impact effect.
 It has no per-fight use limit.
 7.3. Ability 2 â€” Hippopotamus Healing
 Healing: Full restoration of the selected ally's Health
-Uses: 2 per fight
+Uses: 4 per fight
 Type: Healing ability
 Frame: sahira_cura
 Sahira performs a healing ability that completely restores one selected party member's health.
@@ -427,7 +430,7 @@ The player can choose:
 â€¢	Sahira
 â€¢	Hazel
 The healing effect restores the selected character to their maximum Health value.
-Each successful use consumes one of the two uses available for the fight.
+Each successful use consumes one of the four uses available for the fight.
 Healing Target Selection
 1.	The player selects Hippopotamus Healing.
 2.	The game displays all four party members.
@@ -672,7 +675,7 @@ Furai
 â€¢	Spiritual Energy: White bar â€” 0 / 100.
 Sahira
 â€¢	Health: Green bar â€” 125 / 125.
-â€¢	No Mana bar; show ability-use counts for Hippopotamus Healing (2) and Hippopotamus Shield (10).
+â€¢	No Mana bar; show ability-use counts for Hippopotamus Healing (4) and Hippopotamus Shield (10).
 Hazel
 â€¢	Health: Green bar â€” 80 / 80.
 â€¢	No Mana or Chaos bar; show the current Ignis/Glacio form instead.
@@ -703,7 +706,7 @@ Armor Break	25 Spiritual Energy
 Sahira
 Ability	Cost
 Jackal Strike	Unlimited
-Hippopotamus Healing	2 uses per fight
+Hippopotamus Healing	4 uses per fight
 Hippopotamus Shield	10 uses per fight
 Abilities that cannot be afforded must appear disabled.
 Sahira's healing ability opens an ally-selection interface before executing.
@@ -880,7 +883,7 @@ Armor Break costs 25 Spiritual Energy. Successful Tiger Spear hits and successfu
 18.	Three perfect parries in the same chain trigger a 20-damage counterattack.
 Sahira
 19.	Jackal Strike deals 15 damage.
-20.	Jackal Strike has no use limit. Hippopotamus Healing restores a selected conscious ally to maximum Health and can be used twice per fight.
+20.	Jackal Strike has no use limit. Hippopotamus Healing restores a selected conscious ally to maximum Health and can be used four times per fight.
 21.	The healing ability allows the selection of Dexios, Furai, Sahira, or Hazel.
 Hippopotamus Shield can be used ten times per fight and can protect any conscious ally, including Hazel.
 22.	Sahira takes no damage from imperfect blocks.
@@ -1118,7 +1121,7 @@ Register the following animation states:
 | Attack Right | `kosmelys_derecha.png` |
 | Attack Left | `kosmelys_izquierda.png` |
 | Attack Up | `kosmelys_arriba.png` |
-| Attack Down | Temporary labeled placeholder (no supplied down frame) |
+| Attack Down | `kosmelys_abajo.png` |
 | Portal Shield | `kosmelys_escudo.png` |
 | Meteor Rain | `kosmelys_mr.png` |
 
@@ -1773,13 +1776,11 @@ Both bosses must be present at the beginning of the encounter.
 
 ## 9.2. Victory Condition
 
-The player wins only when **both Iobrontes and Kosmelys reach zero Health**.
+The player wins only when **both Iobrontes and Kosmelys are permanently defeated**.
 
-Defeating one boss does not end the battle.
+Each boss begins in NORMAL. Its first Health depletion triggers HEIR MODE after the current player ability finishes; its Health is restored to its full maximum and its combat turn is not reset. The bosses transform independently, and the surviving boss continues acting normally. A boss in HEIR is permanently defeated when its Health is depleted again.
 
-The surviving boss continues acting normally.
-
-Once defeated, a boss:
+Once permanently defeated, a boss:
 
 - Cannot be selected as a target.
 - Cannot use abilities.
@@ -1803,7 +1804,7 @@ In particular:
 
 - Dexios continues generating Chaos energy when taking eligible damage.
 - Furai uses Spirit instead of Mana; successful Tiger Spear and Tiger Parry actions each grant 30 Spirit, capped at 100. Tiger Spear deals 15 damage at no cost; Tiger Fang deals 20 damage per hit (40 total) for 20 Spirit; Armor Break retains its effect and costs 25 Spirit.
-- Sahira has no Mana. Jackal Strike is unlimited; Hippopotamus Healing has two uses and Hippopotamus Shield has ten uses per battle.
+- Sahira has no Mana. Jackal Strike is unlimited; Hippopotamus Healing has four uses and Hippopotamus Shield has ten uses per battle.
 - Sahira can heal or protect any conscious ally, including Hazel.
 - Hazel's two elemental forms share 80 Health; her form-specific actions, costs, and precision defense are defined in section 1.4.
 - Hippopotamus Shield can protect against damaging attacks, including eligible redirected attacks and meteors.
@@ -1811,6 +1812,14 @@ In particular:
 - Kosmelys's Portal Shield only redirects attacks intended for Kosmelys.
 
 Boss-specific status effects must not automatically transfer from one boss to the other.
+
+## 9.6. Heir Mode
+
+Heir Mode uses independent NORMAL, HEIR, and DEFEATED states for each boss. Normal-phase depletion queues one transformation after the active ability resolves, preventing later hits from carrying over to the restored phase. Transformation refills Iobrontes to 550 HP or Kosmelys to 450 HP, switches the boss sprites and turn-order icon, clears its temporary defense and Armor Break state, and does not grant an extra turn.
+
+HEIR damage is doubled while preserving each character's defensive behavior. Iobrontes uses five Lightning Chain strikes, two separately defendable Watch the Thunder sweeps, and 60-damage Divine Retribution. Kosmelys uses three Cosmic Rays projectiles and eight sequential meteors; Portal Shield keeps its existing behavior and does not double redirected player damage. Existing attack probabilities, turn order, perfect-defense rules, and playable-character counterattacks remain unchanged.
+
+Use the exact phase sprite and portrait filenames in section 17, including Iobrontes's `heredero` and Kosmelys's `heredera` naming. Ultimate sprites remain unused.
 
 ## 9.5. Kosmelys Ability Selection
 
@@ -2312,7 +2321,7 @@ Icono: `sahira_icono`
 
 Barras:
 - Verde: HP.
-- Sin barra de manÃ¡. Jackal Strike no tiene lÃ­mite de usos; Hippopotamus Healing tiene 2 usos y Hippopotamus Shield tiene 10 usos por pelea.
+- Sin barra de manÃ¡. Jackal Strike no tiene lÃ­mite de usos; Hippopotamus Healing tiene 4 usos y Hippopotamus Shield tiene 10 usos por pelea.
 
 ### HAZEL LANCASTER
 
@@ -3464,7 +3473,7 @@ After implementing these corrections, verify the following:
 12. Hazel's `IGNIS` and `GLACIO` labels are centered, legible, and update after a successful shift.
 13. All four ally targets fit inside the selection panel and remain keyboard- and mouse-selectable.
 14. Both boss Health bars remain visible and update during player actions, including each hit in a multi-hit attack.
-15. Healing, shielding, resource calculations, turn order, defensive timing, boss behavior, and existing damage rules remain unchanged.
+15. Healing amount and target rules, shielding, resource calculations, turn order, defensive timing, boss behavior, and standard-scene damage rules remain unchanged; tutorial combat applies only its configured god-damage and timing modifiers.
 
 Combat sprites for Dexios, Furai, Sahira, Hazel, Iobrontes, and Kosmelys are generated as transparent 1536 Ã— 1536 PNGs in `assets/normalized/`; the original artwork remains untouched. Run `.\scripts\normalize-character-sprites.ps1` to reproduce them. Normalized frames share the configured 1320 ground baseline and reference visible height in `GAME_CONFIG`, so Phaser uses one character scale without rescanning alpha bounds at runtime. The party spacing follows `bocetos/boceto_combate.jpeg`; compact numeric HUD values use a readable UI font, while decorative text retains Archeologicaps. Per-frame exceptions live in `GAME_CONFIG.sprite.frameScale` (Dexios and Hazel Ignis/Glacio defense frames at 50% or 110%). Hazel's attack frames are `hazel_fuego_dance` and `hazel_hielo_shards`, held for `GAME_CONFIG.timing.hazelAttackPoseMs` before returning to idle. Pressing H on the welcome scene opens `escena_pruebahazel` (`src/hazel-test-scene.ts`), a sandbox with Hazel's forms, abilities, targeting, jump, and free W/A/S/D dodge poses against two refilling boss dummies. Pressing S opens `escena_sahira_prueba` (`src/sahira-test-scene.ts`), the equivalent sandbox for Sahira's Jackal Strike, Hippopotamus Healing and Shield (self-targeted, with the real use limits), jump, and dodges. Pressing D opens `escena_dexios_prueba` (`src/dexios-test-scene.ts`) for Dexios' three attacks with mana/chaos costs, chaos gained from damage, jump, and dodges. Pressing F opens `escena_furai_prueba` (`src/furai-test-scene.ts`) for Furai's Tiger Spear, Tiger Fang (spirit cost), Armor Break, spirit gain, jump, and dodges.
 
@@ -3957,11 +3966,7 @@ If a stage cannot be completed safely, stop and explain the blocker instead of c
 
 The current Phaser combat prototype is functional. This update introduces character-specific offensive and support action commands, inspired by the interactive timing mechanics of turn-based RPGs.
 
-**DO NOT IMPLEMENT HEIR MODE.**
-
-Heir Mode is postponed until the final transformation sprites for Iobrontes and Kosmelys are available.
-
-Do not add second boss phases, restore boss Health automatically, double boss damage, or change boss appearances.
+Heir Mode is implemented for Iobrontes and Kosmelys. Preserve its phase transitions, full-Health restoration, damage scaling, sprite and icon changes, and permanent-defeat rules as documented in sections 9.6 and 17.
 
 **DO NOT REBUILD THE GAME FROM SCRATCH.**
 
@@ -3979,7 +3984,7 @@ Preserve all currently functional systems, including:
 - Existing character positions and sprite scaling.
 - Music, sounds, HUD, and camera behavior.
 
-This update applies only to player-selected ability presentations, action-command minigames, and their interaction with existing damage and support systems.
+Preserve the offensive action-command system alongside the implemented Heir Mode behavior and its interactions with existing damage and support systems.
 
 The rules below supersede any previous generic offensive timing implementation.
 
@@ -4471,7 +4476,7 @@ After the ally is selected and the introduction finishes, execute the healing ab
 Preserve:
 
 - Full healing.
-- Existing use limits.
+- Four uses per battle.
 - Existing conscious-target restriction.
 - Existing healing animation and sound.
 
@@ -5441,3 +5446,2142 @@ Implement only the new tutorial character-introduction panels.
 Do not modify gameplay mechanics, combat balancing, action commands, boss attacks, or character progression.
 
 Preserve the game's current functional state.
+
+# LA DEXÍADA — HEIR MODE IMPLEMENTATION
+
+## Complete Implementation Specification — Iobrontes and Kosmelys
+
+### 1. CRITICAL INSTRUCTIONS
+
+The current La Dexíada Phaser combat prototype is fully functional.
+
+Implement a second combat phase called **HEIR MODE** for Iobrontes and Kosmelys.
+
+This update introduces:
+
+- Automatic transformation upon the first HP depletion.
+- Full HP restoration.
+- Double outgoing damage.
+- Expanded attack sequences.
+- New Heir Mode character sprites.
+- New Heir Mode character icons.
+- Permanent defeat upon the second HP depletion.
+
+Preserve all existing gameplay systems that are not explicitly modified below.
+
+Do not rebuild the game from scratch.
+
+Do not change playable-character abilities, offensive action commands, defensive timing windows, resources, status effects, audio, arena composition, or the fixed turn order except where necessary to support the new boss phases.
+
+All new values must be configurable.
+
+**The supplied sprite filenames are final. Use them exactly as specified, including the distinction between `heredero` and `heredera`.**
+
+---
+
+# 2. BOSS PHASE SYSTEM
+
+Each boss must have its own independent phase state:
+
+- NORMAL
+- HEIR
+- DEFEATED
+
+Both bosses begin in NORMAL state.
+
+## 2.1. First HP Depletion
+
+When a NORMAL boss reaches 0 HP:
+
+1. Do not permanently defeat that boss.
+2. Finish resolving the current player ability safely.
+3. Temporarily suspend turn advancement.
+4. Trigger the boss's Heir Mode transformation.
+5. Restore its HP to its full original maximum.
+6. Switch its visual assets to the Heir set.
+7. Switch its HUD and turn-order icons.
+8. Activate the Heir Mode damage multiplier.
+9. Activate the expanded Heir attack sequences.
+10. Resume combat without granting an additional turn.
+
+A boss can transform only once per battle.
+
+## 2.2. Second HP Depletion
+
+When a boss already in HEIR state reaches 0 HP:
+
+- Mark it as permanently DEFEATED.
+- Prevent it from performing future attacks.
+- Skip its future turns.
+- Remove it from valid enemy target selection.
+- Preserve the surviving boss's independent combat behavior.
+
+Victory occurs only when both bosses are permanently DEFEATED.
+
+## 2.3. Independent Transformations
+
+The two bosses must transform independently.
+
+One boss may remain NORMAL while the other is in HEIR.
+
+Both may enter HEIR during the same encounter.
+
+Defeating one boss permanently must not interrupt the other boss's phase or scheduled turns.
+
+---
+
+# 3. IOBRONTES — HEIR MODE ASSETS
+
+Normal maximum Health: **550 HP**.
+
+On first depletion, restore to **550 / 550 HP**.
+
+Use the following exact Heir asset names:
+
+| State | Asset |
+|---|---|
+| Idle | `iobrontes_heredero_base` |
+| Attack right | `iobrontes_heredero_derecha` |
+| Attack left | `iobrontes_heredero_izquierda` |
+| Attack up | `iobrontes_heredero_arriba` |
+| Attack down | `iobrontes_heredero_abajo` |
+| Taking damage | `iobrontes_heredero_herido` |
+| Divine Retribution armor | `iobrontes_heredero_armadura` |
+| Watch the Thunder | `iobrontes_heredero_wtt` |
+| Portrait / turn-order icon | `iobrontes_heredero_icono` |
+
+Additional supplied asset:
+
+`iobrontes_heredero_ultimate`
+
+**Do not use `iobrontes_heredero_ultimate` in any gameplay action.**
+
+It is reserved for an ability that has not yet been designed.
+
+Do not implement or invent that ability.
+
+## 3.1. Sprite Switching
+
+Once Iobrontes transforms, all animations must use Heir sprites.
+
+Examples:
+
+- Lightning Chain upward attack uses `iobrontes_heredero_arriba`.
+- Lightning Chain downward attack uses `iobrontes_heredero_abajo`.
+- Divine Retribution uses `iobrontes_heredero_armadura`.
+- Watch the Thunder uses `iobrontes_heredero_wtt`.
+- Damage reactions use `iobrontes_heredero_herido`.
+- Returning to idle uses `iobrontes_heredero_base`.
+
+Do not briefly display normal-form frames after transformation.
+
+Preserve Iobrontes's position, sprite scaling, grounding, and battlefield depth.
+
+---
+
+# 4. IOBRONTES — HEIR MODE ABILITIES
+
+His existing three abilities remain unchanged in their general behavior and selection probabilities.
+
+However, their damage and attack counts change in HEIR state.
+
+## 4.1. Lightning Chain
+
+### NORMAL State
+
+Preserve the existing behavior:
+
+- 3 lightning strikes.
+- 10 base damage per strike.
+- One selected conscious ally per entire chain.
+- Independent random attack direction for each strike.
+
+### HEIR State
+
+Modify the attack to:
+
+**5 lightning strikes, each dealing 20 base damage.**
+
+All five strikes must target the same randomly selected conscious ally.
+
+Each strike independently selects a direction from:
+
+- W — Up
+- A — Left
+- S — Down
+- D — Right
+
+The same direction may appear multiple times.
+
+### Heir Attack Sequence
+
+1. Select one conscious party member.
+2. Announce Lightning Chain using the current attack announcement system.
+3. Prepare the first lightning strike.
+4. Display the corresponding Heir directional sprite.
+5. Launch the strike.
+6. Allow the player to defend.
+7. Resolve the defensive result.
+8. Repeat for strikes 2, 3, 4, and 5.
+9. Trigger any eligible defensive counterattack.
+10. Finish the action and advance the turn.
+
+All five strikes must be sequential.
+
+Do not launch multiple strikes simultaneously.
+
+### Defensive Mechanics
+
+Preserve the existing defensive timing windows.
+
+Do not make the lightning attacks faster or slower merely because the boss is in Heir Mode.
+
+Apply the doubled base damage through the combat damage system.
+
+For characters with normal/imperfect damage reduction, scale their resulting damage consistently with the Heir multiplier.
+
+Sahira still prevents all damage with a valid directional block.
+
+Hazel still requires a Perfect Parry to avoid damage.
+
+Dexios retains his 5-damage automatic counterattack per Perfect Parry.
+
+### Furai's Tiger Parry
+
+Furai must perfectly parry all **five** lightning strikes in a Heir Lightning Chain to trigger his 20-damage Tiger Parry.
+
+In NORMAL state, the requirement remains three Perfect Parries.
+
+The number of required perfect defenses must be calculated from the actual number of strikes in the current enemy action, not hard-coded to three.
+
+---
+
+## 4.2. Watch the Thunder
+
+### NORMAL State
+
+Preserve:
+
+- One sweeping lightning attack.
+- 50 damage per character who fails to jump.
+- One team-wide Space-jump opportunity.
+
+### HEIR State
+
+Watch the Thunder now consists of:
+
+**Two consecutive lightning sweeps.**
+
+Each sweep deals:
+
+**100 base damage per affected character.**
+
+### Required Sequence
+
+1. Iobrontes prepares Watch the Thunder.
+2. Display `iobrontes_heredero_wtt`.
+3. Launch the first sweep.
+4. Open the existing team-jump timing window.
+5. Resolve the first sweep.
+6. Begin the second sweep.
+7. Open a new, independent team-jump timing window.
+8. Resolve the second sweep.
+9. Finish the enemy action.
+
+The player must press Space separately for each sweep.
+
+A successful jump on the first sweep does not automatically avoid the second.
+
+The second sweep must have its own independent timing opportunity.
+
+Each successful jump prevents all damage from that sweep.
+
+Each failed jump causes the corresponding 100 damage, subject to existing protective effects.
+
+Do not modify the existing 0.6-second casting and 0.3-second jump-window durations unless a new setting is explicitly required to coordinate the second sweep.
+
+Keep the camera in the appropriate wide battlefield view.
+
+Do not advance the turn between the two sweeps.
+
+---
+
+## 4.3. Divine Retribution
+
+### NORMAL State
+
+Preserve:
+
+- Electric armor.
+- 30 retaliation damage.
+- Existing duration of two playable-character turns.
+- Existing behavior when the armor is triggered or expires.
+
+### HEIR State
+
+Divine Retribution deals:
+
+**60 retaliation damage.**
+
+Use:
+
+`iobrontes_heredero_armadura`
+
+Preserve the existing armor duration and activation behavior.
+
+Do not double its duration.
+
+The electric armor must still end when an eligible damaging player attack triggers the retaliation or its duration expires.
+
+After it ends, return Iobrontes to:
+
+`iobrontes_heredero_base`
+
+Do not return him to his normal-form sprite.
+
+---
+
+# 5. KOSMELYS — ADD MISSING NORMAL SPRITE
+
+The normal-form Kosmelys sprite set has been updated.
+
+A previously missing asset is now available:
+
+`kosmelys_abajo`
+
+Register and load this asset.
+
+When Kosmelys performs a downward-direction attack in NORMAL state, use:
+
+`kosmelys_abajo`
+
+Do not use an unrelated placeholder or incorrectly oriented sprite.
+
+Preserve all existing Normal Kosmelys sprites and behavior.
+
+---
+
+# 6. KOSMELYS — HEIR MODE ASSETS
+
+Normal maximum Health: **450 HP**.
+
+On first depletion, restore to **450 / 450 HP**.
+
+**Important naming difference: Kosmelys uses `heredera`, not `heredero`.**
+
+Use the following exact asset names:
+
+| State | Asset |
+|---|---|
+| Idle | `kosmelys_heredera_base` |
+| Attack right | `kosmelys_heredera_derecha` |
+| Attack left | `kosmelys_heredera_izquierda` |
+| Attack up | `kosmelys_heredera_arriba` |
+| Attack down | `kosmelys_heredera_abajo` |
+| Taking damage | `kosmelys_heredera_herida` |
+| Portal Shield | `kosmelys_heredera_escudo` |
+| Meteor Rain | `kosmelys_heredera_mr` |
+| Portrait / turn-order icon | `kosmelys_heredera_icono` |
+
+Additional supplied asset:
+
+`kosmelys_heredera_ultimate`
+
+**Do not use `kosmelys_heredera_ultimate` in combat.**
+
+No Ultimate ability is currently defined for Kosmelys.
+
+Do not implement one.
+
+## 6.1. Sprite Switching
+
+Once Kosmelys enters Heir Mode, all actions must use her Heir sprites.
+
+Examples:
+
+- Cosmic Rays upward attack uses `kosmelys_heredera_arriba`.
+- Cosmic Rays downward attack uses `kosmelys_heredera_abajo`.
+- Portal Shield uses `kosmelys_heredera_escudo`.
+- Meteor Rain uses `kosmelys_heredera_mr`.
+- Damage reactions use `kosmelys_heredera_herida`.
+- Returning to idle uses `kosmelys_heredera_base`.
+
+All Heir sprites must retain her existing position, perspective, scale, and grounding.
+
+---
+
+# 7. KOSMELYS — HEIR MODE ABILITIES
+
+Kosmelys retains Cosmic Rays, Portal Shield, and Meteor Rain.
+
+Preserve the existing ability-selection probabilities:
+
+- Cosmic Rays: 50%.
+- Portal Shield: 30%.
+- Meteor Rain: 20%.
+
+Preserve the existing redistribution behavior when Portal Shield is already active.
+
+## 7.1. Cosmic Rays
+
+### NORMAL State
+
+Preserve:
+
+- 2 cosmic projectiles.
+- 15 base damage each.
+- Both target the same conscious ally.
+- Each projectile changes its attack direction halfway through its travel.
+- Each projectile resolves independently.
+
+### HEIR State
+
+Cosmic Rays now launches:
+
+**3 cosmic projectiles dealing 30 base damage each.**
+
+All three projectiles target one randomly selected conscious ally.
+
+That target remains the same throughout the full three-projectile attack.
+
+### Required Sequence
+
+For every projectile:
+
+1. Select its initial direction randomly.
+2. Display the corresponding Heir directional sprite.
+3. Launch the cosmic projectile.
+4. At the midpoint of travel, select a different final direction.
+5. Replace the projectile's visual origin and effect according to the new direction.
+6. Update Kosmelys's directional sprite.
+7. Preserve the remaining projectile travel time.
+8. Allow the player to defend according to the final direction.
+9. Resolve the defensive result.
+
+Repeat sequentially for three projectiles.
+
+Preserve the existing `cosmico` visual effect and `ataque_cosmico.mp3` sound behavior.
+
+The sound must play at the appropriate projectile launch and direction-change events.
+
+Do not accidentally apply damage twice when a projectile changes direction.
+
+### Defensive Mechanics
+
+Preserve all existing character-specific defensive rules.
+
+- Dexios can counterattack for 5 damage per Perfect Parry.
+- Sahira avoids damage with a correct directional block.
+- Hazel avoids damage only with a Perfect Parry.
+
+Furai's Tiger Parry condition must adapt to the expanded sequence.
+
+In NORMAL state, Furai must perfectly parry both Cosmic Rays projectiles to perform his 20-damage counterattack.
+
+In HEIR state, he must perfectly parry **all three** projectiles.
+
+Do not change Tiger Parry's damage.
+
+---
+
+## 7.2. Portal Shield
+
+Portal Shield retains its existing functionality.
+
+In Heir Mode:
+
+- Use `kosmelys_heredera_escudo`.
+- Preserve its existing duration.
+- Preserve its existing target-redirection rules.
+- Preserve its existing sound effects.
+- Preserve its existing interaction with Armor Break and offensive action commands.
+
+**Portal Shield does not double reflected or redirected player damage.**
+
+The Heir damage multiplier applies to Kosmelys's own damaging attacks, not to player-origin attacks redirected through Portal Shield.
+
+After Portal Shield expires, restore:
+
+`kosmelys_heredera_base`
+
+---
+
+## 7.3. Meteor Rain
+
+### NORMAL State
+
+Preserve:
+
+- 5 meteors.
+- 20 base damage per meteor.
+- Sequential meteor resolution.
+- A new randomly selected conscious target for each meteor.
+- Upward defense using W.
+- Existing defensive timing windows.
+
+### HEIR State
+
+Meteor Rain now launches:
+
+**8 meteors, each dealing 40 base damage.**
+
+Each meteor independently selects a random conscious party member.
+
+Every meteor comes from above and requires:
+
+`W`
+
+### Required Sequence
+
+1. Kosmelys begins Meteor Rain.
+2. Display `kosmelys_heredera_mr`.
+3. Select the first conscious target.
+4. Launch the first meteor.
+5. Open the appropriate defensive timing window.
+6. Resolve its damage or defensive result.
+7. Select the next conscious target.
+8. Launch the next meteor.
+9. Repeat until all eight meteors have resolved.
+10. Finish the enemy action.
+
+Meteor attacks must remain strictly sequential.
+
+Do not allow:
+
+- Multiple unresolved meteors simultaneously.
+- Overlapping defensive windows.
+- Multiple simultaneous targeting indicators.
+- Damage from an already-resolved meteor being applied again.
+
+Preserve the established first-meteor timing and subsequent-meteor travel timings.
+
+### Defensive Mechanics
+
+Preserve the existing per-character mechanics:
+
+- Dexios deals 5 counterdamage per Perfect Parry.
+- Sahira blocks all damage with a correct W input.
+- Hazel requires a Perfect Parry.
+- Furai can trigger Tiger Parry if every meteor assigned to him during the current Meteor Rain action is perfectly parried, provided at least one meteor targeted him.
+
+The Furai condition must work with eight meteors instead of five.
+
+Do not change Tiger Parry's 20-damage counterattack.
+
+Preserve all existing Meteor Rain sounds and effects.
+
+---
+
+# 8. DAMAGE MULTIPLIER RULES
+
+Both bosses have a permanent outgoing damage multiplier determined by their current phase.
+
+NORMAL:
+
+`damageMultiplier = 1`
+
+HEIR:
+
+`damageMultiplier = 2`
+
+This modifier applies to boss-origin damaging attacks and retaliation damage.
+
+It must not double:
+
+- Player-origin attacks.
+- Player automatic counterattacks.
+- Healing.
+- Player resource gains.
+- Armor Break multipliers.
+- Redirected player attacks from Portal Shield.
+
+### Character Defense
+
+All four playable characters retain their existing defensive properties.
+
+Ensure doubled damage is correctly processed through the existing defense system.
+
+Normal/imperfect blocks must preserve their relative damage-reduction behavior.
+
+Perfect defenses continue preventing damage entirely.
+
+Sahira continues preventing all damage with valid directional blocks.
+
+Hazel continues receiving full damage unless she performs a Perfect Parry.
+
+Hippopotamus Shield retains its existing protective behavior.
+
+Do not alter enemy attack timing windows simply because damage is doubled.
+
+---
+
+# 9. MULTI-HIT TRANSFORMATION SAFETY
+
+A major issue can occur if a boss reaches zero HP during a multi-hit attack.
+
+The same player-selected ability must not defeat the Normal phase and then immediately damage the newly restored Heir phase.
+
+### Required Behavior
+
+When a NORMAL boss reaches zero HP during a player action:
+
+1. Set its Health to zero.
+2. Mark its Heir transformation as pending.
+3. Prevent any remaining hits of that same ability from damaging that boss.
+4. Allow the ability to finish its remaining visual sequence safely.
+5. Continue processing any other valid targets when appropriate.
+6. After the ability finishes, begin the transformation.
+7. Restore the boss to full HP.
+8. Continue the battle.
+
+For area-of-effect attacks, independently evaluate each boss.
+
+If both bosses reach zero Normal HP during the same ability, queue both transformations and resolve them without duplicating turns or entering victory.
+
+Do not trigger normal-defeat victory logic while either boss has a pending Heir transformation.
+
+---
+
+# 10. HEIR TRANSFORMATION PRESENTATION
+
+Create a short transformation sequence when a boss first reaches zero HP.
+
+The sequence must be clear and visually impactful, but it does not need new cinematic artwork.
+
+Use the supplied Heir sprites.
+
+### Suggested Sequence
+
+1. Finish the player ability.
+2. Pause combat progression.
+3. Focus the camera on the transforming boss.
+4. Display a brief purple magical flash or transformation effect.
+5. Show the announcement:
+
+   `MODO HEREDERO`
+
+6. Replace the boss's Normal base sprite with its Heir base sprite.
+7. Replace its Normal icon with the Heir icon.
+8. Refill its HP bar.
+9. Return the camera to the appropriate battle composition.
+10. Resume the turn sequence.
+
+The presentation must not allow the player to perform actions while it is active.
+
+Do not create additional boss attacks during transformation.
+
+Do not use either Ultimate sprite.
+
+---
+
+# 11. HUD AND ICON UPDATES
+
+The Heir Mode transformation must update every relevant visual reference.
+
+### Iobrontes
+
+Normal icon:
+
+`iobrontes_icono`
+
+Heir icon:
+
+`iobrontes_heredero_icono`
+
+### Kosmelys
+
+Normal icon:
+
+`kosmelys_icono`
+
+Heir icon:
+
+`kosmelys_heredera_icono`
+
+Update:
+
+- Turn-order preview.
+- Boss HUD portrait, if displayed.
+- Target-selection portrait, if displayed.
+- Any other existing interface using the boss icon.
+
+The current boss phase must be the source of truth for selecting these icons.
+
+Do not leave cached Normal icons after transformation.
+
+### Health Bars
+
+When entering Heir Mode:
+
+- Iobrontes refills to 550 / 550.
+- Kosmelys refills to 450 / 450.
+
+Both boss Health bars must remain visible during attacks.
+
+Preserve the current HUD layout and colors.
+
+Optionally display a small HEIR label to distinguish the second phase, without rearranging the HUD.
+
+---
+
+# 12. STATUS EFFECTS AND TURN ORDER
+
+## 12.1. Existing Effects
+
+When a boss transforms, clear any pending temporary Normal-phase defensive state:
+
+- Iobrontes's active Divine Retribution armor.
+- Kosmelys's active Portal Shield.
+
+Also clear any active Armor Break mark on the transforming boss.
+
+These effects must not accidentally persist into the new Heir phase.
+
+The boss may activate its own defensive abilities again normally after transformation.
+
+## 12.2. Turn Order
+
+Preserve the current fixed turn sequence.
+
+Do not add new turns.
+
+Do not reset the turn order when a boss transforms.
+
+Do not change the order or frequency of playable-character turns.
+
+When a boss is permanently defeated, skip its remaining scheduled turns according to the existing rules.
+
+---
+
+# 13. CONFIGURATION REQUIREMENTS
+
+Do not hard-code individual Heir values throughout the combat scene.
+
+Define phase-specific boss configurations.
+
+Suggested values:
+
+### Iobrontes
+
+NORMAL:
+- Max HP: 550
+- Damage multiplier: 1
+- Lightning Chain: 3 strikes
+- Watch the Thunder: 1 sweep
+- Divine Retribution: 30 retaliation
+
+HEIR:
+- Max HP: 550
+- Damage multiplier: 2
+- Lightning Chain: 5 strikes
+- Watch the Thunder: 2 sweeps
+- Divine Retribution: 60 retaliation
+
+### Kosmelys
+
+NORMAL:
+- Max HP: 450
+- Damage multiplier: 1
+- Cosmic Rays: 2 projectiles
+- Meteor Rain: 5 meteors
+- Portal Shield: unchanged
+
+HEIR:
+- Max HP: 450
+- Damage multiplier: 2
+- Cosmic Rays: 3 projectiles
+- Meteor Rain: 8 meteors
+- Portal Shield: unchanged
+
+Avoid applying the damage multiplier twice to values already expressed as Heir damage.
+
+For example, 20 damage for a Heir Lightning Chain bolt is the final base incoming damage before the defending character's protection calculations, not an additional value to multiply by two again.
+
+---
+
+# 14. ASSET LOADING
+
+Load the existing Normal asset sets and the new Heir asset sets using the project's asset management system.
+
+Preserve exact filenames and capitalization.
+
+Do not rename the supplied images.
+
+Do not modify their artwork.
+
+Do not rescale all character sprites globally.
+
+If the Heir sprites have different transparent padding, ensure that their visible sizes and grounding remain consistent with the normal forms.
+
+Use the game's existing sprite-normalization and positioning configuration.
+
+Register `kosmelys_abajo` in the Normal Kosmelys asset set.
+
+The two Ultimate files may be registered as unused future assets if convenient, but must not be displayed or connected to any ability.
+
+---
+
+# 15. IMPLEMENTATION WORKFLOW
+
+Implement in controlled stages.
+
+### Stage 1 — Assets
+
+- Register all Heir sprites.
+- Register Heir icons.
+- Register `kosmelys_abajo`.
+- Confirm asset paths and filename spelling.
+
+### Stage 2 — Boss Phase State
+
+- Add NORMAL, HEIR, and DEFEATED states.
+- Implement first-depletion transformation conditions.
+- Implement second-depletion permanent defeat.
+- Prevent premature victory.
+
+### Stage 3 — Transformation Presentation
+
+- Add transformation announcement.
+- Add visual phase transition.
+- Restore boss HP.
+- Switch sprites and icons.
+
+### Stage 4 — Iobrontes Heir Combat
+
+- Implement five-hit Lightning Chain.
+- Implement two-sweep Watch the Thunder.
+- Implement 60-damage Divine Retribution.
+- Test Furai's expanded Tiger Parry requirement.
+
+### Stage 5 — Kosmelys Heir Combat
+
+- Implement three-hit Cosmic Rays.
+- Implement eight-meteor Meteor Rain.
+- Preserve Portal Shield behavior.
+- Test all character defenses and counters.
+
+### Stage 6 — Integration
+
+- Verify simultaneous and independent transformations.
+- Verify fixed turn order.
+- Verify permanent defeat and victory.
+- Verify HUD updates.
+- Verify sprite restoration after attacks.
+- Run the production build.
+
+Do not proceed with unrelated changes.
+
+---
+
+# 16. ACCEPTANCE TESTS
+
+Verify:
+
+1. Iobrontes transforms once when his Normal HP first reaches zero.
+2. Kosmelys transforms once when her Normal HP first reaches zero.
+3. Iobrontes restores to 550 HP.
+4. Kosmelys restores to 450 HP.
+5. Both bosses use their correct Heir base sprites.
+6. All Heir directional sprites load correctly.
+7. Heir damage-reaction sprites work.
+8. Heir defensive ability sprites work.
+9. Boss icons change everywhere required.
+10. Normal Kosmelys uses the new `kosmelys_abajo` frame.
+11. Normal Lightning Chain still has three strikes.
+12. Heir Lightning Chain has five strikes.
+13. Heir Lightning Chain deals 20 base damage per strike.
+14. Normal Watch the Thunder still has one sweep.
+15. Heir Watch the Thunder has two independently defendable sweeps.
+16. Each Heir Watch the Thunder sweep deals 100 base damage.
+17. Heir Divine Retribution retaliates for 60 damage.
+18. Normal Cosmic Rays still has two projectiles.
+19. Heir Cosmic Rays has three projectiles.
+20. Each Heir Cosmic Rays projectile deals 30 base damage.
+21. Normal Meteor Rain still has five meteors.
+22. Heir Meteor Rain has eight meteors.
+23. Each Heir Meteor Rain meteor deals 40 base damage.
+24. Portal Shield does not double redirected damage.
+25. Furai's chain-based Tiger Parry adapts to the new attack counts.
+26. Sahira's valid blocks still prevent all damage.
+27. Hazel still requires Perfect Parries.
+28. Dexios still counterattacks for 5 damage per eligible Perfect Parry.
+29. The two bosses transform independently.
+30. A transformation does not grant an extra turn.
+31. A multi-hit ability cannot damage the Normal and Heir phases of the same boss.
+32. Armor Break and temporary defensive states clear correctly on transformation.
+33. Both Ultimate sprites remain unused.
+34. A boss in HEIR becomes permanently defeated on its next HP depletion.
+35. Victory occurs only after both bosses are permanently defeated.
+36. No existing playable-character abilities are broken.
+37. The production build succeeds.
+38. The game remains fully playable in the browser.
+
+---
+
+# 17. DESIGN.MD UPDATE
+
+Update the existing `DESIGN.md` to incorporate the implemented Heir Mode behavior.
+
+Document:
+
+- Boss phase state transitions.
+- Full HP restoration.
+- Damage doubling.
+- Expanded Heir attack counts.
+- Correct sprite and icon filenames.
+- New Normal Kosmelys downward sprite.
+- Transformation presentation.
+- Phase-specific defensive interactions.
+- Permanent defeat conditions.
+- Existing Ultimate assets remaining unused.
+
+Integrate these rules into the existing boss and combat sections.
+
+Do not append contradictory duplicate specifications.
+
+---
+
+# FINAL REQUIREMENT
+
+Implement the complete Heir Mode system while preserving the existing functional combat prototype.
+
+Use the supplied final asset names exactly.
+
+Do not implement Ultimate abilities.
+
+Do not redesign or rebuild the existing combat engine.
+
+Report the modified files, any missing assets, build status, and results of the Heir Mode tests.
+
+# LA DEXÍADA — TUTORIAL COMBAT SCENE AND SAHIRA HEALING UPDATE
+
+## CRITICAL INSTRUCTIONS
+
+The current Phaser combat scene is functional, including the existing boss phases, attacks, offensive action commands, defensive mechanics, characters, HUD, music, and animations.
+
+Implement the following changes without rebuilding the existing combat system.
+
+There are three tasks:
+
+1. Increase Sahira's Hippopotamus Healing to four uses per battle.
+2. Create a new combat scene called `escena_tutorial`, preserving the complete functionality of the existing combat scene.
+3. Update `select-scene` with two symmetrical combat-selection buttons.
+
+Preserve every existing gameplay mechanic unless explicitly modified below.
+
+---
+
+# 1. SAHIRA — HIPPOPOTAMUS HEALING
+
+Increase the maximum number of Hippopotamus Healing uses from 2 to **4 uses per battle**.
+
+### Required Behavior
+
+- Sahira begins every battle with 4 available Hippopotamus Healing charges.
+- Each successful healing action consumes one charge.
+- The ability becomes unavailable when all four charges have been consumed.
+- Healing continues restoring the selected conscious ally to full Health.
+- Healing does not revive incapacitated characters.
+- The HUD and ability menu must display the correct remaining charges.
+- Restarting a battle restores all four charges.
+
+This change must apply to BOTH the original combat scene and `escena_tutorial`.
+
+Do not change Hippopotamus Shield or its existing use limits.
+
+Do not change Sahira's defensive mechanics.
+
+---
+
+# 2. CREATE `escena_tutorial`
+
+Create a new Phaser scene called:
+
+`escena_tutorial`
+
+This must be a fully functional copy of the existing main combat scene.
+
+The original scene must remain available and must continue working exactly as before.
+
+### 2.1. Preserve Existing Functionality
+
+The new scene must include everything currently implemented in the original combat scene:
+
+- Dexios, Furai, Sahira, and Hazel Lancaster.
+- Iobrontes and Kosmelys.
+- The existing fixed turn order.
+- The current character stats and resources.
+- All playable-character abilities.
+- Offensive action-command minigames.
+- Cinematic attack strips.
+- Directional defense.
+- Normal blocks and Perfect Parries.
+- Character-specific counterattacks.
+- Armor Break.
+- Hippopotamus Healing and Shield.
+- Hazel's Ignis and Glacio forms.
+- All normal boss attacks.
+- Both bosses' Heir Modes.
+- Heir Mode transformations and asset switching.
+- Expanded Heir Mode attacks.
+- Boss status effects and defensive abilities.
+- Existing camera movements.
+- Current character positions and scaling.
+- All sprites and animations.
+- All HUD and turn-order elements.
+- Existing audio and music.
+- Victory and defeat conditions.
+- Restart functionality.
+
+**The new scene must play exactly like the original combat scene, except for the two tutorial modifiers described below.**
+
+### 2.2. Architecture
+
+Prefer reusing the existing combat implementation with configurable scene-specific modifiers.
+
+A recommended approach is:
+
+- Original combat scene: standard combat configuration.
+- `escena_tutorial`: tutorial combat configuration.
+
+Both scenes should share the same underlying combat logic wherever possible.
+
+Do not create two unnecessarily independent implementations that will become difficult to maintain.
+
+However, `escena_tutorial` must exist as a separately accessible Phaser scene.
+
+The tutorial configuration must not accidentally modify the original scene.
+
+### 2.3. Tutorial Instructional Pop-Ups
+
+Only `escena_tutorial` displays instructional pop-ups. A welcome message blocks the first turn until dismissed; each supported boss ability displays its explanation once per encounter, before its first execution. The modal pauses combat, and Enter closes it and resumes the deferred action. Attack counts are read from the active phase configuration, including Heir Mode, while the standard combat scene receives no instructional messages. The complete message and presentation requirements are specified in **LA DEXÍADA — TUTORIAL COMBAT POP-UP SYSTEM** below.
+
+---
+
+# 3. TUTORIAL DAMAGE MODIFIER
+
+In `escena_tutorial`, all damage originating from the gods must be multiplied by:
+
+**0.75**
+
+This modifier applies to both Iobrontes and Kosmelys.
+
+When the resulting damage is fractional, round UP to the next integer using `Math.ceil()`.
+
+### Formula
+
+```javascript
+tutorialDamage = Math.ceil(originalDamage * 0.75);
+```
+
+### Examples
+
+| Original Damage | Tutorial Damage |
+|---|---|
+| 10 | 8 |
+| 15 | 12 |
+| 20 | 15 |
+| 30 | 23 |
+| 40 | 30 |
+| 50 | 38 |
+| 60 | 45 |
+| 100 | 75 |
+
+## 3.1. Iobrontes
+
+Apply the modifier to:
+
+- Lightning Chain.
+- Watch the Thunder.
+- Divine Retribution retaliation.
+
+This also applies when Iobrontes is in Heir Mode.
+
+### Example — Normal Lightning Chain
+
+Original:
+
+3 strikes dealing 10 damage each.
+
+Tutorial:
+
+3 strikes dealing 8 damage each before character-specific defense calculations.
+
+### Example — Heir Lightning Chain
+
+Original:
+
+5 strikes dealing 20 damage each.
+
+Tutorial:
+
+5 strikes dealing 15 damage each before character-specific defense calculations.
+
+### Example — Heir Watch the Thunder
+
+Original:
+
+2 sweeps dealing 100 damage each.
+
+Tutorial:
+
+2 sweeps dealing 75 damage each.
+
+The number of attacks must remain unchanged.
+
+## 3.2. Kosmelys
+
+Apply the modifier to:
+
+- Cosmic Rays.
+- Meteor Rain.
+
+This also applies when Kosmelys is in Heir Mode.
+
+### Example — Normal Cosmic Rays
+
+Original:
+
+2 cosmic projectiles dealing 15 damage each.
+
+Tutorial:
+
+2 cosmic projectiles dealing 12 damage each.
+
+### Example — Heir Cosmic Rays
+
+Original:
+
+3 cosmic projectiles dealing 30 damage each.
+
+Tutorial:
+
+3 cosmic projectiles dealing 23 damage each.
+
+### Example — Heir Meteor Rain
+
+Original:
+
+8 meteors dealing 40 damage each.
+
+Tutorial:
+
+8 meteors dealing 30 damage each.
+
+## 3.3. Defensive Calculations
+
+The tutorial multiplier must be applied once to the boss attack's configured damage, after its normal or Heir damage has been determined.
+
+Then apply the existing character-specific defense mechanics.
+
+Do not independently multiply the same attack again during damage resolution.
+
+Preserve:
+
+- Dexios's normal and perfect defense mechanics.
+- Furai's normal and perfect defense mechanics.
+- Sahira's complete damage prevention on valid directional blocks.
+- Hazel's Perfect-Parry-only damage prevention.
+- Hippopotamus Shield.
+- All existing automatic counterattack behavior.
+
+For example, an imperfect block must continue using the existing defensive reduction logic against the tutorial-adjusted incoming damage.
+
+If damage reduction produces a fractional result, use the same consistent upward-rounding policy.
+
+## 3.4. Exclusions
+
+Do not reduce damage originating from playable characters.
+
+The following must retain their original values:
+
+- Player offensive abilities.
+- Offensive timing multipliers.
+- Armor Break damage.
+- Dexios's automatic counterattacks.
+- Furai's Tiger Parry.
+- Chaotic Lightning's self-damage or failure backlash.
+- Other player-origin damage effects.
+
+Kosmelys's Portal Shield redirects player-origin damage. This redirected damage must not receive the gods' 0.75 modifier.
+
+Do not change healing amounts.
+
+Do not change maximum HP values.
+
+---
+
+# 4. TUTORIAL ATTACK AND TIMING SPEED
+
+In `escena_tutorial`, all combat attack timings and action-command timings must be multiplied by:
+
+**1.5**
+
+The purpose is to make the combat easier by allowing the player more time to react.
+
+### Formula
+
+```javascript
+tutorialDuration = originalDuration * 1.5;
+```
+
+The original combat scene must continue using its existing timing values.
+
+## 4.1. Enemy Attacks
+
+Apply the 1.5 multiplier to:
+
+- Attack preparation and wind-up.
+- Projectile travel duration.
+- Delays between sequential projectiles.
+- Defensive reaction windows.
+- Normal-block windows.
+- Perfect-Parry windows.
+- Team-jump windows.
+- Relevant attack animation durations.
+- Combat timing indicators.
+
+This must apply to all normal and Heir boss attacks.
+
+### Example — Lightning Chain
+
+If the existing attack wind-up is 0.187 seconds:
+
+Tutorial wind-up:
+
+0.2805 seconds.
+
+If projectile travel is 0.373 seconds:
+
+Tutorial travel:
+
+0.5595 seconds.
+
+The complete attack sequence must remain synchronized.
+
+### Example — Watch the Thunder
+
+Normal casting duration:
+
+0.6 seconds.
+
+Tutorial casting duration:
+
+0.9 seconds.
+
+Normal jump window:
+
+0.3 seconds.
+
+Tutorial jump window:
+
+0.45 seconds.
+
+The same modifier must apply independently to both sweeps in Heir Mode.
+
+### Example — Meteor Rain
+
+If a meteor normally takes 0.7 seconds to travel:
+
+Tutorial travel duration:
+
+1.05 seconds.
+
+Keep meteors strictly sequential.
+
+## 4.2. Defensive Timing Windows
+
+Scale every timing-window boundary consistently relative to the intended impact moment.
+
+For example:
+
+Normal:
+
+- Normal block: T−0.5 to T−0.1.
+- Perfect Parry: T−0.1 to T+0.1.
+
+Tutorial:
+
+- Normal block: T−0.75 to T−0.15.
+- Perfect Parry: T−0.15 to T+0.15.
+
+The resulting windows must be 1.5 times longer.
+
+Do not merely slow the projectile visually while leaving the input windows unchanged.
+
+Impact synchronization, damage resolution, and feedback must also respect the scaled timing.
+
+## 4.3. Offensive Action Commands
+
+The tutorial timing modifier also applies to the playable characters' offensive action-command minigames.
+
+Examples:
+
+- Electric Arc timing circles.
+- Tiger Fang timing circles.
+- Chaotic Lightning directional inputs.
+- Furai's Armor Break minigame.
+- Sahira's Hippopotamus Shield minigame.
+- Hazel's Flame Dance directional sequence.
+- Hazel's Figure Shards rapid-input challenge.
+
+### Examples
+
+A 2-second action command becomes:
+
+3 seconds.
+
+A 3-second action command becomes:
+
+4.5 seconds.
+
+For Chaotic Lightning, the Perfect and Normal thresholds must also scale by 1.5.
+
+For example:
+
+- Original Perfect window: first 1 second.
+- Tutorial Perfect window: first 1.5 seconds.
+- Original complete input limit: 2 seconds.
+- Tutorial complete input limit: 3 seconds.
+
+For movement-based minigames, slow moving indicators proportionally so their complete trajectories and reaction opportunities last 1.5 times longer.
+
+Do not simply multiply the challenge duration while leaving moving objects at their original speed.
+
+Maintain consistent success and failure conditions.
+
+## 4.4. Animation Synchronization
+
+Visual indicators, attack projectiles, timing rings, input windows, sound effects, and damage resolution must remain synchronized.
+
+If necessary, adjust animation durations or tween speeds to match the tutorial timing configuration.
+
+Do not change the artwork itself.
+
+Avoid applying the 1.5 multiplier twice to the same duration.
+
+## 4.5. What Must Remain Unchanged
+
+Do not modify:
+
+- Attack damage from playable characters.
+- Number of attacks.
+- Ability costs.
+- Resource regeneration.
+- Boss attack probabilities.
+- Boss maximum HP.
+- Turn order.
+- Enemy targeting behavior.
+- Character movement or battlefield positioning.
+- Music playback speed.
+- General non-combat interface animations.
+
+Only combat-related attack timing and timing challenges receive the 1.5 multiplier.
+
+---
+
+# 5. CONFIGURATION SYSTEM
+
+Create separate, configurable combat modifiers.
+
+Suggested configuration:
+
+```javascript
+const COMBAT_MODES = {
+  normal: {
+    bossDamageMultiplier: 1,
+    combatTimingMultiplier: 1
+  },
+  tutorial: {
+    bossDamageMultiplier: 0.75,
+    combatTimingMultiplier: 1.5
+  }
+};
+```
+
+Use the game's existing configuration architecture where possible.
+
+Do not hard-code `0.75` and `1.5` throughout individual attack implementations.
+
+The scene configuration must be the authoritative source for these modifiers.
+
+The original combat scene must continue using the normal configuration.
+
+`escena_tutorial` must use the tutorial configuration.
+
+---
+
+# 6. SELECT SCENE — TWO COMBAT BUTTONS
+
+Modify the existing `select-scene`.
+
+Currently, there is a button near the top of the screen that opens the original combat scene.
+
+Keep that button, but reposition it slightly to the right.
+
+Add a second matching button on the left.
+
+Both buttons must be horizontally symmetrical around the screen's vertical centerline.
+
+## 6.1. Left Button — Tutorial
+
+Create a new button on the LEFT side.
+
+### Appearance
+
+- Black oval background.
+- Golden border.
+- Same size and visual style as the existing combat button.
+- Centered image: `tutorial.png`.
+- Text displayed below the image: `tutorial`.
+
+Use the existing font style for the button label.
+
+The text must remain readable and centered.
+
+### Behavior
+
+Clicking this button must open:
+
+`escena_tutorial`
+
+The new scene must start a completely new tutorial-configured combat encounter.
+
+## 6.2. Right Button — Original Combat
+
+Keep the existing button on the RIGHT side.
+
+Preserve:
+
+- Its existing image.
+- Its existing text.
+- Its existing black oval styling.
+- Its existing golden border.
+- Its existing click behavior.
+- Its destination: the original combat scene.
+
+The only requested change is its horizontal position.
+
+Move it slightly to the right to create a symmetrical layout with the new Tutorial button.
+
+Do not replace its artwork or rename it.
+
+## 6.3. Symmetrical Positioning
+
+Use the screen's horizontal center as the reference.
+
+At 1920 × 1080:
+
+Screen center X:
+
+960.
+
+Suggested initial button centers:
+
+- Tutorial button: X = 760.
+- Original combat button: X = 1160.
+
+These values may be adjusted depending on the existing oval dimensions.
+
+The important requirement is:
+
+```text
+distance(leftButton, screenCenter)
+=
+distance(rightButton, screenCenter)
+```
+
+Both buttons must share:
+
+- The same vertical position.
+- The same dimensions.
+- The same layout structure.
+- Equivalent spacing around the centerline.
+
+Preserve other existing elements in `select-scene`.
+
+Do not move or redesign unrelated buttons.
+
+## 6.4. Asset Loading
+
+Load `tutorial.png` through the existing asset system.
+
+Verify its actual location and extension.
+
+Do not generate new artwork or substitute an unrelated image.
+
+If it is missing, report it clearly.
+
+---
+
+# 7. RESTART AND SCENE INDEPENDENCE
+
+Both scenes must be independently playable and restartable.
+
+### Original Combat
+
+- Uses normal boss damage.
+- Uses normal combat timing.
+- Uses existing combat functionality.
+- Uses four Hippopotamus Healing charges.
+
+### Tutorial Combat
+
+- Uses 75% boss-origin damage, rounded upward.
+- Uses 150% combat attack/timing durations.
+- Uses the same abilities, bosses, transformations, and combat mechanics.
+- Uses four Hippopotamus Healing charges.
+
+Restarting either scene must restore:
+
+- Both bosses' initial Health.
+- Both bosses' initial phase.
+- All playable-character Health and resources.
+- Sahira's four healing charges.
+- Other limited-use abilities.
+- Existing status effects.
+- The established initial turn order.
+
+Restarting the tutorial must not accidentally launch the original scene.
+
+Likewise, restarting original combat must not launch `escena_tutorial`.
+
+Avoid shared mutable state leaking between scenes.
+
+Ensure that audio, timers, tweens, event listeners, and keyboard handlers are cleaned up appropriately when changing scenes.
+
+---
+
+# 8. IMPLEMENTATION ORDER
+
+Implement the update in small stages.
+
+### Stage 1 — Sahira
+
+- Update Hippopotamus Healing to four uses.
+- Verify its HUD display.
+- Verify charges reset on battle restart.
+
+### Stage 2 — Tutorial Scene
+
+- Register `escena_tutorial`.
+- Reuse or duplicate the existing combat scene behavior.
+- Ensure the new scene loads and runs correctly.
+- Preserve boss phases and existing combat functionality.
+
+### Stage 3 — Damage Modifier
+
+- Implement the 0.75 boss-origin damage modifier.
+- Apply upward rounding.
+- Verify Normal and Heir attacks.
+- Preserve defensive calculations.
+
+### Stage 4 — Timing Modifier
+
+- Implement the 1.5 timing multiplier.
+- Apply it consistently to enemy attacks.
+- Apply it to offensive action commands.
+- Verify timing indicators and visual synchronization.
+
+### Stage 5 — Select Scene
+
+- Add the Tutorial button on the left.
+- Move the existing combat button to the right.
+- Preserve their visual style.
+- Verify both scene transitions.
+
+### Stage 6 — Validation
+
+- Test the original combat scene.
+- Test `escena_tutorial`.
+- Test both scenes after restarting.
+- Test all boss attacks.
+- Test the Heir phases.
+- Test the action-command minigames.
+- Run the production build.
+
+Do not rewrite unrelated code.
+
+---
+
+# 9. ACCEPTANCE TESTS
+
+Verify all of the following:
+
+1. Sahira begins with four Hippopotamus Healing charges.
+2. Healing correctly consumes one charge per successful use.
+3. Healing becomes unavailable after four uses.
+4. Both combat scenes have the four-charge healing system.
+5. The original combat scene remains functional.
+6. `escena_tutorial` loads successfully.
+7. The new scene contains the same four playable characters.
+8. The new scene contains the same two bosses.
+9. Both Heir Modes work in the tutorial scene.
+10. Tutorial boss damage uses the 0.75 multiplier.
+11. Fractional tutorial damage rounds upward.
+12. Player damage remains unchanged.
+13. Normal and Heir attack counts remain unchanged.
+14. Defensive timing windows are 1.5 times longer.
+15. Projectile travel and preparation durations are 1.5 times longer.
+16. Offensive action commands allow 1.5 times the original duration.
+17. Moving timing indicators remain synchronized with their input windows.
+18. Perfect-Parry behavior remains unchanged.
+19. The original combat scene retains its normal timing and damage.
+20. The Tutorial button appears on the left of `select-scene`.
+21. The existing Combat button appears on the right.
+22. Both buttons are symmetrical relative to the screen's vertical center.
+23. The Tutorial button uses `tutorial.png`.
+24. The existing Combat button retains its image, label, and functionality.
+25. Clicking Tutorial opens `escena_tutorial`.
+26. Clicking Combat opens the original combat scene.
+27. Restarting either scene restarts that same scene.
+28. No combat state leaks between scenes.
+29. Existing music and sound effects continue working.
+30. The production build succeeds.
+31. Both scenes remain fully playable.
+
+---
+
+# 10. UPDATE DESIGN.md
+
+Update the existing game design documentation to reflect:
+
+- Hippopotamus Healing having four uses.
+- The new `escena_tutorial`.
+- The 0.75 tutorial boss-damage modifier.
+- Upward damage rounding.
+- The 1.5 combat timing modifier.
+- Preservation of the original combat scene.
+- The revised two-button layout in `select-scene`.
+- The Tutorial button's image and scene destination.
+
+Integrate these changes into the existing relevant sections.
+
+Do not append contradictory duplicate documentation.
+
+---
+
+# FINAL REQUIREMENT
+
+Preserve the existing functional game while introducing a separate tutorial combat scene.
+
+Both scenes must use the same combat mechanics and character systems, with only the specified scene modifiers.
+
+Do not redesign the battle or alter existing abilities beyond the requested changes.
+
+When finished, report:
+
+- Files modified.
+- How the tutorial scene was created.
+- How damage and timing modifiers were implemented.
+- How Sahira's healing charges were updated.
+- How the selection screen was modified.
+- Any missing assets or build errors.
+
+# LA DEXÍADA — TUTORIAL COMBAT POP-UP SYSTEM
+
+## 1. CRITICAL INSTRUCTIONS
+
+The existing `escena_tutorial` is already functional. It uses the same combat mechanics as the original battle, with reduced boss damage and slower combat timing.
+
+The objective of this update is to introduce **instructional pop-up windows** that teach players how the enemy attacks work.
+
+Do not rebuild the combat system or modify existing mechanics.
+
+All pop-up content must be displayed in **English**.
+
+The system must include:
+
+- One introductory tutorial message when the scene begins.
+- One instructional pop-up for each of the six existing boss abilities.
+- Automatic combat pausing while a pop-up is displayed.
+- Enter-key interaction to close each pop-up and resume gameplay.
+- A consistent visual design matching the existing game's UI.
+
+**These pop-ups must exist only in `escena_tutorial`. The original combat scene must remain unchanged.**
+
+---
+
+# 2. POP-UP WINDOW DESIGN
+
+## 2.1. Dimensions
+
+Every tutorial pop-up must appear in the center of the screen.
+
+The window must occupy:
+
+- 60% of the screen width.
+- 60% of the screen height.
+
+At the target resolution of 1920 × 1080, the window measures approximately:
+
+- Width: 1152 pixels.
+- Height: 648 pixels.
+
+The window must be centered symmetrically around both the horizontal and vertical screen axes.
+
+## 2.2. Appearance
+
+Use the following design:
+
+- Black background.
+- Golden borders.
+- Elegant styling consistent with La Dexíada.
+- High text contrast.
+- Sufficient internal padding.
+- No unnecessary decorations or additional artwork.
+
+The window must appear above the battlefield, characters, attacks, and existing HUD.
+
+The background battle scene should remain visible around the window.
+
+## 2.3. Typography
+
+Use the game's existing title font, **Archeologicaps**, for:
+
+- Pop-up titles.
+- Major headings.
+- Enter-key instruction labels.
+
+Use the existing secondary font that supports conventional lowercase letters for:
+
+- Explanatory paragraphs.
+- Descriptive text.
+- Longer instructions.
+
+Do not use Archeologicaps for the descriptive paragraphs.
+
+Text must wrap correctly without clipping or overlapping the window borders.
+
+Use a readable font size and comfortable line spacing.
+
+## 2.4. Keyboard Instructions
+
+Whenever a message mentions a keyboard key, display that key using the existing game's golden key-indicator style.
+
+This applies to:
+
+- W
+- A
+- S
+- D
+- Space
+- Enter
+
+Do not display these as ordinary unstyled text if the game already has a reusable golden key component.
+
+At the bottom of every pop-up, display a clear instruction such as:
+
+**[ENTER] CONTINUE**
+
+The Enter key must appear in the same golden style as other keyboard indicators.
+
+---
+
+# 3. POP-UP INTERACTION
+
+## 3.1. Enter to Continue
+
+The player closes the currently displayed pop-up by pressing:
+
+`Enter`
+
+When Enter is pressed:
+
+1. Close the pop-up.
+2. Restore the normal combat view.
+3. Resume the gameplay sequence exactly where it was interrupted.
+4. Restore the appropriate gameplay controls.
+
+Do not require mouse input.
+
+## 3.2. Blocking Gameplay Input
+
+While a pop-up is visible:
+
+- The player cannot select attacks.
+- The player cannot activate abilities.
+- WASD inputs must not trigger defensive animations.
+- Space must not activate jumps or minigames.
+- Boss actions cannot advance.
+- Combat damage cannot resolve.
+- The turn order cannot advance.
+- Timed combat events cannot expire.
+
+Only the pop-up's Enter interaction should be processed.
+
+Prevent the same Enter press from unintentionally activating another game action after the window closes.
+
+## 3.3. Pause Synchronization
+
+The tutorial must pause correctly without breaking attack timing.
+
+When an enemy ability is selected for the first time, display its explanatory pop-up **before that ability's casting animation, projectile movement, or reaction timer begins**.
+
+After closing the pop-up, the attack should begin normally from its initial state.
+
+Do not allow the attack's timer to run invisibly behind the instructional window.
+
+Do not simply hide an already-running attack animation.
+
+Prefer pausing or deferring the relevant combat action at the state-machine level.
+
+The existing slower tutorial timing multiplier must remain active.
+
+Background music may continue playing normally while the pop-up is visible.
+
+---
+
+# 4. INITIAL TUTORIAL MESSAGE
+
+Immediately upon entering `escena_tutorial`, display the introductory pop-up.
+
+It must appear before the first combat turn or attack begins.
+
+### Title
+
+WELCOME TO THE DEXIAD
+
+### Description
+
+Welcome to combat in The Dexiad!
+
+In this tutorial, the gods will deal less damage and take more time to perform their abilities, giving you a better opportunity to practice.
+
+You can also freely train each character's abilities in their dedicated practice section.
+
+### Interaction
+
+Display the golden Enter key indicator at the bottom of the window.
+
+The battle begins only after the player presses Enter to close this introductory message.
+
+Do not automatically close it after a timer.
+
+---
+
+# 5. FIRST-USE ENEMY ABILITY POP-UPS
+
+Each of the six existing enemy abilities must display its own explanatory pop-up the first time it is used during the tutorial encounter.
+
+The six abilities are:
+
+### Iobrontes
+1. Lightning Chain
+2. Watch the Thunder
+3. Divine Retribution
+
+### Kosmelys
+4. Cosmic Rays
+5. Meteor Rain
+6. Portal Shield
+
+Each pop-up appears **only once per tutorial battle**, regardless of how many times the corresponding ability is used afterward.
+
+The system must track each ability independently.
+
+The message must appear after the enemy has selected the ability but before the ability begins executing.
+
+---
+
+# 6. IOBRONTES — ATTACK TUTORIALS
+
+## 6.1. Lightning Chain
+
+### Title
+
+LIGHTNING CHAIN
+
+### Description
+
+Iobrontes launches 3 consecutive lightning bolts from four possible directions.
+
+Defend yourself by pressing W, A, S, or D according to the direction of the incoming attack, timing your input as the circle closes.
+
+### Display Requirements
+
+The W, A, S, and D keys must use the existing golden key style.
+
+Preserve all current defensive mechanics.
+
+Do not modify Lightning Chain's damage, timing, or targeting behavior.
+
+## 6.2. Watch the Thunder
+
+### Title
+
+WATCH THE THUNDER
+
+### Description
+
+Iobrontes unleashes a powerful attack that strikes your entire party.
+
+Jump to avoid the attack by pressing Space during the timing window.
+
+### Display Requirements
+
+Display Space as a golden key indicator.
+
+The ability must not begin until the player closes the instructional window.
+
+## 6.3. Divine Retribution
+
+### Title
+
+DIVINE RETRIBUTION
+
+### Description
+
+Iobrontes surrounds his body with electricity, creating a temporary protective state.
+
+If you attack him while this effect is active, he will still receive damage, but your attacking character will suffer a powerful retaliation.
+
+### Display Requirements
+
+This ability does not require a specific defensive key instruction.
+
+Do not alter the existing Divine Retribution duration, retaliation damage, or expiration rules.
+
+---
+
+# 7. KOSMELYS — ATTACK TUTORIALS
+
+## 7.1. Cosmic Rays
+
+### Title
+
+COSMIC RAYS
+
+### Description
+
+Kosmelys launches 2 consecutive cosmic attacks from four possible directions.
+
+Defend yourself by pressing W, A, S, or D according to the incoming direction as the timing circle closes.
+
+Be careful! Each projectile changes direction halfway through its journey. You must defend against its final direction.
+
+### Display Requirements
+
+The W, A, S, and D keys must use the existing golden key style.
+
+Do not change the existing direction-change mechanic.
+
+## 7.2. Meteor Rain
+
+### Title
+
+METEOR RAIN
+
+### Description
+
+Kosmelys unleashes a barrage of 5 meteors, randomly targeting members of your party.
+
+Press W as the timing circle closes to defend against each incoming meteor and avoid damage.
+
+### Display Requirements
+
+The W key must use the golden key style.
+
+Preserve the existing sequential meteor system.
+
+Do not start the first meteor before the player closes the pop-up.
+
+## 7.3. Portal Shield
+
+### Title
+
+PORTAL SHIELD
+
+### Description
+
+Kosmelys protects herself with a spatial portal that remains active until an allied character performs an action.
+
+If she receives an attack while the portal is active, she redirects that attack toward a randomly selected member of your party.
+
+### Display Requirements
+
+No special keyboard instruction is needed for this explanation.
+
+Preserve the existing Portal Shield redirection rules, duration, and interactions with player abilities.
+
+---
+
+# 8. HEIR MODE COMPATIBILITY
+
+Both bosses can enter Heir Mode during the tutorial battle.
+
+The first-use tutorial messages must remain accurate when a boss uses an expanded Heir Mode attack for the first time.
+
+### Normal / Heir Attack Counts
+
+| Ability | Normal Mode | Heir Mode |
+|---|---:|---:|
+| Lightning Chain | 3 bolts | 5 bolts |
+| Watch the Thunder | 1 sweep | 2 sweeps |
+| Cosmic Rays | 2 projectiles | 3 projectiles |
+| Meteor Rain | 5 meteors | 8 meteors |
+
+Use the actual current boss phase to display the appropriate attack count in the corresponding description.
+
+For example, if Iobrontes first uses Lightning Chain after transforming into Heir Mode, the pop-up must say:
+
+"Iobrontes launches 5 consecutive lightning bolts..."
+
+Similarly, if Kosmelys first uses Meteor Rain while in Heir Mode, it must describe 8 meteors rather than 5.
+
+For Heir Watch the Thunder, explain that the attack performs two consecutive sweeps and requires a separate Space input for each.
+
+The first-use flag belongs to the ability, not separately to each phase.
+
+Therefore, if Lightning Chain was already explained in Normal Mode, do not repeat the pop-up merely because Iobrontes entered Heir Mode.
+
+Do not modify boss damage values, attack counts, or timing mechanics to match the tutorial text. The text must reflect the existing gameplay configuration.
+
+---
+
+# 9. FIRST-USE TRACKING
+
+Create a centralized tutorial pop-up tracking system.
+
+Suggested structure:
+
+```javascript
+const tutorialMessagesSeen = {
+  introduction: false,
+  lightningChain: false,
+  watchTheThunder: false,
+  divineRetribution: false,
+  cosmicRays: false,
+  meteorRain: false,
+  portalShield: false
+};
+```
+
+### Required Behavior
+
+- On entering a fresh tutorial battle, all flags are false.
+- The introduction is displayed immediately.
+- When an enemy selects an ability, check its corresponding flag.
+- If false, show that ability's pop-up before executing the attack.
+- Mark the explanation as seen when the player closes it.
+- Resume the selected enemy ability.
+- On later uses of that same ability, execute it normally without pausing.
+
+When the tutorial battle is restarted, reset all flags so the explanations can appear again.
+
+Do not share this tracking state with the original combat scene.
+
+Do not persist the flags across separate tutorial battles unless an explicit save feature is added later.
+
+---
+
+# 10. REUSABLE POP-UP COMPONENT
+
+Implement a reusable tutorial instructional window rather than seven separate UI implementations.
+
+The component should support:
+
+- Title.
+- Description.
+- Styled keyboard keys embedded in the description.
+- Optional dynamic values such as the number of attacks.
+- Enter-to-continue functionality.
+- Combat pause / resume callback.
+- Automatic text wrapping.
+- Consistent sizing and positioning.
+
+Store the tutorial messages in a central configuration object so their wording can be edited easily.
+
+Separate tutorial content from combat execution logic.
+
+Do not duplicate boss attack implementations just to display instructional messages.
+
+---
+
+# 11. SCENE AND GAMEPLAY RESTRICTIONS
+
+This update must not modify:
+
+- Boss damage.
+- Tutorial damage multipliers.
+- Tutorial speed multipliers.
+- Heir Mode.
+- Offensive action commands.
+- Character abilities.
+- Character statistics.
+- Character positions.
+- HUD layouts.
+- Existing combat animations.
+- Sound effects.
+- Music playback.
+- The fixed turn order.
+- Victory and defeat conditions.
+
+The original combat scene must not show these pop-ups.
+
+Only `escena_tutorial` receives this instructional system.
+
+---
+
+# 12. ACCEPTANCE TESTS
+
+Verify all the following:
+
+1. The introduction appears immediately upon entering `escena_tutorial`.
+2. The initial combat turn does not begin until the introduction is closed.
+3. Each instructional window occupies 60% of the screen width and height.
+4. Every pop-up is centered horizontally and vertically.
+5. Every pop-up has a black background and golden borders.
+6. All titles use Archeologicaps.
+7. All explanatory text uses the readable lowercase-capable font.
+8. Keyboard keys appear using the existing golden style.
+9. Enter closes the currently displayed pop-up.
+10. No gameplay input is accepted while a pop-up is open.
+11. Combat timing does not continue behind the pop-up.
+12. Lightning Chain displays its explanation on first use.
+13. Watch the Thunder displays its explanation on first use.
+14. Divine Retribution displays its explanation on first use.
+15. Cosmic Rays displays its explanation on first use.
+16. Meteor Rain displays its explanation on first use.
+17. Portal Shield displays its explanation on first use.
+18. Each explanation appears only once per tutorial encounter.
+19. The selected boss attack executes normally after closing its explanation.
+20. No projectile, animation, or damage event is skipped or duplicated.
+21. Heir Mode attack descriptions use their correct current attack counts.
+22. The existing tutorial damage and timing modifiers continue working.
+23. Restarting the tutorial resets the instructional-message tracking.
+24. The original combat scene remains unchanged.
+25. All text fits within its window without overlap or clipping.
+26. The production build succeeds.
+27. The tutorial battle remains fully playable from beginning to victory or defeat.
+
+---
+
+# 13. DESIGN.MD UPDATE
+
+Update the existing `DESIGN.md` to document:
+
+- The new tutorial instructional pop-up system.
+- The initial welcome message.
+- The six first-use boss-ability explanations.
+- The 60%-screen centered black-and-gold window.
+- The Enter-to-continue behavior.
+- Correct combat pausing.
+- First-use tracking and reset behavior.
+- Heir Mode-aware instructional text.
+
+Integrate the new requirements into the existing tutorial-scene documentation.
+
+Do not create contradictory or duplicated sections.
+
+---
+
+# FINAL REQUIREMENT
+
+Implement only the instructional pop-up system for `escena_tutorial`.
+
+The pop-ups must teach the player how each existing boss ability works without altering the ability itself.
+
+Preserve the existing functional combat system and ensure every paused enemy attack resumes correctly after the player presses Enter.
+
+When finished, report the files modified, the pop-ups implemented, and the results of the build and gameplay tests.

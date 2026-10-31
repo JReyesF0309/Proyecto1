@@ -5,6 +5,8 @@ import HazelTestScene from './hazel-test-scene';
 import SahiraTestScene from './sahira-test-scene';
 import DexiosTestScene from './dexios-test-scene';
 import FuraiTestScene from './furai-test-scene';
+import TutorialCombatScene from './tutorial-combat-scene';
+import TutorialPopupScene from './tutorial-popups';
 import { EB_GARAMOND_FONT_FAMILY, GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
 import WelcomeScene from './welcome-scene';
 
@@ -23,7 +25,17 @@ const config: Phaser.Types.Core.GameConfig = {
     pixelArt: false,
     roundPixels: false,
   },
-  scene: [WelcomeScene, SelectScene, CombatScene, HazelTestScene, SahiraTestScene, DexiosTestScene, FuraiTestScene],
+  scene: [
+    WelcomeScene,
+    SelectScene,
+    CombatScene,
+    TutorialCombatScene,
+    TutorialPopupScene,
+    HazelTestScene,
+    SahiraTestScene,
+    DexiosTestScene,
+    FuraiTestScene,
+  ],
 };
 
 await document.fonts.load(`16px "${GAME_FONT_FAMILY}"`);

@@ -32,13 +32,30 @@ import iobrontesRight from '../assets/normalized/iobrontes/iobrontes_derecha.png
 import iobrontesHit from '../assets/normalized/iobrontes/iobrontes_herido.png';
 import iobrontesLeft from '../assets/normalized/iobrontes/iobrontes_izquierda.png';
 import iobrontesWatchThunder from '../assets/normalized/iobrontes/iobrontes_wtt.png';
+import iobrontesHeirBase from '../assets/normalized/iobrontes/iobrontes_heredero_base.png';
+import iobrontesHeirRight from '../assets/normalized/iobrontes/iobrontes_heredero_derecha.png';
+import iobrontesHeirLeft from '../assets/normalized/iobrontes/iobrontes_heredero_izquierda.png';
+import iobrontesHeirUp from '../assets/normalized/iobrontes/iobrontes_heredero_arriba.png';
+import iobrontesHeirDown from '../assets/normalized/iobrontes/iobrontes_heredero_abajo.png';
+import iobrontesHeirHit from '../assets/normalized/iobrontes/iobrontes_heredero_herido.png';
+import iobrontesHeirArmor from '../assets/normalized/iobrontes/iobrontes_heredero_armadura.png';
+import iobrontesHeirWatchThunder from '../assets/normalized/iobrontes/iobrontes_heredero_wtt.png';
 import kosmelysBase from '../assets/normalized/kosmelys/kosmelys_base.png';
 import kosmelysRight from '../assets/normalized/kosmelys/kosmelys_derecha.png';
 import kosmelysLeft from '../assets/normalized/kosmelys/kosmelys_izquierda.png';
 import kosmelysUp from '../assets/normalized/kosmelys/kosmelys_arriba.png';
+import kosmelysDown from '../assets/normalized/kosmelys/kosmelys_abajo.png';
 import kosmelysShield from '../assets/normalized/kosmelys/kosmelys_escudo.png';
 import kosmelysMeteorRain from '../assets/normalized/kosmelys/kosmelys_mr.png';
 import kosmelysHit from '../assets/normalized/kosmelys/kosmelys_herida.png';
+import kosmelysHeirBase from '../assets/normalized/kosmelys/kosmelys_heredera_base.png';
+import kosmelysHeirRight from '../assets/normalized/kosmelys/kosmelys_heredera_derecha.png';
+import kosmelysHeirLeft from '../assets/normalized/kosmelys/kosmelys_heredera_izquierda.png';
+import kosmelysHeirUp from '../assets/normalized/kosmelys/kosmelys_heredera_arriba.png';
+import kosmelysHeirDown from '../assets/normalized/kosmelys/kosmelys_heredera_abajo.png';
+import kosmelysHeirShield from '../assets/normalized/kosmelys/kosmelys_heredera_escudo.png';
+import kosmelysHeirMeteorRain from '../assets/normalized/kosmelys/kosmelys_heredera_mr.png';
+import kosmelysHeirHit from '../assets/normalized/kosmelys/kosmelys_heredera_herida.png';
 import sahiraDown from '../assets/normalized/sahira/sahira_abajo.png';
 import sahiraUp from '../assets/normalized/sahira/sahira_arriba.png';
 import sahiraAttack from '../assets/normalized/sahira/sahira_ataque.png';
@@ -52,7 +69,9 @@ import dexiosIcon from '../assets/dexios/dexios_icono.png';
 import furaiIcon from '../assets/furai/furai_icono.png';
 import sahiraIcon from '../assets/sahira/sahira_icono.png';
 import iobrontesIcon from '../assets/iobrontes/iobrontes_icono.png';
+import iobrontesHeirIcon from '../assets/iobrontes/iobrontes_heredero_icono.png';
 import kosmelysIcon from '../assets/kosmelys/kosmelys_icono.png';
+import kosmelysHeirIcon from '../assets/kosmelys/kosmelys_heredera_icono.png';
 import hazelFireIdle from '../assets/normalized/hazel/hazel__fuego_base.png';
 import hazelFireUp from '../assets/normalized/hazel/hazel__fuego_arriba.png';
 import hazelFireDown from '../assets/normalized/hazel/hazel__fuego_abajo.png';
@@ -95,13 +114,20 @@ export const NORMALIZED_SPRITE_KEYS = [
   'hazel_hielo_herida', 'hazel_hielo_salto', 'hazel_hielo_arriba', 'hazel_hielo_abajo',
   'hazel_hielo_derecha', 'hazel_hielo_izquierda', 'iobrontes_armadura',
   'iobrontes_abajo', 'iobrontes_arriba', 'iobrontes_base', 'iobrontes_derecha',
-  'iobrontes_herido', 'iobrontes_izquierda', 'iobrontes_wtt', 'kosmelys_base',
+  'iobrontes_herido', 'iobrontes_izquierda', 'iobrontes_wtt',
+  'iobrontes_heredero_base', 'iobrontes_heredero_derecha', 'iobrontes_heredero_izquierda',
+  'iobrontes_heredero_arriba', 'iobrontes_heredero_abajo', 'iobrontes_heredero_herido',
+  'iobrontes_heredero_armadura', 'iobrontes_heredero_wtt', 'kosmelys_base',
   'kosmelys_derecha', 'kosmelys_izquierda', 'kosmelys_arriba', 'kosmelys_escudo',
-  'kosmelys_mr', 'kosmelys_herida',
+  'kosmelys_abajo', 'kosmelys_mr', 'kosmelys_herida', 'kosmelys_heredera_base',
+  'kosmelys_heredera_derecha', 'kosmelys_heredera_izquierda', 'kosmelys_heredera_arriba',
+  'kosmelys_heredera_abajo', 'kosmelys_heredera_escudo', 'kosmelys_heredera_mr',
+  'kosmelys_heredera_herida',
 ] as const;
 export const PLAYABLE_CHARACTERS = ['furai', 'dexios', 'sahira', 'hazel'] as const;
 export type CharacterId = typeof PLAYABLE_CHARACTERS[number];
 export type BossId = 'iobrontes' | 'kosmelys';
+export type BossPhase = 'normal' | 'heir' | 'defeated';
 export type Direction = 'left' | 'right' | 'up' | 'down';
 export type HazelForm = 'ignis' | 'glacio';
 
@@ -189,13 +215,30 @@ export const IMAGE_ASSETS = {
   iobrontes_herido: iobrontesHit,
   iobrontes_izquierda: iobrontesLeft,
   iobrontes_wtt: iobrontesWatchThunder,
+  iobrontes_heredero_base: iobrontesHeirBase,
+  iobrontes_heredero_derecha: iobrontesHeirRight,
+  iobrontes_heredero_izquierda: iobrontesHeirLeft,
+  iobrontes_heredero_arriba: iobrontesHeirUp,
+  iobrontes_heredero_abajo: iobrontesHeirDown,
+  iobrontes_heredero_herido: iobrontesHeirHit,
+  iobrontes_heredero_armadura: iobrontesHeirArmor,
+  iobrontes_heredero_wtt: iobrontesHeirWatchThunder,
   kosmelys_base: kosmelysBase,
   kosmelys_derecha: kosmelysRight,
   kosmelys_izquierda: kosmelysLeft,
   kosmelys_arriba: kosmelysUp,
+  kosmelys_abajo: kosmelysDown,
   kosmelys_escudo: kosmelysShield,
   kosmelys_mr: kosmelysMeteorRain,
   kosmelys_herida: kosmelysHit,
+  kosmelys_heredera_base: kosmelysHeirBase,
+  kosmelys_heredera_derecha: kosmelysHeirRight,
+  kosmelys_heredera_izquierda: kosmelysHeirLeft,
+  kosmelys_heredera_arriba: kosmelysHeirUp,
+  kosmelys_heredera_abajo: kosmelysHeirDown,
+  kosmelys_heredera_escudo: kosmelysHeirShield,
+  kosmelys_heredera_mr: kosmelysHeirMeteorRain,
+  kosmelys_heredera_herida: kosmelysHeirHit,
   sahira_abajo: sahiraDown,
   sahira_arriba: sahiraUp,
   sahira_ataque: sahiraAttack,
@@ -214,7 +257,9 @@ export const ICON_ASSETS = {
   hazel: hazelFireIcon,
   hazel_glacio: hazelIceIcon,
   iobrontes: iobrontesIcon,
+  iobrontes_heir: iobrontesHeirIcon,
   kosmelys: kosmelysIcon,
+  kosmelys_heir: kosmelysHeirIcon,
 } as const;
 
 export const COVER_ASSETS = {
@@ -297,6 +342,16 @@ export const GAME_CONFIG = {
     portalEffectDurationMs: 620,
     kosmelysBreathingMs: 1750,
     kosmelysBreathingPixels: 4,
+  },
+  combatModes: {
+    standard: {
+      bossDamageMultiplier: 1,
+      combatTimingMultiplier: 1,
+    },
+    tutorial: {
+      bossDamageMultiplier: 0.75,
+      combatTimingMultiplier: 1.5,
+    },
   },
   partyOrder: ['furai', 'iobrontes', 'kosmelys', 'dexios', 'iobrontes', 'kosmelys', 'sahira', 'iobrontes', 'kosmelys', 'hazel', 'iobrontes', 'kosmelys'] as const,
   hazelTurnPlacement: 'after-sahira (provisional)' as const,
@@ -411,7 +466,97 @@ export const GAME_CONFIG = {
           left: 'kosmelys_izquierda',
           right: 'kosmelys_derecha',
           up: 'kosmelys_arriba',
-          down: 'MISSING_KOSMELYS_ATTACK_DOWN',
+          down: 'kosmelys_abajo',
+        },
+      },
+    },
+  },
+  bossPhases: {
+    iobrontes: {
+      normal: {
+        maxHealth: 550,
+        damageMultiplier: 1,
+        lightningStrikes: 3,
+        watchThunderSweeps: 1,
+        watchThunderDamage: 50,
+        divineRetaliationDamage: 30,
+        frames: {
+          idle: 'iobrontes_base',
+          attack: {
+            left: 'iobrontes_izquierda',
+            right: 'iobrontes_derecha',
+            up: 'iobrontes_arriba',
+            down: 'iobrontes_abajo',
+          },
+          hit: 'iobrontes_herido',
+          divineRetribution: 'iobrontes_armadura',
+          watchThunder: 'iobrontes_wtt',
+        },
+      },
+      heir: {
+        maxHealth: 550,
+        damageMultiplier: 2,
+        lightningStrikes: 5,
+        watchThunderSweeps: 2,
+        watchThunderDamage: 100,
+        divineRetaliationDamage: 60,
+        frames: {
+          idle: 'iobrontes_heredero_base',
+          attack: {
+            left: 'iobrontes_heredero_izquierda',
+            right: 'iobrontes_heredero_derecha',
+            up: 'iobrontes_heredero_arriba',
+            down: 'iobrontes_heredero_abajo',
+          },
+          hit: 'iobrontes_heredero_herido',
+          divineRetribution: 'iobrontes_heredero_armadura',
+          watchThunder: 'iobrontes_heredero_wtt',
+        },
+      },
+    },
+    kosmelys: {
+      normal: {
+        maxHealth: 450,
+        damageMultiplier: 1,
+        cosmicRaysProjectiles: 2,
+        cosmicRaysDamage: 15,
+        cosmicBlockedDamage: 5,
+        meteorCount: 5,
+        meteorRainDamage: 20,
+        meteorBlockedDamage: 5,
+        frames: {
+          idle: 'kosmelys_base',
+          attack: {
+            left: 'kosmelys_izquierda',
+            right: 'kosmelys_derecha',
+            up: 'kosmelys_arriba',
+            down: 'kosmelys_abajo',
+          },
+          hit: 'kosmelys_herida',
+          shield: 'kosmelys_escudo',
+          meteorRain: 'kosmelys_mr',
+        },
+      },
+      heir: {
+        maxHealth: 450,
+        damageMultiplier: 2,
+        cosmicRaysProjectiles: 3,
+        cosmicRaysDamage: 30,
+        cosmicBlockedDamage: 10,
+        meteorCount: 8,
+        meteorRainDamage: 40,
+        meteorBlockedDamage: 10,
+        frames: {
+          idle: 'kosmelys_heredera_base',
+          attack: {
+            left: 'kosmelys_heredera_izquierda',
+            right: 'kosmelys_heredera_derecha',
+            up: 'kosmelys_heredera_arriba',
+            down: 'kosmelys_heredera_abajo',
+          },
+          hit: 'kosmelys_heredera_herida',
+          shield: 'kosmelys_heredera_escudo',
+          meteorRain: 'kosmelys_heredera_mr',
         },
       },
     },

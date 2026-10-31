@@ -164,12 +164,20 @@ $assetGroups = @{
     iobrontes = @(
         'iobrontes_armadura.png', 'iobrontes_abajo.png', 'iobrontes_arriba.png',
         'iobrontes_base.png', 'iobrontes_derecha.png', 'iobrontes_herido.png',
-        'iobrontes_izquierda.png', 'iobrontes_wtt.png'
+        'iobrontes_izquierda.png', 'iobrontes_wtt.png',
+        'iobrontes_heredero_abajo.png', 'iobrontes_heredero_armadura.png',
+        'iobrontes_heredero_arriba.png', 'iobrontes_heredero_base.png',
+        'iobrontes_heredero_derecha.png', 'iobrontes_heredero_herido.png',
+        'iobrontes_heredero_izquierda.png', 'iobrontes_heredero_wtt.png'
     )
     kosmelys = @(
         'kosmelys_base.png', 'kosmelys_derecha.png', 'kosmelys_izquierda.png',
-        'kosmelys_arriba.png', 'kosmelys_escudo.png', 'kosmelys_mr.png',
-        'kosmelys_herida.png'
+        'kosmelys_arriba.png', 'kosmelys_abajo.png', 'kosmelys_escudo.png',
+        'kosmelys_mr.png', 'kosmelys_herida.png',
+        'kosmelys_heredera_abajo.png', 'kosmelys_heredera_arriba.png',
+        'kosmelys_heredera_base.png', 'kosmelys_heredera_derecha.png',
+        'kosmelys_heredera_escudo.png', 'kosmelys_heredera_herida.png',
+        'kosmelys_heredera_izquierda.png', 'kosmelys_heredera_mr.png'
     )
 }
 
