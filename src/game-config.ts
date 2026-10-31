@@ -97,6 +97,29 @@ import iceImpact from '../assets/hazel/hielo.png';
 import weakIceImpact from '../assets/hazel/hielo_debil.png';
 import iobrontesCover from '../assets/iobrontes/iobrontes_portada.png';
 import kosmelysCover from '../assets/kosmelys/kosmelys_portada.png';
+import dexiosDialogueTired from '../assets/dexios/dexios_dialogo_cansado.png';
+import dexiosDialogueReady from '../assets/dexios/dexios_dialogo_engarde.png';
+import dexiosDialogueAnnoyed from '../assets/dexios/dexios_dialogo_molesto.png';
+import dexiosDialoguePotion from '../assets/dexios/dexios_dialogo_planta.png';
+import furaiDialogueReady from '../assets/furai/furai_dialogo_engarde.png';
+import furaiDialogueExpectant from '../assets/furai/furai_dialogo_expectativa.png';
+import sahiraDialogueConfused from '../assets/sahira/sahira_dialogo_confundida.png';
+import sahiraDialogueAnnoyed from '../assets/sahira/sahira_dialogo_molesta.png';
+import hazelDialogueHappy from '../assets/hazel/hazel_dialogo_feliz.png';
+import hazelDialogueSad from '../assets/hazel/hazel_dialogo_triste.png';
+import hazelDialogueWorried from '../assets/hazel/hazel_dialogo_preocupada.png';
+import kosmelysDialogueHappy from '../assets/kosmelys/kosmelys_dialogo_feliz.png';
+import kosmelysDialogueDowncast from '../assets/kosmelys/kosmelys_dialogo_cabizbaja.png';
+import kosmelysDialogueChaotic from '../assets/kosmelys/kosmelys_dialogo_caotica.png';
+import kosmelysDialogueHurt from '../assets/kosmelys/kosmelys_dialogo_herida.png';
+import kosmelysHeirDialogueHurt from '../assets/kosmelys/kosmelys_heredera_dialogo_herida.png';
+import iobrontesDialogueHappy from '../assets/iobrontes/iobrontes_dialogo_feliz.png';
+import iobrontesDialogueHurt from '../assets/iobrontes/iobrontes_dialogo_herido.png';
+import iobrontesHeirDialogueHurt from '../assets/iobrontes/iobrontes_heredero_dialogo_herido.png';
+import iobrontesArrivalFirst from '../assets/iobrontes/iobrontes_llegada1.png';
+import iobrontesArrivalSecond from '../assets/iobrontes/iobrontes_llegada2.png';
+import iobrontesHeirTransformation from '../assets/iobrontes/iobrontes_heredero_transformacion.png';
+import kosmelysHeirTransformation from '../assets/kosmelys/kosmelys_heredera_transformacion.png';
 
 export const GAME_FONT_FAMILY = 'Archeologicaps';
 export const UI_FONT_FAMILY = 'Arial';
@@ -267,6 +290,32 @@ export const COVER_ASSETS = {
   kosmelys: kosmelysCover,
 } as const;
 
+export const NARRATIVE_IMAGE_ASSETS = {
+  dexios_dialogo_cansado: dexiosDialogueTired,
+  dexios_dialogo_engarde: dexiosDialogueReady,
+  dexios_dialogo_molesto: dexiosDialogueAnnoyed,
+  dexios_dialogo_planta: dexiosDialoguePotion,
+  furai_dialogo_engarde: furaiDialogueReady,
+  furai_dialogo_expectativa: furaiDialogueExpectant,
+  sahira_dialogo_confundida: sahiraDialogueConfused,
+  sahira_dialogo_molesta: sahiraDialogueAnnoyed,
+  hazel_dialogo_feliz: hazelDialogueHappy,
+  hazel_dialogo_triste: hazelDialogueSad,
+  hazel_dialogo_preocupada: hazelDialogueWorried,
+  kosmelys_dialogo_feliz: kosmelysDialogueHappy,
+  kosmelys_dialogo_cabizbaja: kosmelysDialogueDowncast,
+  kosmelys_dialogo_caotica: kosmelysDialogueChaotic,
+  kosmelys_dialogo_herida: kosmelysDialogueHurt,
+  kosmelys_heredera_dialogo_herida: kosmelysHeirDialogueHurt,
+  iobrontes_dialogo_feliz: iobrontesDialogueHappy,
+  iobrontes_dialogo_herido: iobrontesDialogueHurt,
+  iobrontes_heredero_dialogo_herido: iobrontesHeirDialogueHurt,
+  iobrontes_llegada1: iobrontesArrivalFirst,
+  iobrontes_llegada2: iobrontesArrivalSecond,
+  iobrontes_heredero_transformacion: iobrontesHeirTransformation,
+  kosmelys_heredera_transformacion: kosmelysHeirTransformation,
+} as const;
+
 export const GAME_CONFIG = {
   canvas: { width: 1920, height: 1080 },
   sprite: {
@@ -302,6 +351,8 @@ export const GAME_CONFIG = {
       hazel_hielo_derecha: 1.1,
       hazel_hielo_salto: 0.8,
       hazel_hielo_izquierda: 0.9025,
+      hazel_fuego_dance: 0.91,
+      hazel_hielo_shards: 0.91,
     } as Readonly<Record<string, number>>,
   },
   camera: {

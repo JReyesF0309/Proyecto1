@@ -7585,3 +7585,421 @@ The pop-ups must teach the player how each existing boss ability works without a
 Preserve the existing functional combat system and ensure every paused enemy attack resumes correctly after the player presses Enter.
 
 When finished, report the files modified, the pop-ups implemented, and the results of the build and gameplay tests.
+
+# LA DEXÍADA — NARRATIVE BATTLE IMPLEMENTATION
+
+## 1. OBJECTIVE
+
+Implement a narrative version of the existing functional Phaser combat encounter.
+
+Reuse the existing combat engine, boss phases, abilities, action commands, HUD, animations, and turn system. Do not rebuild combat or modify the normal battle or tutorial scenes.
+
+The narrative battle adds dialogue, cinematic events, music transitions, and scripted battle progression.
+
+**ALL dialogue text must be in English. Use the English lines provided below exactly.**
+
+Preserve the existing combat mechanics and update `DESIGN.md` after implementation.
+
+## 2. DIALOGUE PRESENTATION
+
+Follow the supplied dialogue UI reference image.
+
+Whenever dialogue appears:
+
+- Keep the battlefield background visible beneath a translucent black overlay.
+- Display large character portraits, emphasizing the active speaker.
+- Display a dialogue box near the bottom with the speaker's name and text.
+- Use Archeologicaps for character names and the existing lowercase-capable font for dialogue.
+- Advance dialogue with Enter.
+- Pause combat, timers, projectiles, damage resolution, action commands, and turn progression.
+- Block gameplay inputs while dialogue is active.
+- Prevent a single Enter press from advancing multiple lines.
+
+Use a reusable dialogue manager and a sequential cinematic-event queue. Avoid overlapping dialogue windows.
+
+## 3. OPENING SEQUENCE
+
+Initially, display only the temple background.
+
+No playable characters, bosses, combat HUD, or turn-order icons should be visible.
+
+Display these dialogues in order:
+
+| Speaker | Sprite | Dialogue |
+|---|---|---|
+| Hazel | `hazel_dialogo_feliz` | Your Majesty Kosmelys, thank you so much for training me these past few days. Now that my team has arrived, it's time for me to leave. |
+| Kosmelys | `kosmelys_dialogo_feliz` | The honor was mine, little Hazel. You have great potential, but what impressed me most was your discipline and passion. I hope we meet again soon. We'll continue with the plan here. |
+| Kosmelys | `kosmelys_dialogo_feliz` | Iobrontes is out on patrol. I'll let him know you said goodbye, my loyal friends. |
+
+### Red Chaos Wave
+
+After the third dialogue:
+
+1. Close the dialogue window.
+2. Display a red chaotic shockwave traveling from left to right.
+3. Add a brief screen distortion and subtle camera shake.
+4. Include a short dramatic silence before the next dialogue.
+
+Use Phaser effects or existing assets. Do not generate new artwork.
+
+### Dialogue After the Chaos Wave
+
+| Speaker | Sprite | Dialogue |
+|---|---|---|
+| Sahira | `sahira_dialogo_confundida` | Something's wrong. Helíocles' waves have dissipated. |
+| Hazel | `hazel_dialogo_preocupada` | Hmm... Kosmelys? |
+| Kosmelys | `kosmelys_dialogo_cabizbaja` | … |
+| Furai | `furai_dialogo_engarde` | Something seems to have affected the Sun Banner. Prepare for the worst! |
+| Kosmelys | `kosmelys_dialogo_caotica` | What's wrong? Don't you want to be part of Xantharchía's golden age? |
+| Dexios | `dexios_dialogo_engarde` | To your positions! |
+
+Pause briefly on Kosmelys's silence.
+
+Use a subtle dark flash when her expression changes to the corrupted smile.
+
+## 4. FIRST BATTLE PHASE — KOSMELYS ALONE
+
+After Dexios's final line:
+
+- Close the dialogue interface.
+- Show all four playable characters.
+- Spawn Kosmelys at 450 HP.
+- Begin the existing combat system.
+- Start `cosmic_strike.mp3`.
+- Keep Iobrontes absent.
+
+Until his arrival, Iobrontes must have no visible sprite, HUD, active turns, or targeting availability.
+
+Treat him as NOT YET ARRIVED, not DEFEATED.
+
+Preserve Kosmelys's existing abilities, attack probabilities, and Normal/Heir mechanics.
+
+## 5. IOBRONTES ARRIVAL TRIGGER
+
+When Kosmelys's HP first becomes **strictly less than 150**, finish the current ability and pause combat.
+
+Play `trueno.mp3` as distant thunder.
+
+Then display:
+
+| Speaker | Sprite | Dialogue |
+|---|---|---|
+| Dexios | `dexios_dialogo_molesto` | Damn it! He's realized we're here. We can't give up. We're getting out of this! |
+| Furai | `furai_dialogo_expectativa` | Your call, man! |
+
+Trigger this event only once.
+
+If a powerful attack reduces Kosmelys directly from above 150 HP to zero, prioritize Iobrontes's arrival and queue Kosmelys's pending Heir transformation afterward.
+
+## 6. IOBRONTES'S TRIUMPHANT ENTRANCE
+
+This sequence uses cinematic images, NOT dialogue portraits.
+
+After Furai's line:
+
+1. Close the dialogue UI.
+2. Start `watch_the_thunder.mp3`, replacing `cosmic_strike.mp3`.
+3. Display `iobrontes_llegada1` over the battlefield.
+4. Synchronize `trueno.mp3` and a brief, powerful camera shake with his landing.
+5. Hold this image for exactly **3 seconds**.
+6. Replace it with `iobrontes_llegada2`.
+7. Hold the second image for exactly **3 seconds**.
+8. Remove the cinematic overlay.
+
+The images advance automatically, without Enter.
+
+Combat remains paused throughout the cinematic.
+
+Preserve the images' aspect ratios and avoid cropping important details.
+
+### Post-Entrance Dialogue
+
+| Speaker | Sprite | Dialogue |
+|---|---|---|
+| Iobrontes | `iobrontes_dialogo_feliz` | Did you think you'd have all the fun without me? |
+| Sahira | `sahira_dialogo_molesta` | We can handle this. Our wills shall not yield! |
+
+After the dialogue:
+
+- Spawn Iobrontes with 550 HP.
+- Enable his HUD, targeting, and scheduled turns.
+- Preserve Kosmelys's remaining HP.
+- Preserve all player HP, resources, and statuses.
+- Continue the dual-boss battle without restarting it.
+
+### Music
+
+Starting with Iobrontes's entrance, alternate entire tracks:
+
+`watch_the_thunder.mp3` → `cosmic_strike.mp3` → repeat.
+
+Play each track fully before starting the next.
+
+Do not overlap tracks or loop either song individually.
+
+Preserve existing victory music behavior.
+
+## 7. HEIR TRANSFORMATION DIALOGUES
+
+The existing Heir Mode system is already functional.
+
+Do not reimplement it.
+
+Integrate the following dialogue and cinematic events into its current transformation flow.
+
+### Kosmelys — First HP Depletion
+
+Sprite: `kosmelys_dialogo_herida`
+
+Dialogue:
+
+"I underestimated you. It's time for you to witness the true power of the HEIR OF SPACE!"
+
+After Enter:
+
+1. Display `kosmelys_heredera_transformacion` as a foreground cinematic for **3 seconds**.
+2. Execute her existing Heir transformation exactly once.
+3. Restore her HP to 450.
+4. Activate the existing Heir sprites and attacks.
+5. Change her displayed title to exactly:
+
+**KOSMELYS, HEIR OF SPACE**
+
+6. Resume combat.
+
+### Iobrontes — First HP Depletion
+
+Sprite: `iobrontes_dialogo_herido`
+
+Dialogue:
+
+"Huh, the fun is only just beginning. HEIR OF THUNDER!"
+
+After Enter:
+
+1. Display `iobrontes_heredero_transformacion` for **3 seconds**.
+2. Execute his existing Heir transformation exactly once.
+3. Restore his HP to 550.
+4. Activate the existing Heir sprites and attacks.
+5. Change his displayed title to exactly:
+
+**IOBRONTES, HEIR OF THUNDER**
+
+6. Resume combat.
+
+Both transformations must remain independent.
+
+Update the titles in the boss HUD and other existing title displays.
+
+## 8. FINAL BOSS DEFEAT DIALOGUES
+
+These events can occur in either order, depending on which boss the player defeats first.
+
+### Kosmelys — Permanent Defeat
+
+Sprite: `kosmelys_heredera_dialogo_herida`
+
+Dialogue:
+
+"I'm sorry, Bas. The… golden… age…"
+
+Then display:
+
+Speaker: Hazel  
+Sprite: `hazel_dialogo_triste`
+
+"I'm sorry, Master."
+
+After Hazel's dialogue, pause briefly and fade Kosmelys out of the battlefield.
+
+Disable her future turns and continue combat against Iobrontes if he remains active.
+
+### Iobrontes — Permanent Defeat
+
+Sprite: `iobrontes_heredero_dialogo_herido`
+
+Dialogue:
+
+"El, forgive me. I wasn't… strong… enough…"
+
+After this dialogue, pause briefly and fade Iobrontes out of the battlefield.
+
+Disable his future turns and continue combat against Kosmelys if she remains active.
+
+Do not trigger victory before all pending boss-defeat dialogues and exit animations are complete.
+
+## 9. SPECIAL EVENT — BOTH BOSSES ENTER HEIR MODE
+
+When BOTH bosses have entered Heir Mode, trigger this event exactly once.
+
+Pause combat and display:
+
+Speaker: Dexios  
+Sprite: `dexios_dialogo_planta`
+
+Dialogue:
+
+"Hey, I made some potions using dittany. Here, take them, and let's win this!"
+
+After Enter:
+
+- Revive every incapacitated playable character.
+- Restore all four characters to 100% Health.
+- Restore Mana to maximum for characters who use Mana.
+- Restore their active battlefield sprites and targeting eligibility.
+- Update their HUD.
+- Resume the existing turn sequence.
+
+Do not reset Spirit, Chaos Energy, limited-use abilities, shields, or other resources that are not Health or Mana.
+
+This is an automatic narrative event, not an inventory item.
+
+Trigger it after the second Heir transformation finishes, before the next combat action.
+
+## 10. FINAL VICTORY DIALOGUE
+
+When both gods have been permanently defeated and their exit sequences are complete, show:
+
+Speaker: Dexios  
+Sprite: `dexios_dialogo_cansado`
+
+Dialogue:
+
+"At last, it's over."
+
+After Enter, transition to the existing victory screen and victory music.
+
+## 11. SCRIPTED EVENT SAFETY
+
+Implement a centralized narrative-event queue.
+
+Required event handling:
+
+1. Finish the active combat ability safely.
+2. Process Iobrontes's arrival when the HP threshold is crossed.
+3. Process pending Heir transformation dialogue and cinematic events.
+4. Trigger the dittany potion event once both transformations are complete.
+5. Process final defeat dialogues and boss exits.
+6. Trigger Dexios's final line once both bosses are permanently defeated.
+7. Resume combat only when no narrative event is pending.
+
+Each event must trigger once.
+
+If multiple events become eligible after the same ability, queue them rather than overwriting them.
+
+During dialogue and cinematics:
+
+- Pause combat timers, damage, AI, and turn advancement.
+- Block gameplay inputs.
+- Prevent duplicate transformations and duplicated HP restoration.
+- Keep dialogue UI above the battlefield.
+- Restore the camera and HUD afterward.
+- Clean up temporary tweens, overlays, sounds, and input listeners.
+
+## 12. ASSET REGISTRATION
+
+Register the supplied assets using their exact filenames and extensions.
+
+### Cinematics
+
+- `iobrontes_llegada1`
+- `iobrontes_llegada2`
+- `iobrontes_heredero_transformacion`
+- `kosmelys_heredera_transformacion`
+
+### Dexios
+
+- `dexios_dialogo_planta`
+- `dexios_dialogo_cansado`
+- `dexios_dialogo_molesto`
+- `dexios_dialogo_engarde`
+
+### Furai
+
+- `furai_dialogo_expectativa`
+- `furai_dialogo_engarde`
+
+### Sahira
+
+- `sahira_dialogo_confundida`
+- `sahira_dialogo_molesta`
+
+### Hazel
+
+- `hazel_dialogo_feliz`
+- `hazel_dialogo_triste`
+- `hazel_dialogo_preocupada`
+
+### Kosmelys
+
+- `kosmelys_dialogo_feliz`
+- `kosmelys_dialogo_cabizbaja`
+- `kosmelys_dialogo_caotica`
+- `kosmelys_dialogo_herida`
+- `kosmelys_heredera_dialogo_herida`
+
+### Iobrontes
+
+- `iobrontes_dialogo_feliz`
+- `iobrontes_dialogo_herido`
+- `iobrontes_heredero_dialogo_herido`
+
+For Kosmelys's initial patrol dialogue, reuse `kosmelys_dialogo_feliz`.
+
+For Dexios's final lowered-head dialogue, use `dexios_dialogo_cansado`.
+
+Do not generate missing artwork.
+
+## 13. IMPLEMENTATION ORDER
+
+1. Register the dialogue and cinematic assets.
+2. Implement the reusable dialogue interface.
+3. Implement the opening dialogue and chaos wave.
+4. Configure the Kosmelys-only combat phase.
+5. Implement the HP threshold and Iobrontes entrance.
+6. Integrate Heir dialogue and transformation cinematics.
+7. Integrate permanent defeat dialogue and exits.
+8. Add the dittany potion recovery event.
+9. Add the final victory dialogue.
+10. Update `DESIGN.md` and test the production build.
+
+## 14. ACCEPTANCE TESTS
+
+Verify:
+
+- All dialogue appears in English.
+- The opening starts with no battlers visible.
+- The red chaos wave plays at the correct moment.
+- Kosmelys initially fights alone.
+- Iobrontes enters once Kosmelys falls below 150 HP.
+- Both entrance images remain visible for 3 seconds each.
+- Thunder, camera shake, and music synchronize correctly.
+- Music alternates after Iobrontes arrives.
+- Both bosses transform with their correct dialogue and cinematics.
+- Their titles update to HEIR OF THUNDER and HEIR OF SPACE.
+- Either boss can be permanently defeated first.
+- Hazel apologizes after Kosmelys's final defeat.
+- The dittany event revives and heals the party when both gods enter Heir Mode.
+- Dexios's final line plays before the victory screen.
+- No duplicate events, damage, turn advancement, or input bugs occur.
+- The normal combat and tutorial scenes remain unchanged.
+- `npm run build` succeeds.
+
+## FINAL REQUIREMENT
+
+Implement the narrative encounter by extending the existing combat system.
+
+Use **English for every spoken dialogue line**, including opening, mid-battle, transformation, defeat, potion, and victory dialogue.
+
+Keep the supplied sprite filenames unchanged.
+
+Do not rebuild existing combat systems.
+
+## Current implementation notes
+
+- The narrative battle is available with **N · NARRATIVE BATTLE** from the selection screen and runs as a separate instance of the standard combat scene.
+- Dialogue and cinematic overlays pause combat; the encounter event queue coordinates Iobrontes's arrival, both Heir transformations, dittany recovery, defeat sequences, and final victory.
+- Hazel's `hazel_dialogo_feliz`, `hazel_dialogo_triste`, and `hazel_dialogo_preocupada` portraits load from `assets/hazel/`. Iobrontes and Kosmelys dialogue portraits are aligned to the right of the dialogue window.
+- Dialogue text and controls keep an inset from the panel edges, portraits sit above the panel, and Hazel's Flame Dance/Figure Shards command illustrations are trimmed to visible artwork before fitting the black action strip vertically.
+
+Report the modified files, implemented events, missing assets, and build results.

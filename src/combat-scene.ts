@@ -9,6 +9,7 @@ import {
   GAME_FONT_FAMILY,
   ICON_ASSETS,
   IMAGE_ASSETS,
+  NARRATIVE_IMAGE_ASSETS,
   NORMALIZED_SPRITE_KEYS,
   PLAYABLE_CHARACTERS,
   UI_FONT_FAMILY,
@@ -61,6 +62,11 @@ import {
   TUTORIAL_POPUP_SCENE_KEY,
   TutorialMessageId,
 } from './tutorial-popups';
+import {
+  NARRATIVE_PRESENTATION_SCENE_KEY,
+  NarrativeDialogueLine,
+  NarrativePresentationData,
+} from './narrative-presentation';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
@@ -92,6 +98,7 @@ type CombatPhase =
   | 'cosmic-rays'
   | 'meteor-rain'
   | 'transforming'
+  | 'narrative'
   | 'jump-window'
   | 'resolving'
   | 'ended';
@@ -181,6 +188,11 @@ interface MeteorEvent {
   ring: Phaser.GameObjects.Graphics;
 }
 
+interface NarrativeEvent {
+  id: string;
+  run: (onComplete: () => void) => void;
+}
+
 export default class CombatScene extends Phaser.Scene {
   private state: CombatState = createCombatState();
   private phase: CombatPhase = 'player';
@@ -199,6 +211,7 @@ export default class CombatScene extends Phaser.Scene {
   private missingLabels!: Record<CharacterId, Phaser.GameObjects.Text>;
   private frameGeneration: Record<CharacterId, number> = { dexios: 0, furai: 0, sahira: 0, hazel: 0 };
   private boss!: Phaser.GameObjects.Sprite;
+  private iobrontesShadow?: Phaser.GameObjects.Ellipse;
   private kosmelysBoss!: Phaser.GameObjects.Sprite;
   private bossFrameGeneration = 0;
   private kosmelysFrameGeneration = 0;
@@ -276,6 +289,14 @@ export default class CombatScene extends Phaser.Scene {
     meteorRain: false,
     portalShield: false,
   };
+  private readonly narrativeInitialObjects: Phaser.GameObjects.Components.Visible[] = [];
+  private readonly narrativeEventQueue: NarrativeEvent[] = [];
+  private readonly queuedNarrativeEventIds = new Set<string>();
+  private readonly completedNarrativeEventIds = new Set<string>();
+  private narrativeMode: boolean;
+  private narrativeIobrontesArrived = false;
+  private processingNarrativeEvents = false;
+  private narrativeBattleStarted = false;
 
   private readonly practiceId: CharacterId | null;
   private readonly modeConfig: CombatModeConfig;
@@ -306,9 +327,11 @@ export default class CombatScene extends Phaser.Scene {
     key = 'escena_combate_dificil',
     practiceId: CharacterId | null = null,
     combatMode: CombatMode = 'standard',
+    narrativeMode = false,
   ) {
     super({ key });
     this.practiceId = practiceId;
+    this.narrativeMode = narrativeMode;
     this.modeConfig = GAME_CONFIG.combatModes[combatMode];
     const multiplier = this.modeConfig.combatTimingMultiplier;
     this.combatTiming = {
@@ -357,6 +380,11 @@ export default class CombatScene extends Phaser.Scene {
     Object.entries(ICON_ASSETS).forEach(([id, asset]) => {
       loadImage(`icon_${id}`, asset);
     });
+    if (this.narrativeMode) {
+      Object.entries(NARRATIVE_IMAGE_ASSETS).forEach(([key, asset]) => {
+        loadImage(key, asset);
+      });
+    }
     (Object.keys(CINEMATIC_ASSETS) as Array<keyof typeof CINEMATIC_ASSETS>).forEach((key) => {
       loadImage(cinematicTextureKey(key), CINEMATIC_ASSETS[key]);
     });
@@ -366,6 +394,13 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.narrativeInitialObjects.length = 0;
+    this.narrativeEventQueue.length = 0;
+    this.queuedNarrativeEventIds.clear();
+    this.completedNarrativeEventIds.clear();
+    this.narrativeIobrontesArrived = false;
+    this.processingNarrativeEvents = false;
+    this.narrativeBattleStarted = false;
     this.state = createCombatState();
     Object.keys(this.tutorialMessagesSeen).forEach((id) => {
       this.tutorialMessagesSeen[id as TutorialMessageId] = false;
@@ -422,6 +457,13 @@ export default class CombatScene extends Phaser.Scene {
         key !== 'arena' && !NORMALIZED_SPRITE_KEY_SET.has(key),
       ),
     );
+    stripBlackMattes(this.textures, [
+      cinematicTextureKey('hazel_fuego_ataque_dance'),
+      cinematicTextureKey('hazel_hielo_ataque_shards'),
+    ]);
+    if (this.narrativeMode) {
+      stripBlackMattes(this.textures, Object.keys(NARRATIVE_IMAGE_ASSETS));
+    }
     if (this.practiceId) {
       createCharacterIntroductionTextures(this.textures);
     }
@@ -454,6 +496,7 @@ export default class CombatScene extends Phaser.Scene {
     this.input.on('pointerdown', this.handleUiPointer, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scene.stop(TUTORIAL_POPUP_SCENE_KEY);
+      this.scene.stop(NARRATIVE_PRESENTATION_SCENE_KEY);
       this.events.off(Phaser.Scenes.Events.ADDED_TO_SCENE, this.ignoreInOverlay, this);
       this.input.keyboard?.off('keydown', this.onKeyDown, this);
       this.input.off('pointerdown', this.startAudio, this);
@@ -466,17 +509,177 @@ export default class CombatScene extends Phaser.Scene {
     });
 
     this.refreshHud();
-    this.startAudio();
-    if (this.practiceId) {
+    if (this.narrativeMode) {
+      this.narrativeInitialObjects.push(
+        ...this.children.getChildren().slice(2).map((object) =>
+          object as Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible,
+        ),
+      );
+      this.narrativeInitialObjects.forEach((object) => object.setVisible(false));
+      this.soundscape.stopMusic();
+      this.startNarrativeOpening();
+    } else if (this.practiceId) {
+      this.startAudio();
       this.setupPractice(this.practiceId);
     } else if (this.modeConfig === GAME_CONFIG.combatModes.tutorial) {
+      this.startAudio();
       this.showTutorialPopup('introduction', () => this.startTurn());
     } else {
+      this.startAudio();
       this.startTurn();
     }
   }
 
+  private startNarrativeOpening(): void {
+    this.phase = 'narrative';
+    const opening: NarrativeDialogueLine[] = [
+      {
+        speaker: 'Hazel',
+        portrait: 'hazel_dialogo_feliz',
+        text: "Your Majesty Kosmelys, thank you so much for training me these past few days. Now that my team has arrived, it's time for me to leave.",
+      },
+      {
+        speaker: 'Kosmelys',
+        portrait: 'kosmelys_dialogo_feliz',
+        text: "The honor was mine, little Hazel. You have great potential, but what impressed me most was your discipline and passion. I hope we meet again soon. We'll continue with the plan here.",
+      },
+      {
+        speaker: 'Kosmelys',
+        portrait: 'kosmelys_dialogo_feliz',
+        text: "Iobrontes is out on patrol. I'll let him know you said goodbye, my loyal friends.",
+      },
+    ];
+    this.showNarrativeDialogue(opening, () => {
+      this.playNarrativeChaosWave(() => {
+        const aftermath: NarrativeDialogueLine[] = [
+          {
+            speaker: 'Sahira',
+            portrait: 'sahira_dialogo_confundida',
+            text: "Something's wrong. Helíocles' waves have dissipated.",
+          },
+          {
+            speaker: 'Hazel',
+            portrait: 'hazel_dialogo_preocupada',
+            text: 'Hmm... Kosmelys?',
+          },
+          {
+            speaker: 'Kosmelys',
+            portrait: 'kosmelys_dialogo_cabizbaja',
+            text: '…',
+            holdMs: 850,
+          },
+          {
+            speaker: 'Furai',
+            portrait: 'furai_dialogo_engarde',
+            text: 'Something seems to have affected the Sun Banner. Prepare for the worst!',
+          },
+        ];
+        this.showNarrativeDialogue(aftermath, () => {
+          this.cameras.main.flash(240, 20, 10, 24, false);
+          this.time.delayedCall(150, () => {
+            this.showNarrativeDialogue([
+              {
+                speaker: 'Kosmelys',
+                portrait: 'kosmelys_dialogo_caotica',
+                text: "What's wrong? Don't you want to be part of Xantharchía's golden age?",
+              },
+              {
+                speaker: 'Dexios',
+                portrait: 'dexios_dialogo_engarde',
+                text: 'To your positions!',
+              },
+            ], () => this.beginNarrativeBattle());
+          });
+        });
+      });
+    });
+  }
+
+  private showNarrativeDialogue(
+    lines: NarrativeDialogueLine[],
+    onComplete: () => void,
+  ): void {
+    this.showNarrativePresentation({
+      parentSceneKey: this.scene.key,
+      type: 'dialogue',
+      lines,
+    }, onComplete);
+  }
+
+  private showNarrativeCinematic(
+    texture: string,
+    durationMs: number,
+    onComplete: () => void,
+    cameraShake?: number,
+  ): void {
+    this.showNarrativePresentation({
+      parentSceneKey: this.scene.key,
+      type: 'cinematic',
+      texture,
+      durationMs,
+      cameraShake,
+    }, onComplete);
+  }
+
+  private showNarrativePresentation(
+    data: NarrativePresentationData,
+    onComplete: () => void,
+  ): void {
+    this.events.once(Phaser.Scenes.Events.RESUME, () => {
+      this.input.enabled = true;
+      onComplete();
+    });
+    this.input.enabled = false;
+    this.scene.pause(this.scene.key);
+    this.scene.launch(NARRATIVE_PRESENTATION_SCENE_KEY, data);
+  }
+
+  private playNarrativeChaosWave(onComplete: () => void): void {
+    const wave = this.add.graphics().setDepth(35);
+    wave.fillStyle(0xc51f38, 0.62);
+    wave.fillRect(-180, 0, 170, HEIGHT);
+    wave.fillStyle(0xff5860, 0.28);
+    wave.fillRect(-130, 0, 34, HEIGHT);
+    wave.fillStyle(0x521020, 0.3);
+    wave.fillRect(-28, 0, 45, HEIGHT);
+    wave.setX(-240);
+    this.cameras.main.shake(620, 0.004);
+    this.cameras.main.flash(280, 100, 8, 24, false);
+    this.tweens.add({
+      targets: wave,
+      x: WIDTH + 250,
+      alpha: 0,
+      duration: 1050,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        wave.destroy();
+        this.time.delayedCall(650, onComplete);
+      },
+    });
+  }
+
+  private beginNarrativeBattle(): void {
+    if (this.narrativeBattleStarted) {
+      return;
+    }
+    this.narrativeBattleStarted = true;
+    this.narrativeInitialObjects.forEach((object) => object.setVisible(true));
+    this.narrativeIobrontesArrived = false;
+    this.boss.setVisible(false);
+    this.iobrontesShadow?.setVisible(false);
+    this.missingBossLabels.iobrontes.setVisible(false);
+    this.state.bosses.iobrontes.health = GAME_CONFIG.bossPhases.iobrontes.normal.maxHealth;
+    this.soundscape.setBattleMusicAlternation(false);
+    this.soundscape.playMusic('battle-cosmic');
+    this.phase = 'player';
+    this.refreshHud();
+    this.startTurn();
+  }
+
   update(): void {
+    if (this.narrativeMode && this.phase === 'narrative') {
+      return;
+    }
     this.updateEnemyTargetArrows();
     if (this.phase === 'target-boss') {
       this.positionBossTargetHud();
@@ -650,7 +853,7 @@ export default class CombatScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(boss.depth);
     this.sizeSprite(this.boss, 'iobrontes_base', boss.displayHeight);
-    const bossShadow = this.add.ellipse(boss.x, boss.feetY - 4, 500, 42, 0x100d1b, 0.38)
+    this.iobrontesShadow = this.add.ellipse(boss.x, boss.feetY - 4, 500, 42, 0x100d1b, 0.38)
       .setDepth(boss.depth - 1);
     this.tweens.add({
       targets: this.boss,
@@ -1270,8 +1473,9 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private updateBossHudVisibility(): void {
-    const visible = this.phase !== 'ended';
     (['iobrontes', 'kosmelys'] as const).forEach((id) => {
+      const visible = this.phase !== 'ended'
+        && (id !== 'iobrontes' || !this.narrativeMode || this.narrativeIobrontesArrived);
       const hud = this.bossHud[id];
       hud.panel.setVisible(visible);
       hud.label.setVisible(visible);
@@ -1466,8 +1670,7 @@ export default class CombatScene extends Phaser.Scene {
     const layout = GAME_CONFIG.bossTargetUi;
     const x = 4 + index * (layout.buttonWidth + layout.buttonGap);
     const y = 36;
-    const alive = this.state.bosses[id].health > 0
-      && this.state.bosses[id].phase !== 'defeated';
+    const alive = this.isBossAvailable(id);
     const selected = this.selectedBoss === id;
     const background = this.add.graphics();
     background.fillStyle(selected ? 0x49376a : COLORS.panelLight, 1);
@@ -1631,6 +1834,13 @@ export default class CombatScene extends Phaser.Scene {
         );
         hud.label.setPosition(x + layout.labelX, y + layout.labelY);
         hud.subtitle.setPosition(x + layout.subtitleX, y + layout.subtitleY);
+        hud.subtitle.setText(
+          this.narrativeMode && this.state.bosses[id].phase !== 'normal'
+            ? id === 'iobrontes'
+              ? 'IOBRONTES, HEIR OF THUNDER'
+              : 'KOSMELYS, HEIR OF SPACE'
+            : GAME_CONFIG.characters[id].title,
+        );
         hud.selected.setPosition(x + layout.healthTextX, y + 9);
         hud.healthText.setPosition(x + layout.healthTextX, y + layout.healthTextY);
       });
@@ -1680,8 +1890,7 @@ export default class CombatScene extends Phaser.Scene {
     for (let attempt = 0; attempt < GAME_CONFIG.partyOrder.length * 3 && upcoming.length < 6; attempt += 1) {
       const actor = GAME_CONFIG.partyOrder[orderIndex];
       const active = actor === 'iobrontes' || actor === 'kosmelys'
-        ? this.state.bosses[actor].health > 0
-          && this.state.bosses[actor].phase !== 'defeated'
+        ? this.isBossAvailable(actor)
         : this.state.party[actor].health > 0;
       if (active) {
         upcoming.push(actor);
@@ -1755,6 +1964,9 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private handleUiPointer(pointer: Phaser.Input.Pointer): void {
+    if (this.narrativeMode && this.processingNarrativeEvents) {
+      return;
+    }
     if (this.characterIntroduction?.isBlockingInput) {
       return;
     }
@@ -1815,7 +2027,7 @@ export default class CombatScene extends Phaser.Scene {
     for (let attempt = 0; attempt < GAME_CONFIG.partyOrder.length; attempt += 1) {
       const turn = GAME_CONFIG.partyOrder[this.turnIndex];
       if (turn === 'iobrontes' || turn === 'kosmelys') {
-        if (this.state.bosses[turn].health <= 0) {
+        if (!this.isBossAvailable(turn)) {
           this.turnIndex = (this.turnIndex + 1) % GAME_CONFIG.partyOrder.length;
           continue;
         }
@@ -1869,6 +2081,26 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private advanceTurn(): void {
+    if (this.result || this.processingNarrativeEvents) {
+      return;
+    }
+    if (this.narrativeMode && !this.processingNarrativeEvents) {
+      this.collectNarrativeEvents();
+      if (this.narrativeEventQueue.length > 0) {
+        this.processingNarrativeEvents = true;
+        this.runNextNarrativeEvent(() => {
+          this.processingNarrativeEvents = false;
+          if (!this.result) {
+            this.advanceTurnCore();
+          }
+        });
+        return;
+      }
+    }
+    this.advanceTurnCore();
+  }
+
+  private advanceTurnCore(): void {
     if (this.result) {
       return;
     }
@@ -1881,6 +2113,226 @@ export default class CombatScene extends Phaser.Scene {
       return;
     }
     this.advanceTurnAfterTransform();
+  }
+
+  private collectNarrativeEvents(): void {
+    const enqueue = (event: NarrativeEvent): void => {
+      if (
+        this.completedNarrativeEventIds.has(event.id)
+        || this.queuedNarrativeEventIds.has(event.id)
+      ) {
+        return;
+      }
+      this.queuedNarrativeEventIds.add(event.id);
+      this.narrativeEventQueue.push(event);
+    };
+
+    if (
+      !this.narrativeIobrontesArrived
+      && this.state.bosses.kosmelys.health < 150
+    ) {
+      enqueue({ id: 'iobrontes-arrival', run: (done) => this.runIobrontesArrival(done) });
+    }
+
+    (['iobrontes', 'kosmelys'] as const).forEach((boss) => {
+      if (
+        this.state.bosses[boss].phase === 'normal'
+        && this.state.bosses[boss].health <= 0
+      ) {
+        enqueue({
+          id: `${boss}-heir-transformation`,
+          run: (done) => this.runNarrativeHeirTransformation(boss, done),
+        });
+      }
+    });
+
+    if (
+      (['iobrontes', 'kosmelys'] as const).every(
+        (boss) => this.state.bosses[boss].phase === 'heir',
+      )
+    ) {
+      enqueue({
+        id: 'dittany-potions',
+        run: (done) => this.runDittanyPotionEvent(done),
+      });
+    }
+
+    (['iobrontes', 'kosmelys'] as const).forEach((boss) => {
+      if (this.state.bosses[boss].phase === 'defeated') {
+        enqueue({
+          id: `${boss}-permanent-defeat`,
+          run: (done) => this.runBossDefeatEvent(boss, done),
+        });
+      }
+    });
+
+    if (
+      (['iobrontes', 'kosmelys'] as const).every(
+        (boss) => this.state.bosses[boss].phase === 'defeated',
+      )
+      && (['iobrontes', 'kosmelys'] as const).every((boss) =>
+        this.completedNarrativeEventIds.has(`${boss}-permanent-defeat`),
+      )
+    ) {
+      enqueue({
+        id: 'final-victory-dialogue',
+        run: (done) => {
+          this.showNarrativeDialogue([{
+            speaker: 'Dexios',
+            portrait: 'dexios_dialogo_cansado',
+            text: "At last, it's over.",
+          }], () => {
+            this.finishBattle('victory');
+            done();
+          });
+        },
+      });
+    }
+  }
+
+  private runNextNarrativeEvent(onComplete: () => void): void {
+    this.collectNarrativeEvents();
+    const event = this.narrativeEventQueue.shift();
+    if (!event) {
+      onComplete();
+      return;
+    }
+    this.phase = 'narrative';
+    event.run(() => {
+      this.queuedNarrativeEventIds.delete(event.id);
+      this.completedNarrativeEventIds.add(event.id);
+      this.runNextNarrativeEvent(onComplete);
+    });
+  }
+
+  private runIobrontesArrival(onComplete: () => void): void {
+    this.soundscape.play('trueno');
+    this.showNarrativeDialogue([
+      {
+        speaker: 'Dexios',
+        portrait: 'dexios_dialogo_molesto',
+        text: "Damn it! He's realized we're here. We can't give up. We're getting out of this!",
+      },
+      {
+        speaker: 'Furai',
+        portrait: 'furai_dialogo_expectativa',
+        text: 'Your call, man!',
+      },
+    ], () => {
+      this.soundscape.setBattleMusicAlternation(true);
+      this.soundscape.playMusic('battle-thunder');
+      this.soundscape.play('trueno');
+      this.showNarrativeCinematic('iobrontes_llegada1', 3000, () => {
+        this.showNarrativeCinematic('iobrontes_llegada2', 3000, () => {
+          this.showNarrativeDialogue([
+            {
+              speaker: 'Iobrontes',
+              portrait: 'iobrontes_dialogo_feliz',
+              text: 'Did you think you\'d have all the fun without me?',
+            },
+            {
+              speaker: 'Sahira',
+              portrait: 'sahira_dialogo_molesta',
+              text: 'We can handle this. Our wills shall not yield!',
+            },
+          ], () => {
+            this.narrativeIobrontesArrived = true;
+            this.boss.setVisible(true).setAlpha(1);
+            this.iobrontesShadow?.setVisible(true);
+            this.missingBossLabels.iobrontes.setVisible(true);
+            this.refreshHud();
+            onComplete();
+          });
+        });
+      }, 0.012);
+    });
+  }
+
+  private runNarrativeHeirTransformation(
+    boss: BossId,
+    onComplete: () => void,
+  ): void {
+    const line: NarrativeDialogueLine = boss === 'kosmelys'
+      ? {
+        speaker: 'Kosmelys',
+        portrait: 'kosmelys_dialogo_herida',
+        text: 'I underestimated you. It\'s time for you to witness the true power of the HEIR OF SPACE!',
+      }
+      : {
+        speaker: 'Iobrontes',
+        portrait: 'iobrontes_dialogo_herido',
+        text: 'Huh, the fun is only just beginning. HEIR OF THUNDER!',
+      };
+    const cinematic = boss === 'kosmelys'
+      ? 'kosmelys_heredera_transformacion'
+      : 'iobrontes_heredero_transformacion';
+    this.showNarrativeDialogue([line], () => {
+      this.showNarrativeCinematic(cinematic, 3000, () => {
+        this.transformPendingBosses([boss], 0, () => {
+          this.refreshHud();
+          onComplete();
+        });
+      });
+    });
+  }
+
+  private runDittanyPotionEvent(onComplete: () => void): void {
+    this.showNarrativeDialogue([{
+      speaker: 'Dexios',
+      portrait: 'dexios_dialogo_planta',
+      text: "Hey, I made some potions using dittany. Here, take them, and let's win this!",
+    }], () => {
+      PLAYABLE_CHARACTERS.forEach((id) => {
+        this.state.party[id].health = MAX_HEALTH[id];
+        this.actorSprites[id].setVisible(true).setAlpha(1);
+        this.actorNames[id].setVisible(true);
+        this.missingLabels[id].setVisible(false);
+      });
+      this.state.party.dexios.mana = MAX_MANA.dexios;
+      this.refreshHud();
+      onComplete();
+    });
+  }
+
+  private runBossDefeatEvent(
+    boss: BossId,
+    onComplete: () => void,
+  ): void {
+    const lines: NarrativeDialogueLine[] = boss === 'kosmelys'
+      ? [
+        {
+          speaker: 'Kosmelys',
+          portrait: 'kosmelys_heredera_dialogo_herida',
+          text: "I'm sorry, Bas. The… golden… age…",
+        },
+        {
+          speaker: 'Hazel',
+          portrait: 'hazel_dialogo_triste',
+          text: "I'm sorry, Master.",
+        },
+      ]
+      : [{
+        speaker: 'Iobrontes',
+        portrait: 'iobrontes_heredero_dialogo_herido',
+        text: "El, forgive me. I wasn't… strong… enough…",
+      }];
+
+    this.showNarrativeDialogue(lines, () => {
+      this.time.delayedCall(550, () => {
+        this.tweens.add({
+          targets: this.getBossSprite(boss),
+          alpha: 0,
+          duration: 700,
+          onComplete: () => {
+            this.getBossSprite(boss).setVisible(false);
+            if (boss === 'iobrontes') {
+              this.iobrontesShadow?.setVisible(false);
+            }
+            onComplete();
+          },
+        });
+      });
+    });
   }
 
   private advanceTurnAfterTransform(): void {
@@ -3641,7 +4093,7 @@ export default class CombatScene extends Phaser.Scene {
     this.selectedBoss = null;
     this.phase = 'target-boss';
     this.highlightBossTarget(
-      this.state.bosses.iobrontes.health > 0 ? 'iobrontes' : 'kosmelys',
+      this.isBossAvailable('iobrontes') ? 'iobrontes' : 'kosmelys',
     );
     this.focusBossSelectionCamera();
     this.promptText.setText(`Elige a qué jefe dirigirá ${ability.name}.`);
@@ -3653,7 +4105,7 @@ export default class CombatScene extends Phaser.Scene {
     if (
       this.phase !== 'target-boss'
       || this.cameraTransitioning
-      || this.state.bosses[boss].health <= 0
+      || !this.isBossAvailable(boss)
     ) {
       return;
     }
@@ -3702,7 +4154,7 @@ export default class CombatScene extends Phaser.Scene {
       this.phase !== 'target-boss'
       || this.cameraTransitioning
       || this.selectedBoss !== boss
-      || this.state.bosses[boss].health <= 0
+      || !this.isBossAvailable(boss)
       || !this.targetingAbility
       || !this.activeCharacter
     ) {
@@ -3730,7 +4182,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private livingBossesAnchor(): { x: number; y: number } {
     const living = (['iobrontes', 'kosmelys'] as const)
-      .filter((boss) => this.state.bosses[boss].health > 0)
+      .filter((boss) => this.isBossAvailable(boss))
       .map((boss) => this.characterAnchor(boss));
     if (living.length === 0) {
       return { x: WIDTH / 2, y: HEIGHT / 2 };
@@ -3930,7 +4382,7 @@ export default class CombatScene extends Phaser.Scene {
     this.portalRedirectTarget = null;
     if (!outcome.success) {
       (['iobrontes', 'kosmelys'] as const)
-        .filter((boss) => this.state.bosses[boss].health > 0)
+        .filter((boss) => this.isBossAvailable(boss))
         .forEach((boss) => {
           const target = GAME_CONFIG.characters[boss];
           this.showFloatingText(
@@ -3974,7 +4426,7 @@ export default class CombatScene extends Phaser.Scene {
     const effect = weakFire ? 'fuego_debil' : 'fuego';
     this.soundscape.play('flame');
     const livingBosses = (['iobrontes', 'kosmelys'] as const)
-      .filter((boss) => this.state.bosses[boss].health > 0);
+      .filter((boss) => this.isBossAvailable(boss));
     if (weakFire) {
       let pendingImpacts = livingBosses.length;
       if (pendingImpacts === 0) {
@@ -4553,6 +5005,9 @@ export default class CombatScene extends Phaser.Scene {
     if (event.repeat) {
       return;
     }
+    if (this.narrativeMode && this.processingNarrativeEvents) {
+      return;
+    }
     this.soundscape.start();
     const key = event.key.toLowerCase();
     if (key === 'm') {
@@ -4647,6 +5102,14 @@ export default class CombatScene extends Phaser.Scene {
 
   private getBossSprite(boss: BossId): Phaser.GameObjects.Sprite {
     return boss === 'iobrontes' ? this.boss : this.kosmelysBoss;
+  }
+
+  private isBossAvailable(boss: BossId): boolean {
+    return (
+      (!this.narrativeMode || boss !== 'iobrontes' || this.narrativeIobrontesArrived)
+      && this.state.bosses[boss].health > 0
+      && this.state.bosses[boss].phase !== 'defeated'
+    );
   }
 
   private getBossPhaseConfig(boss: 'iobrontes'): IobrontesPhaseConfig;
@@ -4966,6 +5429,9 @@ export default class CombatScene extends Phaser.Scene {
     }
     const result = getBattleResult(this.state);
     if (!result) {
+      return false;
+    }
+    if (this.narrativeMode && result === 'victory') {
       return false;
     }
     this.finishBattle(result);

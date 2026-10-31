@@ -143,7 +143,7 @@ export default class WelcomeScene extends Phaser.Scene {
     this.add.text(
       WIDTH / 2,
       690,
-      'A shrinking circle reveals the timing.\nBlock normally, or strike at the perfect moment.',
+      'A shrinking circle reveals the timing.\nBlock normally, or strike at the perfect moment.\nYour abilities also have different kinds of time trials, so watch out.',
       {
         fontFamily: DESCRIPTION_FONT,
         fontSize: WELCOME_FONT_SIZE,
@@ -156,7 +156,7 @@ export default class WelcomeScene extends Phaser.Scene {
 
     this.add.text(
       WIDTH / 2,
-      795,
+      842,
       'Face two formidable bosses with four heroes.\nEach hero has a distinct strategy and mechanics',
       {
         fontFamily: FONT,
@@ -168,7 +168,7 @@ export default class WelcomeScene extends Phaser.Scene {
       },
     ).setOrigin(0.5, 0).setDepth(2);
 
-    this.add.text(WIDTH / 2, 920, 'MAY THE GODS GUIDE YOU, WARRIOR', {
+    this.add.text(WIDTH / 2, 975, 'MAY THE GODS GUIDE YOU, WARRIOR', {
       fontFamily: FONT,
       fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',

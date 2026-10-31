@@ -441,7 +441,10 @@ export class ActionCommandRunner {
     add(this.scene.add.rectangle(W / 2, cy, W, H, 0x000000, 1));
     add(this.scene.add.rectangle(W / 2, top + cfg.borderPx / 2, W, cfg.borderPx, cfg.borderColor, 1));
     add(this.scene.add.rectangle(W / 2, top + H - cfg.borderPx / 2, W, cfg.borderPx, cfg.borderColor, 1));
-    const textureKey = cinematicTextureKey(key);
+    let textureKey = cinematicTextureKey(key);
+    if (key === 'hazel_fuego_ataque_dance' || key === 'hazel_hielo_ataque_shards') {
+      textureKey = this.getTrimmedHazelIllustration(textureKey);
+    }
     if (this.scene.textures.exists(textureKey)) {
       const source = this.scene.textures.get(textureKey).getSourceImage();
       const scale = Math.min(
@@ -493,6 +496,66 @@ export class ActionCommandRunner {
         });
       },
     });
+  }
+
+  private getTrimmedHazelIllustration(textureKey: string): string {
+    const trimmedKey = `${textureKey}_trimmed`;
+    if (this.scene.textures.exists(trimmedKey)) {
+      return trimmedKey;
+    }
+
+    const source = this.scene.textures.get(textureKey).getSourceImage();
+    if (!(source instanceof HTMLImageElement) && !(source instanceof HTMLCanvasElement)) {
+      throw new Error(`No se pudo recortar la ilustración ${textureKey}`);
+    }
+    const sourceCanvas = document.createElement('canvas');
+    sourceCanvas.width = source.width;
+    sourceCanvas.height = source.height;
+    const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
+    if (!sourceContext) {
+      throw new Error(`No se pudo leer la ilustración ${textureKey}`);
+    }
+    sourceContext.drawImage(source, 0, 0);
+    const pixels = sourceContext.getImageData(0, 0, source.width, source.height).data;
+    let left = source.width;
+    let top = source.height;
+    let right = 0;
+    let bottom = 0;
+    for (let y = 0; y < source.height; y += 1) {
+      for (let x = 0; x < source.width; x += 1) {
+        if (pixels[(y * source.width + x) * 4 + 3] <= 8) {
+          continue;
+        }
+        left = Math.min(left, x);
+        top = Math.min(top, y);
+        right = Math.max(right, x + 1);
+        bottom = Math.max(bottom, y + 1);
+      }
+    }
+    if (right <= left || bottom <= top) {
+      throw new Error(`La ilustración no tiene contenido visible: ${textureKey}`);
+    }
+
+    const trimmedCanvas = document.createElement('canvas');
+    trimmedCanvas.width = right - left;
+    trimmedCanvas.height = bottom - top;
+    const trimmedContext = trimmedCanvas.getContext('2d');
+    if (!trimmedContext) {
+      throw new Error(`No se pudo crear el recorte de ${textureKey}`);
+    }
+    trimmedContext.drawImage(
+      sourceCanvas,
+      left,
+      top,
+      trimmedCanvas.width,
+      trimmedCanvas.height,
+      0,
+      0,
+      trimmedCanvas.width,
+      trimmedCanvas.height,
+    );
+    this.scene.textures.addCanvas(trimmedKey, trimmedCanvas);
+    return trimmedKey;
   }
 
   private startCommand(

@@ -7,6 +7,7 @@ import DexiosTestScene from './dexios-test-scene';
 import FuraiTestScene from './furai-test-scene';
 import TutorialCombatScene from './tutorial-combat-scene';
 import TutorialPopupScene from './tutorial-popups';
+import NarrativePresentationScene from './narrative-presentation';
 import { EB_GARAMOND_FONT_FAMILY, GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
 import WelcomeScene from './welcome-scene';
 
@@ -29,6 +30,8 @@ const config: Phaser.Types.Core.GameConfig = {
     WelcomeScene,
     SelectScene,
     CombatScene,
+    new CombatScene('escena_narrativa', null, 'standard', true),
+    NarrativePresentationScene,
     TutorialCombatScene,
     TutorialPopupScene,
     HazelTestScene,

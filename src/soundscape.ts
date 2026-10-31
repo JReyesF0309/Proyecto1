@@ -49,6 +49,7 @@ export default class Soundscape {
   private readonly soundEffects: Record<AssetSoundEffect, HTMLAudioElement>;
   private readonly overlappingEffects = new Set<HTMLAudioElement>();
   private activeTrack: MusicTrack | null = 'battle-thunder';
+  private alternateBattleTracks = true;
   private enabled = true;
 
   constructor() {
@@ -70,12 +71,12 @@ export default class Soundscape {
       this.context.createMediaElementSource(track).connect(this.musicGain);
     });
     this.musicTracks['battle-thunder'].addEventListener('ended', () => {
-      if (this.activeTrack === 'battle-thunder') {
+      if (this.alternateBattleTracks && this.activeTrack === 'battle-thunder') {
         this.playMusic('battle-cosmic');
       }
     });
     this.musicTracks['battle-cosmic'].addEventListener('ended', () => {
-      if (this.activeTrack === 'battle-cosmic') {
+      if (this.alternateBattleTracks && this.activeTrack === 'battle-cosmic') {
         this.playMusic('battle-thunder');
       }
     });
@@ -148,6 +149,10 @@ export default class Soundscape {
       this.musicGain.gain.setTargetAtTime(GAME_CONFIG.audio.music, now, 0.04);
     }
     this.start();
+  }
+
+  setBattleMusicAlternation(enabled: boolean): void {
+    this.alternateBattleTracks = enabled;
   }
 
   play(effect: SoundEffect): void {
