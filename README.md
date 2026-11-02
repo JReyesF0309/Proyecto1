@@ -28,9 +28,12 @@ Armor Break potencia solo el primer impacto de la siguiente habilidad ofensiva s
 - `1`, `2`, `3` o los botones del menú: elegir una habilidad.
 - Al curar: selecciona a Dexios, Furai o Sahira con `1`, `2`, `3` o pulsa su panel. No se puede reanimar a un personaje incapacitado.
 - `W`, `A`, `S`, `D`: defenderse arriba, izquierda, abajo y derecha durante los ataques de los jefes. `Space`: saltar en equipo durante la ventana indicada. Solo se acepta el primer input dentro de la ventana.
-- `M`: silenciar o activar el audio.
-- `Esc`: cancelar la selección de objetivo de curación.
-- `R`: volver a empezar después de la victoria o derrota.
+- `N`: silenciar o activar la música (en todas las escenas).
+- `M`: silenciar o activar los efectos de sonido (en todas las escenas).
+- `P`: pausar o reanudar (combates y tutoriales).
+- `R`: reiniciar la escena actual (combates y tutoriales).
+- `Esc`: volver a la escena anterior.
+- `Espacio`: cancelar la selección de ataque u objetivo.
 
 Iobrontes avisa durante 1 segundo y lanza cada rayo durante 1 segundo. Antes de T−0,5 s no se acepta defensa; de T−0,5 s a T−0,1 s, la dirección correcta bloquea; de T−0,1 s a T+0,1 s, la dirección correcta ejecuta una parada perfecta. La resolución del daño espera hasta T+0,1 s.
 
@@ -46,4 +49,4 @@ npm run build
 npm run build:electron
 ```
 
-La compilación web se genera en `docs/` para GitHub Pages. `assets/music/watch_the_thunder.mp3` se reproduce en bucle durante la pelea y, cuando Iobrontes llega a 0 de vida, cambia a `assets/music/nike.mp3`, también en bucle, hasta reiniciar el combate. El audio empieza tras la primera interacción por las restricciones de reproducción automática del navegador; `M` silencia o reactiva la música y los efectos.
+La compilación web se genera en `docs/` para GitHub Pages. `assets/music/watch_the_thunder.mp3` se reproduce en bucle durante la pelea y, cuando Iobrontes llega a 0 de vida, cambia a `assets/music/nike.mp3`, también en bucle, hasta reiniciar el combate. El audio empieza tras la primera interacción por las restricciones de reproducción automática del navegador; `N` silencia o reactiva la música y `M` los efectos.

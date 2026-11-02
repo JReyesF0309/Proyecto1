@@ -7,6 +7,8 @@ Visual Perspective: 2D character-based combat with foreground/background depth
 Prototype Scope: Four playable characters, two bosses, one arena, and standard and tutorial configurations of the dual-boss combat encounter.
 Note to the implementer: This document is intended to be self-contained. Implement the mechanics and values described here without relying on previous versions. Numerical values, timings, character positions, camera settings, and animation references must be stored in configuration files whenever possible.
 
+All player-facing in-game text must be in English, including HUD labels, prompts, ability descriptions, action-command instructions, tutorials, dialogue, and battle outcomes.
+
 ## DOCUMENT AUTHORITY AND ORGANIZATION
 
 The current implementation is authoritative. The core specification and final timing table at the front of this document are the consolidated reference for the current build. Appendix A preserves the original requirements and design notes in their original wording for traceability; some notes are superseded, while others retain detail for current features. They are not cumulative changes to implement. If an archived value or instruction conflicts with the current build, use the current implementation and final values in this document.

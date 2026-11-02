@@ -10,6 +10,8 @@ import TutorialPopupScene from './tutorial-popups';
 import NarrativePresentationScene from './narrative-presentation';
 import { EB_GARAMOND_FONT_FAMILY, GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
 import WelcomeScene from './welcome-scene';
+import PauseScene from './pause-scene';
+import { audioSettings } from './audio-settings';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -38,6 +40,7 @@ const config: Phaser.Types.Core.GameConfig = {
     SahiraTestScene,
     DexiosTestScene,
     FuraiTestScene,
+    PauseScene,
   ],
 };
 
@@ -49,4 +52,26 @@ await document.fonts.load(`16px "${EB_GARAMOND_FONT_FAMILY}"`);
 if (!document.fonts.check(`16px "${EB_GARAMOND_FONT_FAMILY}"`)) {
   throw new Error(`No se pudo cargar la fuente ${EB_GARAMOND_FONT_FAMILY}`);
 }
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+window.addEventListener('keydown', (event) => {
+  if (event.repeat) {
+    return;
+  }
+  const key = event.key.toLowerCase();
+  if (key === 'n') {
+    audioSettings.toggleMusic();
+  } else if (key === 'm') {
+    audioSettings.toggleEffects();
+  } else if (event.code === 'Escape') {
+    const running = game.scene.getScenes(false)
+      .filter((scene) => scene.sys.isActive() || scene.sys.isPaused())
+      .map((scene) => scene.scene.key);
+    if (running.includes('escena_bienvenida')) {
+      return;
+    }
+    const target = running.includes('escena_select') ? 'escena_bienvenida' : 'escena_select';
+    running.forEach((sceneKey) => game.scene.stop(sceneKey));
+    game.scene.start(target);
+  }
+});

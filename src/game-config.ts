@@ -678,28 +678,28 @@ export const GAME_CONFIG = {
   },
   abilities: {
     dexios: [
-      { id: 'triple-lightning', name: 'Triple Lightning', detail: '3 impactos · 5 de daño', frame: 'dexios_ataque', damage: 5, hits: 3, resource: null, cost: 0, selfDamage: 0, color: 0xffd65c, sound: 'dexios' },
-      { id: 'electric-arc', name: 'Electric Arc', detail: '1 impacto · 30 de daño', frame: 'dexios_blanco', damage: 30, hits: 1, resource: 'mana', cost: 20, selfDamage: 0, color: 0xf3f6ff, sound: 'dexios' },
-      { id: 'chaotic-lightning', name: 'Chaotic Lightning', detail: '70 de daño · 10 propio', frame: 'dexios_rojo', damage: 70, hits: 1, resource: 'chaos', cost: 50, selfDamage: 10, color: 0xff435b, sound: 'dexios' },
+      { id: 'triple-lightning', name: 'Triple Lightning', detail: '3 hits · 5 damage', frame: 'dexios_ataque', damage: 5, hits: 3, resource: null, cost: 0, selfDamage: 0, color: 0xffd65c, sound: 'dexios' },
+      { id: 'electric-arc', name: 'Electric Arc', detail: '1 hit · 30 damage', frame: 'dexios_blanco', damage: 30, hits: 1, resource: 'mana', cost: 20, selfDamage: 0, color: 0xf3f6ff, sound: 'dexios' },
+      { id: 'chaotic-lightning', name: 'Chaotic Lightning', detail: '70 damage · 10 self-damage', frame: 'dexios_rojo', damage: 70, hits: 1, resource: 'chaos', cost: 50, selfDamage: 10, color: 0xff435b, sound: 'dexios' },
     ],
     furai: [
-      { id: 'tiger-spear', name: 'Tiger Spear', detail: '15 de daño', frame: 'furai_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xf3bf66, sound: 'furai' },
-      { id: 'tiger-fang', name: 'Tiger Fang', detail: '2 impactos · 20 de daño', frame: 'furai_tigre', damage: 20, hits: 2, resource: 'spirit', cost: 20, selfDamage: 0, color: 0xdca7ff, sound: 'tigre' },
-      { id: 'armor-break', name: 'Armor Break', detail: 'Duplica el siguiente golpe', frame: 'furai_romper', damage: 0, hits: 0, resource: 'spirit', cost: 25, selfDamage: 0, color: 0xc77cff, sound: 'tigre' },
+      { id: 'tiger-spear', name: 'Tiger Spear', detail: '15 damage', frame: 'furai_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xf3bf66, sound: 'furai' },
+      { id: 'tiger-fang', name: 'Tiger Fang', detail: '2 hits · 20 damage', frame: 'furai_tigre', damage: 20, hits: 2, resource: 'spirit', cost: 20, selfDamage: 0, color: 0xdca7ff, sound: 'tigre' },
+      { id: 'armor-break', name: 'Armor Break', detail: 'Doubles the next hit', frame: 'furai_romper', damage: 0, hits: 0, resource: 'spirit', cost: 25, selfDamage: 0, color: 0xc77cff, sound: 'tigre' },
     ],
     sahira: [
-      { id: 'jackal-strike', name: 'Jackal Strike', detail: '15 de daño', frame: 'sahira_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x65e5bd, sound: 'sahira' },
-      { id: 'hippopotamus-healing', name: 'Hippopotamus Healing', detail: 'Restaura toda la salud', frame: 'sahira_cura', damage: 0, hits: 0, resource: null, cost: 0, selfDamage: 0, color: 0x63f0c0, sound: 'cura' },
-      { id: 'hippopotamus-shield', name: 'Hippopotamus Shield', detail: 'Protege de los siguientes 2 ataques', frame: 'sahira_cura', damage: 0, hits: 0, resource: null, cost: 0, selfDamage: 0, color: 0x68d391, sound: 'cura' },
+      { id: 'jackal-strike', name: 'Jackal Strike', detail: '15 damage', frame: 'sahira_ataque', damage: 15, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x65e5bd, sound: 'sahira' },
+      { id: 'hippopotamus-healing', name: 'Hippopotamus Healing', detail: 'Restores all health', frame: 'sahira_cura', damage: 0, hits: 0, resource: null, cost: 0, selfDamage: 0, color: 0x63f0c0, sound: 'cura' },
+      { id: 'hippopotamus-shield', name: 'Hippopotamus Shield', detail: 'Blocks the next 2 attacks', frame: 'sahira_cura', damage: 0, hits: 0, resource: null, cost: 0, selfDamage: 0, color: 0x68d391, sound: 'cura' },
     ],
     hazel: {
       ignis: [
-        { id: 'flame-dance', name: 'Flame Dance', detail: '30 de daño a cada jefe vivo', frame: 'hazel_fuego_dance', damage: 30, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xff783d, sound: 'flame' },
-        { id: 'glacio-shift', name: 'Glacio Shift', detail: '10 de daño · cambia a Glacio', frame: 'hazel_cambio', damage: 10, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x8dd7ff, sound: 'shard' },
+        { id: 'flame-dance', name: 'Flame Dance', detail: '30 damage to each living boss', frame: 'hazel_fuego_dance', damage: 30, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xff783d, sound: 'flame' },
+        { id: 'glacio-shift', name: 'Glacio Shift', detail: '10 damage · shifts to Glacio', frame: 'hazel_cambio', damage: 10, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x8dd7ff, sound: 'shard' },
       ],
       glacio: [
-        { id: 'figure-shards', name: 'Figure Shards', detail: '60 de daño', frame: 'hazel_hielo_shards', damage: 60, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x76bdff, sound: 'shard' },
-        { id: 'ignis-shift', name: 'Ignis Shift', detail: '5 de daño a cada jefe vivo', frame: 'hazel_cambio', damage: 5, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xff783d, sound: 'flame' },
+        { id: 'figure-shards', name: 'Figure Shards', detail: '60 damage', frame: 'hazel_hielo_shards', damage: 60, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0x76bdff, sound: 'shard' },
+        { id: 'ignis-shift', name: 'Ignis Shift', detail: '5 damage to each living boss', frame: 'hazel_cambio', damage: 5, hits: 1, resource: null, cost: 0, selfDamage: 0, color: 0xff783d, sound: 'flame' },
       ],
     },
   },

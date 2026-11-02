@@ -66,6 +66,41 @@ export const TUTORIAL_MESSAGES = {
     ],
     keys: [],
   },
+  tigerFang: {
+    title: 'TIGER FANG',
+    paragraphs: ['Press [A] or [D] when the circle shrinks completely.'],
+    keys: [],
+  },
+  armorBreak: {
+    title: 'ARMOR BREAK',
+    paragraphs: ['With [A] or [D] keep the circle inside the box.'],
+    keys: [],
+  },
+  electricArc: {
+    title: 'ELECTRIC ARC',
+    paragraphs: ['Hold [A] and [D] and release at the right time.'],
+    keys: [],
+  },
+  chaoticLightning: {
+    title: 'CHAOTIC LIGHTNING',
+    paragraphs: ['Press the key shown on screen.'],
+    keys: [],
+  },
+  hippopotamusShield: {
+    title: 'HIPPOPOTAMUS SHIELD',
+    paragraphs: ['Press [SPACE] when the small circle is inside the large one.'],
+    keys: [],
+  },
+  flameDance: {
+    title: 'FLAME DANCE',
+    paragraphs: ['Press [W], [A], [S], [D] in order.'],
+    keys: [],
+  },
+  figureShards: {
+    title: 'FIGURE SHARDS',
+    paragraphs: ['Press [S] 10 times.'],
+    keys: [],
+  },
 } as const;
 
 export type TutorialMessageId = keyof typeof TUTORIAL_MESSAGES;
@@ -121,14 +156,7 @@ export default class TutorialPopupScene extends Phaser.Scene {
 
     let paragraphY = top + 132;
     data.paragraphs.forEach((paragraph) => {
-      const text = this.add.text(left + 64, paragraphY, paragraph, {
-        fontFamily: EB_GARAMOND_FONT_FAMILY,
-        fontSize: '31px',
-        color: '#f3eee4',
-        lineSpacing: 9,
-        wordWrap: { width: panelWidth - 128 },
-      }).setDepth(2);
-      paragraphY += text.height + 24;
+      paragraphY += this.drawRichParagraph(paragraph, left + 64, paragraphY, panelWidth - 128) + 24;
     });
 
     if (data.keys.length > 0) {
@@ -157,10 +185,19 @@ export default class TutorialPopupScene extends Phaser.Scene {
       });
     }
 
-    const footerY = top + panelHeight - 78;
+    const footerY = top + panelHeight - 58;
     const enterWidth = 142;
     const enterHeight = 48;
-    const enterX = centerX - 204;
+    const right = left + panelWidth - 64;
+    const continueText = this.add.text(right, footerY, 'CONTINUE', {
+      fontFamily: GAME_FONT_FAMILY,
+      fontSize: '25px',
+      fontStyle: 'bold',
+      letterSpacing: 2,
+      color: '#fffaf0',
+      align: 'center',
+    }).setOrigin(1, 0.5).setDepth(3);
+    const enterX = right - continueText.width - 20 - enterWidth;
     const enter = this.add.graphics().setDepth(2);
     enter.fillStyle(0x24152c, 1)
       .fillRoundedRect(enterX, footerY - enterHeight / 2, enterWidth, enterHeight, 8)
@@ -173,19 +210,56 @@ export default class TutorialPopupScene extends Phaser.Scene {
       color: '#f5d47d',
       align: 'center',
     }).setOrigin(0.5).setDepth(3);
-    this.add.text(centerX + 16, footerY, 'CONTINUE', {
-      fontFamily: GAME_FONT_FAMILY,
-      fontSize: '25px',
-      fontStyle: 'bold',
-      letterSpacing: 2,
-      color: '#fffaf0',
-      align: 'center',
-    }).setOrigin(0, 0.5).setDepth(3);
-
     this.input.keyboard?.on('keydown-ENTER', this.closePopup, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ENTER', this.closePopup, this);
     });
+  }
+
+  // Lays out a paragraph word by word; [KEY] tokens become gold bordered key badges.
+  private drawRichParagraph(paragraph: string, x: number, y: number, maxWidth: number): number {
+    const lineHeight = 50;
+    const gap = 11;
+    let cursorX = x;
+    let line = 0;
+    paragraph.split(/(\[[^\]]+\])/).forEach((part) => {
+      const isKey = part.startsWith('[') && part.endsWith(']');
+      const pieces = isKey ? [part.slice(1, -1)] : part.split(/\s+/).filter(Boolean);
+      pieces.forEach((piece) => {
+        const centerY = y + line * lineHeight + lineHeight / 2;
+        const label = this.add.text(0, centerY, piece, isKey
+          ? {
+            fontFamily: GAME_FONT_FAMILY,
+            fontSize: piece.length > 1 ? '22px' : '26px',
+            fontStyle: 'bold',
+            color: '#f5d47d',
+          }
+          : {
+            fontFamily: EB_GARAMOND_FONT_FAMILY,
+            fontSize: '31px',
+            color: '#f3eee4',
+          }).setOrigin(0, 0.5).setDepth(3);
+        const width = isKey ? Math.max(label.width + 28, 52) : label.width;
+        if (cursorX + width > x + maxWidth && cursorX > x) {
+          line += 1;
+          cursorX = x;
+          label.setY(y + line * lineHeight + lineHeight / 2);
+        }
+        const itemY = label.y;
+        if (isKey) {
+          const badge = this.add.graphics().setDepth(2);
+          badge.fillStyle(0x24152c, 1)
+            .fillRoundedRect(cursorX, itemY - 24, width, 48, 8)
+            .lineStyle(3, 0xe7bd65, 1)
+            .strokeRoundedRect(cursorX, itemY - 24, width, 48, 8);
+          label.setX(cursorX + (width - label.width) / 2);
+        } else {
+          label.setX(cursorX);
+        }
+        cursorX += width + gap;
+      });
+    });
+    return (line + 1) * lineHeight;
   }
 
   private closePopup(event: KeyboardEvent): void {

@@ -227,7 +227,7 @@ export const ABILITY_COMMANDS: Record<string, AbilityCommandConfig> = {
       random: true,
       keys: ['w', 'a', 's', 'd'],
       count: 3,
-      totalTimeMs: 0,
+      totalTimeMs: 3000,
       perKeyTimeMs: 2000,
       perfectWithinMs: 1000,
       graded: true,
@@ -313,7 +313,7 @@ const RESULT_STYLE: Record<HitResult, { text: string; color: string }> = {
 
 type Promote = <T extends Phaser.GameObjects.GameObject>(object: T) => T;
 
-const KEY_LABELS: Record<string, string> = { ' ': 'ESPACIO' };
+const KEY_LABELS: Record<string, string> = { ' ': 'SPACE' };
 const keyLabel = (key: string): string => KEY_LABELS[key] ?? key.toUpperCase();
 
 export class ActionCommandRunner {
@@ -633,7 +633,7 @@ export class ActionCommandRunner {
   ): void {
     const graphics = this.track(this.scene.add.graphics().setDepth(3050));
     const keyText = this.makeText(at.x, at.y, '', 64, '#ffffff');
-    const counter = this.makeText(at.x, at.y + 150, '', 24, '#e6e6e6');
+    const counter = this.makeText(at.x, at.y + 150, '', 24, '#ff3b3b');
     const results: HitResult[] = [];
     const targetRadius = 62;
     const startRadius = 190;
@@ -644,7 +644,7 @@ export class ActionCommandRunner {
       impactAt = performance.now() + cfg.circleDurationMs;
       waiting = false;
       keyText.setText(keyLabel(cfg.keys[index])).setVisible(true);
-      counter.setText(`GOLPE ${index + 1} / ${cfg.keys.length}`);
+      counter.setText(`HIT ${index + 1} / ${cfg.keys.length}`);
     };
     const resolve = (result: HitResult): void => {
       if (waiting) {
@@ -708,20 +708,20 @@ export class ActionCommandRunner {
       : [...cfg.keys];
     const results: HitResult[] = [];
     const keyText = this.makeText(at.x, at.y - 10, '', cfg.random ? 120 : 70, '#ffffff');
-    const subText = this.makeText(at.x, at.y + 95, '', 24, '#e6e6e6');
+    const subText = this.makeText(at.x, at.y + 95, '', 24, '#ff3b3b');
     let index = 0;
     let startedAt = performance.now();
     let sequenceStartedAt = startedAt;
     let ended = false;
-    const duration = (): number => (cfg.random ? cfg.perKeyTimeMs : cfg.totalTimeMs);
-    const origin = (): number => (cfg.random ? startedAt : sequenceStartedAt);
+    const duration = (): number => cfg.totalTimeMs;
+    const origin = (): number => sequenceStartedAt;
     const render = (): void => {
       keyText.setText(
         cfg.random
           ? keyLabel(sequence[index])
           : sequence.map((key, i) => (i < index ? '✓' : keyLabel(key))).join(' → '),
       );
-      subText.setText(cfg.random ? `TECLA ${index + 1} / ${sequence.length}` : '');
+      subText.setText(cfg.random ? `KEY ${index + 1} / ${sequence.length}` : '');
     };
     const conclude = (outcomeResult: HitResult | 'success' | 'failure'): void => {
       if (ended) {
@@ -797,7 +797,7 @@ export class ActionCommandRunner {
     finish: (outcome: CommandOutcome) => void,
   ): void {
     const graphics = this.track(this.scene.add.graphics().setDepth(3050));
-    this.makeText(at.x, at.y - 60, `Mantén ${keyLabel(cfg.keys[0])} + ${keyLabel(cfg.keys[1])} y suelta en la zona`, 26, '#e6e6e6');
+    this.makeText(at.x, at.y - 60, `Hold ${keyLabel(cfg.keys[0])} + ${keyLabel(cfg.keys[1])} and release in the target zone`, 26, '#ff3b3b');
     const keyboard = this.scene.input.keyboard;
     const pressed = cfg.keys.map((key) => keyboard?.addKey(key.toUpperCase(), false));
     const barW = 500;
@@ -875,7 +875,7 @@ export class ActionCommandRunner {
   ): void {
     const graphics = this.track(this.scene.add.graphics().setDepth(3050));
     const timerText = this.makeText(at.x, at.y - cfg.heightPx / 2 - 40, '', 28, '#ffffff');
-    this.makeText(at.x, at.y + cfg.heightPx / 2 + 36, `${keyLabel(cfg.leftKey)} ← →  ${keyLabel(cfg.rightKey)}`, 26, '#e6e6e6');
+    this.makeText(at.x, at.y + cfg.heightPx / 2 + 36, `${keyLabel(cfg.leftKey)} ← →  ${keyLabel(cfg.rightKey)}`, 26, '#ff3b3b');
     const radius = cfg.ballRadiusPx;
     const speed = cfg.speedPxPerSec;
     let offset = 0;
@@ -934,7 +934,7 @@ export class ActionCommandRunner {
     finish: (outcome: CommandOutcome) => void,
   ): void {
     const graphics = this.track(this.scene.add.graphics().setDepth(3050));
-    this.makeText(at.x, at.y - cfg.stationaryRadiusPx - 46, `${keyLabel(cfg.key)} cuando el círculo esté dentro`, 26, '#e6e6e6');
+    this.makeText(at.x, at.y - cfg.stationaryRadiusPx - 46, `Press ${keyLabel(cfg.key)} when the circle is inside the target`, 26, '#ff3b3b');
     const R = cfg.stationaryRadiusPx;
     const r = R * cfg.movingRadiusRatio;
     const speed = R * cfg.speedRatio;
@@ -988,7 +988,7 @@ export class ActionCommandRunner {
   ): void {
     const graphics = this.track(this.scene.add.graphics().setDepth(3050));
     const counter = this.makeText(at.x, at.y - 10, String(cfg.presses), 130, '#ffffff');
-    this.makeText(at.x, at.y + 90, `¡PULSA ${keyLabel(cfg.key)}!`, 32, '#e6e6e6');
+    this.makeText(at.x, at.y + 90, `PRESS ${keyLabel(cfg.key)}!`, 32, '#ff3b3b');
     const startedAt = performance.now();
     let remaining = cfg.presses;
     let ended = false;

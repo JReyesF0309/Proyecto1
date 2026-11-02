@@ -6,6 +6,7 @@ import {
   GAME_FONT_FAMILY,
   UI_FONT_FAMILY,
 } from './game-config';
+import { bindPhaserMusic } from './audio-settings';
 import stripBlackMattes from './strip-black-matte';
 import welcomeMusicUrl from '../assets/music/start.mp3';
 
@@ -39,6 +40,7 @@ export default class WelcomeScene extends Phaser.Scene {
       volume: GAME_CONFIG.audio.music,
     });
     this.welcomeMusic.play();
+    const unbindMusic = bindPhaserMusic(this.welcomeMusic);
     stripBlackMattes(this.textures, ['iobrontes_portada', 'kosmelys_portada']);
     this.createBackground();
     this.createPortraits();
@@ -51,6 +53,7 @@ export default class WelcomeScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ENTER', this.onEnter, this);
       this.input.off('pointerdown', this.onEnter, this);
+      unbindMusic();
       this.welcomeMusic?.stop();
     });
   }
@@ -143,7 +146,7 @@ export default class WelcomeScene extends Phaser.Scene {
     this.add.text(
       WIDTH / 2,
       690,
-      'A shrinking circle reveals the timing.\nBlock normally, or strike at the perfect moment.\nYour abilities also have different kinds of time trials, so watch out.',
+      'A shrinking circle reveals the timing.\nBlock normally, or strike at the perfect moment.\nYour abilities also have different kinds of timed-challenges, so watch out.',
       {
         fontFamily: DESCRIPTION_FONT,
         fontSize: WELCOME_FONT_SIZE,
@@ -168,7 +171,7 @@ export default class WelcomeScene extends Phaser.Scene {
       },
     ).setOrigin(0.5, 0).setDepth(2);
 
-    this.add.text(WIDTH / 2, 975, 'MAY THE GODS GUIDE YOU, WARRIOR', {
+    this.add.text(WIDTH / 2, 975, 'MAY THE AETHER GUIDE YOU, WARRIOR', {
       fontFamily: FONT,
       fontSize: WELCOME_FONT_SIZE,
       fontStyle: 'bold',

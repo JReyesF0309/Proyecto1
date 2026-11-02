@@ -1,4 +1,5 @@
 import { GAME_CONFIG } from './game-config';
+import { audioSettings } from './audio-settings';
 import battleMusicUrl from '../assets/music/watch_the_thunder.mp3';
 import cosmicBattleMusicUrl from '../assets/music/cosmic_strike.mp3';
 import victoryMusicUrl from '../assets/music/nike.mp3';
@@ -71,12 +72,13 @@ export default class Soundscape {
   private readonly overlappingEffects = new Set<HTMLAudioElement>();
   private activeTrack: MusicTrack | null = 'battle-thunder';
   private alternateBattleTracks = true;
-  private enabled = true;
+  private readonly unsubscribeSettings: () => void;
 
   constructor() {
     this.master.gain.value = GAME_CONFIG.audio.master;
-    this.musicGain.gain.value = GAME_CONFIG.audio.music;
-    this.effectsGain.gain.value = GAME_CONFIG.audio.effects;
+    this.musicGain.gain.value = this.musicLevel;
+    this.effectsGain.gain.value = this.effectsLevel;
+    this.unsubscribeSettings = audioSettings.subscribe(() => this.applyMute());
     this.musicGain.connect(this.master);
     this.effectsGain.connect(this.master);
     this.master.connect(this.context.destination);
@@ -142,8 +144,12 @@ export default class Soundscape {
     }
   }
 
-  get isEnabled(): boolean {
-    return this.enabled;
+  private get musicLevel(): number {
+    return audioSettings.musicMuted ? 0 : GAME_CONFIG.audio.music;
+  }
+
+  private get effectsLevel(): number {
+    return audioSettings.effectsMuted ? 0 : GAME_CONFIG.audio.effects;
   }
 
   start(): void {
@@ -155,16 +161,12 @@ export default class Soundscape {
     this.resumeMusic();
   }
 
-  toggle(): void {
-    this.enabled = !this.enabled;
+  private applyMute(): void {
     const now = this.context.currentTime;
-    this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setTargetAtTime(this.enabled ? GAME_CONFIG.audio.master : 0, now, 0.04);
-    if (this.enabled) {
-      this.start();
-    } else if (this.activeTrack) {
-      this.musicTracks[this.activeTrack].pause();
-    }
+    this.musicGain.gain.cancelScheduledValues(now);
+    this.musicGain.gain.setTargetAtTime(this.musicLevel, now, 0.04);
+    this.effectsGain.gain.cancelScheduledValues(now);
+    this.effectsGain.gain.setTargetAtTime(this.effectsLevel, now, 0.04);
   }
 
   playMusic(track: MusicTrack): void {
@@ -178,7 +180,7 @@ export default class Soundscape {
       this.activeTrack = track;
       const now = this.context.currentTime;
       this.musicGain.gain.cancelScheduledValues(now);
-      this.musicGain.gain.setTargetAtTime(GAME_CONFIG.audio.music, now, 0.04);
+      this.musicGain.gain.setTargetAtTime(this.musicLevel, now, 0.04);
     }
     this.start();
   }
@@ -189,7 +191,7 @@ export default class Soundscape {
 
   play(effect: SoundEffect): void {
     this.start();
-    if (!this.enabled) {
+    if (audioSettings.effectsMuted) {
       return;
     }
     if (
@@ -239,6 +241,7 @@ export default class Soundscape {
   }
 
   destroy(): void {
+    this.unsubscribeSettings();
     Object.values(this.musicTracks).forEach((track) => track.pause());
     Object.values(this.soundEffects).forEach((effect) => effect.pause());
     this.overlappingEffects.forEach((effect) => effect.pause());
@@ -250,7 +253,7 @@ export default class Soundscape {
   private playAssetSound(effect: AssetSoundEffect): void {
     const audio = this.soundEffects[effect];
     const play = (): void => {
-      if (!this.enabled) {
+      if (audioSettings.effectsMuted) {
         return;
       }
       const instance = audio.paused ? audio : audio.cloneNode(true) as HTMLAudioElement;
@@ -279,7 +282,7 @@ export default class Soundscape {
   }
 
   private resumeMusic(): void {
-    if (!this.enabled || !this.activeTrack) {
+    if (!this.activeTrack) {
       return;
     }
     const track = this.musicTracks[this.activeTrack];

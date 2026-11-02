@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG, GAME_FONT_FAMILY } from './game-config';
+import { bindPhaserMusic } from './audio-settings';
 import welcomeMusicUrl from '../assets/music/start.mp3';
 import godsImage from '../assets/select/iobrontes_kosmelys.png';
 import furaiImage from '../assets/select/furai.png';
@@ -60,8 +61,8 @@ const OPTIONS: SelectOption[] = [
     image: 'select_narrative',
     crop: { x: 0, y: 40, width: 1672, height: 867 },
     label: 'NARRATIVE MODE',
-    key: 'N',
-    keyEvent: 'keydown-N',
+    key: 'A',
+    keyEvent: 'keydown-A',
     scene: 'escena_narrativa',
     color: WHITE,
     x: WIDTH / 2,
@@ -170,21 +171,18 @@ export default class SelectScene extends Phaser.Scene {
       volume: GAME_CONFIG.audio.music,
     });
     this.music.play();
+    const unbindMusic = bindPhaserMusic(this.music);
     this.createBackground();
     OPTIONS.forEach((option) => this.createOption(option));
 
     this.handlers.forEach(({ event, callback }) => {
       this.input.keyboard?.on(event, callback, this);
     });
-    const back = (): void => {
-      this.scene.start('escena_bienvenida');
-    };
-    this.input.keyboard?.on('keydown-ESC', back, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unbindMusic();
       this.handlers.forEach(({ event, callback }) => {
         this.input.keyboard?.off(event, callback, this);
       });
-      this.input.keyboard?.off('keydown-ESC', back, this);
       this.music?.stop();
     });
   }
