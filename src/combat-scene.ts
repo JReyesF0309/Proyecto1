@@ -1500,7 +1500,7 @@ export default class CombatScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#f1d9ff',
       align: 'center',
-      lineSpacing: -8,
+      lineSpacing: 8,
     }).setOrigin(0.5);
     this.warning.add([badge, this.warningArrow]);
 
