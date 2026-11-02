@@ -394,6 +394,11 @@ export const GAME_CONFIG = {
     kosmelysBreathingMs: 1750,
     kosmelysBreathingPixels: 4,
   },
+  narrativeMode: {
+    defenseWindowScale: 2.25,
+    iobrontesMaxHealth: 350,
+    kosmelysMaxHealth: 300,
+  },
   combatModes: {
     standard: {
       bossDamageMultiplier: 1,

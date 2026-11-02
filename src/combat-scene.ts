@@ -31,8 +31,6 @@ import {
   damagePartyMember,
   consumeShieldHit,
   DefenseOutcome,
-  DEFENSE_WINDOW_END_MS,
-  DEFENSE_WINDOW_START_MS,
   getBattleResult,
   gainFuraiSpirit,
   healPartyMember,
@@ -41,7 +39,6 @@ import {
   MAX_MANA,
   MAX_SPIRIT,
   PERFECT_PARRY_DAMAGE,
-  PERFECT_PARRY_WINDOW_START_MS,
   resolveDefense,
   SAHIRA_ABILITY_USE_LIMITS,
   spendCost,
@@ -327,15 +324,15 @@ export default class CombatScene extends Phaser.Scene {
   private readonly combatTiming: Record<keyof typeof GAME_CONFIG.timing, number>;
 
   private get defenseWindowStartMs(): number {
-    return DEFENSE_WINDOW_START_MS * this.modeConfig.combatTimingMultiplier;
+    return this.combatTiming.projectileTravelMs - this.combatTiming.defenseOpensBeforeImpactMs;
   }
 
   private get perfectParryWindowStartMs(): number {
-    return PERFECT_PARRY_WINDOW_START_MS * this.modeConfig.combatTimingMultiplier;
+    return this.combatTiming.projectileTravelMs - this.combatTiming.perfectParryStartsBeforeImpactMs;
   }
 
   private get defenseWindowEndMs(): number {
-    return DEFENSE_WINDOW_END_MS * this.modeConfig.combatTimingMultiplier;
+    return this.combatTiming.projectileTravelMs + this.combatTiming.defenseClosesAfterImpactMs;
   }
 
   private combatDuration(durationMs: number): number {
@@ -358,33 +355,34 @@ export default class CombatScene extends Phaser.Scene {
     this.narrativeMode = narrativeMode;
     this.modeConfig = GAME_CONFIG.combatModes[combatMode];
     const multiplier = this.modeConfig.combatTimingMultiplier;
+    const windowScale = narrativeMode ? GAME_CONFIG.narrativeMode.defenseWindowScale : 1;
     this.combatTiming = {
       ...GAME_CONFIG.timing,
       windUpMs: GAME_CONFIG.timing.windUpMs * multiplier,
       projectileTravelMs: GAME_CONFIG.timing.projectileTravelMs * multiplier,
-      defenseOpensBeforeImpactMs: GAME_CONFIG.timing.defenseOpensBeforeImpactMs * multiplier,
-      perfectParryStartsBeforeImpactMs: GAME_CONFIG.timing.perfectParryStartsBeforeImpactMs * multiplier,
-      defenseClosesAfterImpactMs: GAME_CONFIG.timing.defenseClosesAfterImpactMs * multiplier,
+      defenseOpensBeforeImpactMs: GAME_CONFIG.timing.defenseOpensBeforeImpactMs * multiplier * windowScale,
+      perfectParryStartsBeforeImpactMs: GAME_CONFIG.timing.perfectParryStartsBeforeImpactMs * multiplier * windowScale,
+      defenseClosesAfterImpactMs: GAME_CONFIG.timing.defenseClosesAfterImpactMs * multiplier * windowScale,
       defenseHintLeadMs: GAME_CONFIG.timing.defenseHintLeadMs * multiplier,
       resultDurationMs: GAME_CONFIG.timing.resultDurationMs * multiplier,
       nextBoltDelayMs: GAME_CONFIG.timing.nextBoltDelayMs * multiplier,
       enemyAttackAnnouncementMs: GAME_CONFIG.timing.enemyAttackAnnouncementMs * multiplier,
       enemyTurnGapMs: GAME_CONFIG.timing.enemyTurnGapMs * multiplier,
       watchTheThunderCastMs: GAME_CONFIG.timing.watchTheThunderCastMs * multiplier,
-      jumpWindowMs: GAME_CONFIG.timing.jumpWindowMs * multiplier,
+      jumpWindowMs: GAME_CONFIG.timing.jumpWindowMs * multiplier * windowScale,
       jumpPoseMs: GAME_CONFIG.timing.jumpPoseMs * multiplier,
       attackHitIntervalMs: GAME_CONFIG.timing.attackHitIntervalMs * multiplier,
       hazelAttackPoseMs: GAME_CONFIG.timing.hazelAttackPoseMs * multiplier,
       attackRecoveryMs: GAME_CONFIG.timing.attackRecoveryMs * multiplier,
       spritePoseMs: GAME_CONFIG.timing.spritePoseMs * multiplier,
-      cosmicPerfectParryWindowMs: GAME_CONFIG.timing.cosmicPerfectParryWindowMs * multiplier,
+      cosmicPerfectParryWindowMs: GAME_CONFIG.timing.cosmicPerfectParryWindowMs * multiplier * windowScale,
       cosmicWindUpMs: GAME_CONFIG.timing.cosmicWindUpMs * multiplier,
       meteorPreparationMs: GAME_CONFIG.timing.meteorPreparationMs * multiplier,
       meteorTravelMs: GAME_CONFIG.timing.meteorTravelMs * multiplier,
       meteorFollowUpTravelMs: GAME_CONFIG.timing.meteorFollowUpTravelMs * multiplier,
-      meteorDefenseOpensBeforeImpactMs: GAME_CONFIG.timing.meteorDefenseOpensBeforeImpactMs * multiplier,
-      meteorNormalBlockWindowMs: GAME_CONFIG.timing.meteorNormalBlockWindowMs * multiplier,
-      meteorPerfectBlockWindowMs: GAME_CONFIG.timing.meteorPerfectBlockWindowMs * multiplier,
+      meteorDefenseOpensBeforeImpactMs: GAME_CONFIG.timing.meteorDefenseOpensBeforeImpactMs * multiplier * windowScale,
+      meteorNormalBlockWindowMs: GAME_CONFIG.timing.meteorNormalBlockWindowMs * multiplier * windowScale,
+      meteorPerfectBlockWindowMs: GAME_CONFIG.timing.meteorPerfectBlockWindowMs * multiplier * windowScale,
       portalEffectDurationMs: GAME_CONFIG.timing.portalEffectDurationMs * multiplier,
     };
   }
@@ -426,6 +424,9 @@ export default class CombatScene extends Phaser.Scene {
     this.processingNarrativeEvents = false;
     this.narrativeBattleStarted = false;
     this.state = createCombatState();
+    (['iobrontes', 'kosmelys'] as const).forEach((boss) => {
+      this.state.bosses[boss].health = this.getBossPhaseConfig(boss).maxHealth;
+    });
     Object.keys(this.tutorialMessagesSeen).forEach((id) => {
       this.tutorialMessagesSeen[id as TutorialMessageId] = false;
     });
@@ -703,7 +704,7 @@ export default class CombatScene extends Phaser.Scene {
     this.boss.setVisible(false);
     this.iobrontesShadow?.setVisible(false);
     this.missingBossLabels.iobrontes.setVisible(false);
-    this.state.bosses.iobrontes.health = GAME_CONFIG.bossPhases.iobrontes.normal.maxHealth;
+    this.state.bosses.iobrontes.health = this.getBossPhaseConfig('iobrontes').maxHealth;
     this.soundscape.setBattleMusicAlternation(false);
     this.soundscape.playMusic('battle-cosmic');
     this.phase = 'player';
@@ -2461,6 +2462,7 @@ export default class CombatScene extends Phaser.Scene {
     const inTutorial = this.modeConfig === GAME_CONFIG.combatModes.tutorial
       || (includePractice && this.practiceId !== null);
     if (!inTutorial || this.tutorialMessagesSeen[messageId]) {
+      this.tutorialMessagesSeen[messageId] = true;
       onContinue();
       return;
     }
@@ -2570,7 +2572,7 @@ export default class CombatScene extends Phaser.Scene {
           return;
         }
         bossState.phase = 'heir';
-        bossState.health = GAME_CONFIG.bossPhases[boss].heir.maxHealth;
+        bossState.health = this.getBossPhaseConfig(boss).maxHealth;
         bossState.armorBreak = false;
         if (boss === 'iobrontes') {
           this.state.divineRetributionTurnsRemaining = 0;
@@ -3624,7 +3626,7 @@ export default class CombatScene extends Phaser.Scene {
     this.targetCharacter = null;
     this.watchThunderSweepIndex = 0;
     this.watchThunderSweepCount = this.getBossPhaseConfig('iobrontes').watchThunderSweeps;
-    this.promptText.setText('Iobrontes concentra un rayo contra todo el equipo.');
+    this.promptText.setText('Iobrontes channels a bolt of lightning against the whole party.');
     this.setBossFrame(this.getBossFrames('iobrontes').watchThunder);
     this.startWatchThunderSweep();
   }
@@ -3783,8 +3785,8 @@ export default class CombatScene extends Phaser.Scene {
     this.soundscape.play('impact');
     this.promptText.setText(
       this.partyJumped
-        ? 'El equipo esquiva Watch the Thunder con un salto sincronizado.'
-        : 'Watch the Thunder golpea a todos los personajes alcanzados.',
+        ? 'The party dodges Watch the Thunder with a synchronized jump.'
+        : 'Watch the Thunder hits every character caught in it.',
     );
     this.refreshHud();
     if (this.finishIfBattleEnded()) {
@@ -5269,7 +5271,15 @@ export default class CombatScene extends Phaser.Scene {
     boss: BossId,
   ): IobrontesPhaseConfig | KosmelysPhaseConfig {
     const phase: BossPhase = this.state.bosses[boss].phase === 'normal' ? 'normal' : 'heir';
-    return GAME_CONFIG.bossPhases[boss][phase];
+    const config = GAME_CONFIG.bossPhases[boss][phase];
+    if (!this.narrativeMode) {
+      return config;
+    }
+    const narrative = GAME_CONFIG.narrativeMode;
+    return {
+      ...config,
+      maxHealth: boss === 'iobrontes' ? narrative.iobrontesMaxHealth : narrative.kosmelysMaxHealth,
+    } as unknown as IobrontesPhaseConfig | KosmelysPhaseConfig;
   }
 
   private getBossFrames(boss: 'iobrontes'): IobrontesPhaseConfig['frames'];
@@ -5637,7 +5647,7 @@ export default class CombatScene extends Phaser.Scene {
     this.cameras.main.zoomTo(1, 280, 'Sine.easeInOut');
     if (result === 'victory') {
       this.turnText.setText('VICTORY');
-      this.promptText.setText('La tormenta se disipa sobre el templo.');
+      this.promptText.setText('The storm fades over the temple.');
       this.setBossFrame(this.getBossFrames('iobrontes').hit);
       this.cameras.main.flash(450, 205, 168, 255, false);
     } else {
@@ -5668,7 +5678,7 @@ export default class CombatScene extends Phaser.Scene {
       WIDTH / 2,
       493,
       result === 'victory'
-        ? 'Iobrontes y Kosmelys han sido vencidos.'
+        ? 'Iobrontes and Kosmelys have been defeated.'
         : 'The party can no longer continue.',
       {
         fontFamily: GAME_FONT_FAMILY,
