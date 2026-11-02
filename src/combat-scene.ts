@@ -516,9 +516,16 @@ export default class CombatScene extends Phaser.Scene {
         ),
       );
       this.narrativeInitialObjects.forEach((object) => object.setVisible(false));
-      this.soundscape.stopMusic();
+      this.soundscape.playMusic('intro');
       this.startNarrativeOpening();
     } else if (this.practiceId) {
+      const practiceMusic = {
+        dexios: 'dexios-training',
+        furai: 'furai-training',
+        sahira: 'sahira-training',
+        hazel: 'hazel-training',
+      } as const;
+      this.soundscape.playMusic(practiceMusic[this.practiceId]);
       this.startAudio();
       this.setupPractice(this.practiceId);
     } else if (this.modeConfig === GAME_CONFIG.combatModes.tutorial) {
@@ -635,6 +642,7 @@ export default class CombatScene extends Phaser.Scene {
   }
 
   private playNarrativeChaosWave(onComplete: () => void): void {
+    this.soundscape.playMusic('chaos');
     const wave = this.add.graphics().setDepth(35);
     wave.fillStyle(0xc51f38, 0.62);
     wave.fillRect(-180, 0, 170, HEIGHT);
@@ -2148,7 +2156,8 @@ export default class CombatScene extends Phaser.Scene {
 
     if (
       (['iobrontes', 'kosmelys'] as const).every(
-        (boss) => this.state.bosses[boss].phase === 'heir',
+        (boss) => this.state.bosses[boss].phase === 'heir'
+          || this.completedNarrativeEventIds.has(`${boss}-heir-transformation`),
       )
     ) {
       enqueue({
@@ -2267,6 +2276,7 @@ export default class CombatScene extends Phaser.Scene {
       ? 'kosmelys_heredera_transformacion'
       : 'iobrontes_heredero_transformacion';
     this.showNarrativeDialogue([line], () => {
+      this.soundscape.play(boss === 'kosmelys' ? 'kosmelys_heredera' : 'iobrontes_heredero');
       this.showNarrativeCinematic(cinematic, 3000, () => {
         this.transformPendingBosses([boss], 0, () => {
           this.refreshHud();
@@ -5454,7 +5464,7 @@ export default class CombatScene extends Phaser.Scene {
     if (result === 'victory') {
       this.soundscape.playMusic('victory');
     } else {
-      this.soundscape.stopMusic();
+      this.soundscape.playMusic('lose');
     }
     this.time.removeAllEvents();
     this.tweens.killAll();

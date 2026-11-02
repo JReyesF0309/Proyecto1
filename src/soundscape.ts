@@ -2,12 +2,20 @@ import { GAME_CONFIG } from './game-config';
 import battleMusicUrl from '../assets/music/watch_the_thunder.mp3';
 import cosmicBattleMusicUrl from '../assets/music/cosmic_strike.mp3';
 import victoryMusicUrl from '../assets/music/nike.mp3';
+import chaosMusicUrl from '../assets/music/chaos.mp3';
+import dexiosTrainingMusicUrl from '../assets/music/dexios_training.mp3';
+import furaiTrainingMusicUrl from '../assets/music/furai_training.mp3';
+import hazelTrainingMusicUrl from '../assets/music/hazel_training.mp3';
+import introMusicUrl from '../assets/music/intro.mp3';
+import loseMusicUrl from '../assets/music/lose.mp3';
+import sahiraTrainingMusicUrl from '../assets/music/sahira_training.mp3';
 import cosmicAttackSoundUrl from '../assets/sfx/ataque_cosmico.mp3';
 import portalOpenSoundUrl from '../assets/sfx/abrir_portal.mp3';
 import curaSoundUrl from '../assets/sfx/cura.mp3';
 import armorSoundUrl from '../assets/sfx/armadura.mp3';
 import dexiosSoundUrl from '../assets/sfx/dexios.mp3';
 import furaiSoundUrl from '../assets/sfx/furai.mp3';
+import iobrontesHeirSoundUrl from '../assets/sfx/iobrontes_heredero.mp3';
 import iobrontesSoundUrl from '../assets/sfx/iobrontes.mp3';
 import meteorFallSoundUrl from '../assets/sfx/meteor_fall.mp3';
 import perfectBlockSoundUrl from '../assets/sfx/perfect_block.mp3';
@@ -18,6 +26,7 @@ import thunderSoundUrl from '../assets/sfx/trueno.mp3';
 import flameSoundUrl from '../assets/sfx/flame.mp3';
 import shardSoundUrl from '../assets/sfx/shard.mp3';
 import shiftSoundUrl from '../assets/sfx/shift.mp3';
+import kosmelysHeirSoundUrl from '../assets/sfx/kosmelys_heredera.mp3';
 
 type AssetSoundEffect =
   | 'dexios'
@@ -35,9 +44,21 @@ type AssetSoundEffect =
   | 'meteor_fall'
   | 'flame'
   | 'shard'
-  | 'shift';
+  | 'shift'
+  | 'iobrontes_heredero'
+  | 'kosmelys_heredera';
 type SoundEffect = 'lightning' | 'impact' | 'physical' | 'magic' | 'heal' | AssetSoundEffect;
-type MusicTrack = 'battle-thunder' | 'battle-cosmic' | 'victory';
+type MusicTrack =
+  | 'battle-thunder'
+  | 'battle-cosmic'
+  | 'victory'
+  | 'chaos'
+  | 'intro'
+  | 'lose'
+  | 'dexios-training'
+  | 'furai-training'
+  | 'sahira-training'
+  | 'hazel-training';
 
 export default class Soundscape {
   private readonly context = new AudioContext();
@@ -64,9 +85,18 @@ export default class Soundscape {
       'battle-thunder': new Audio(battleMusicUrl),
       'battle-cosmic': new Audio(cosmicBattleMusicUrl),
       victory: new Audio(victoryMusicUrl),
+      chaos: new Audio(chaosMusicUrl),
+      intro: new Audio(introMusicUrl),
+      lose: new Audio(loseMusicUrl),
+      'dexios-training': new Audio(dexiosTrainingMusicUrl),
+      'furai-training': new Audio(furaiTrainingMusicUrl),
+      'sahira-training': new Audio(sahiraTrainingMusicUrl),
+      'hazel-training': new Audio(hazelTrainingMusicUrl),
     };
     Object.entries(this.musicTracks).forEach(([name, track]) => {
-      track.loop = name === 'victory';
+      track.loop = name === 'victory'
+        || name.endsWith('-training')
+        || name === 'chaos';
       track.preload = 'auto';
       this.context.createMediaElementSource(track).connect(this.musicGain);
     });
@@ -97,6 +127,8 @@ export default class Soundscape {
       flame: new Audio(flameSoundUrl),
       shard: new Audio(shardSoundUrl),
       shift: new Audio(shiftSoundUrl),
+      iobrontes_heredero: new Audio(iobrontesHeirSoundUrl),
+      kosmelys_heredera: new Audio(kosmelysHeirSoundUrl),
     };
     Object.values(this.soundEffects).forEach((effect) => {
       effect.preload = 'auto';
@@ -177,6 +209,8 @@ export default class Soundscape {
       || effect === 'flame'
       || effect === 'shard'
       || effect === 'shift'
+      || effect === 'iobrontes_heredero'
+      || effect === 'kosmelys_heredera'
     ) {
       this.playAssetSound(effect);
     } else if (effect === 'lightning') {

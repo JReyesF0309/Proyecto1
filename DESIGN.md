@@ -6,6 +6,105 @@ Genre: Turn-Based RPG with Real-Time Directional Defense
 Visual Perspective: 2D character-based combat with foreground/background depth
 Prototype Scope: Four playable characters, two bosses, one arena, and standard and tutorial configurations of the dual-boss combat encounter.
 Note to the implementer: This document is intended to be self-contained. Implement the mechanics and values described here without relying on previous versions. Numerical values, timings, character positions, camera settings, and animation references must be stored in configuration files whenever possible.
+
+## DOCUMENT AUTHORITY AND ORGANIZATION
+
+The current implementation is authoritative. The core specification and final timing table at the front of this document are the consolidated reference for the current build. Appendix A preserves the original requirements and design notes in their original wording for traceability; some notes are superseded, while others retain detail for current features. They are not cumulative changes to implement. If an archived value or instruction conflicts with the current build, use the current implementation and final values in this document.
+
+The system index is:
+
+1. Core game overview, setting, assets, combat, characters, defense, audio, and acceptance criteria.
+2. Dual-boss combat, Cosmic Rays, Portal Shield, Meteor Rain, targeting, and boss turn rules.
+3. Combat HUD, camera, character selection, and target selection.
+4. Character presentation, battlefield layout, sprite and HUD corrections.
+5. Offensive action commands and their damage, timing, and ability interactions.
+6. Character introduction screens.
+7. Normal and Heir boss phases, transformations, and Heir abilities.
+8. Tutorial combat configuration, tutorial pop-ups, and tutorial-specific behavior.
+9. Narrative battle, dialogue, cinematics, and event sequencing.
+10. Historical source notes retained in Appendix A.
+
+## FINAL CONFIGURED TIMING VALUES
+
+These are the current base values in milliseconds unless a different unit is shown. Tutorial combat uses a 1.5 timing multiplier; standard combat uses 1.0. Tutorial damage from bosses uses a separate 0.75 multiplier, rounded up.
+
+### Camera
+
+| Timing | Value |
+|---|---:|
+| Focus transition | 260 ms |
+| Selection transition | 380 ms |
+| Return transition | 300 ms |
+
+### Combat and defense
+
+| Timing | Value |
+|---|---:|
+| Enemy wind-up | 187 ms |
+| Projectile travel | 373 ms |
+| Defense opens before impact | 500 ms |
+| Perfect-parry window starts before impact | 100 ms |
+| Defense closes after impact | 100 ms |
+| Defense hint lead | 100 ms |
+| Result display | 1,019 ms |
+| Delay between Lightning Chain bolts | 373 ms |
+| Enemy attack announcement | 1,000 ms |
+| Gap between enemy turns | 500 ms |
+| Watch the Thunder cast | 600 ms |
+| Team jump input window | 300 ms |
+| Team jump pose | 700 ms |
+| Player multi-hit interval | 260 ms |
+| Hazel attack pose | 700 ms |
+| Player attack recovery | 500 ms |
+| Sprite pose | 650 ms |
+| Cosmic Rays wind-up | 187 ms |
+| Cosmic Rays perfect-parry window | 100 ms |
+| Meteor Rain first-meteor preparation | 500 ms |
+| Meteor Rain first-meteor travel | 500 ms |
+| Meteor Rain follow-up travel | 700 ms |
+| Meteor defense opens before impact | 700 ms |
+| Meteor normal-block window | 400 ms |
+| Meteor perfect-parry window | 400 ms |
+| Portal Shield visual effect | 620 ms |
+| Kosmelys breathing cycle | 1,750 ms |
+| Kosmelys breathing displacement | 4 px |
+| Portal Shield duration | 1 playable-character turn |
+
+For Meteor Rain, the normal-block window is the first 400 ms of the 800 ms defense window, and the perfect-parry window is the following 400 ms. Each meteor resolves after both windows close. The first meteor has a 500 ms preparation phase; following meteors have no preparation phase.
+
+### Offensive action commands
+
+| Action command | Final timing values |
+|---|---|
+| Presentation strip | 260 ms enter, 1,000 ms hold, 260 ms exit |
+| Electric Arc | 1,500 ms fill; normal threshold at -700 ms, perfect threshold at -300 ms, window ends at +100 ms; 8,000 ms timeout |
+| Chaotic Lightning | 3 directional inputs; 2,000 ms per input; perfect if entered within 1,000 ms |
+| Tiger Fang | 1,200 ms timing circle; fail threshold -1,100 ms, normal threshold -700 ms, perfect threshold -300 ms, window ends at +100 ms; 350 ms between circles |
+| Armor Break | 3,000 ms horizontal-control command at 175.5 px/s |
+| Hippopotamus Shield | 15,000 ms timeout; moving-circle speed ratio 1.92 |
+| Flame Dance | 4 directional inputs within 2,000 ms |
+| Figure Shards | 10 presses within 3,000 ms |
+
+Action-command timing thresholds are relative to the event indicated by that command. The tutorial timing multiplier applies to action commands as well as combat timing. Values are defined by `src/game-config.ts` and `src/action-commands.ts`.
+
+## FINAL AUDIO CUES
+
+| Scene or event | Audio asset | Behavior |
+|---|---|---|
+| Dexios practice scene | `assets/music/dexios_training.mp3` | Loops during the practice scene |
+| Sahira practice scene | `assets/music/sahira_training.mp3` | Loops during the practice scene |
+| Furai practice scene | `assets/music/furai_training.mp3` | Loops during the practice scene |
+| Hazel practice scene | `assets/music/hazel_training.mp3` | Loops during the practice scene |
+| Narrative scene opening | `assets/music/intro.mp3` | Plays during the opening |
+| Narrative chaos wave | `assets/music/chaos.mp3` | Starts with the wave and loops until the battle music replaces it |
+| Battle defeat | `assets/music/lose.mp3` | Starts when the lose condition is reached |
+| Kosmelys enters Heir Mode | `assets/sfx/kosmelys_heredera.mp3` | Plays as her Heir transformation cinematic appears |
+| Iobrontes enters Heir Mode | `assets/sfx/iobrontes_heredero.mp3` | Plays as his Heir transformation cinematic appears |
+
+## NARRATIVE HEIR RECOVERY EVENT
+
+In the narrative battle, trigger Dexios's dittany-potion scene exactly once after both bosses have entered Heir Mode at least once. This remains true if one boss enters Heir Mode and is permanently defeated before the other transforms. When the surviving boss enters Heir Mode, run the recovery scene even though the defeated boss's current phase is `defeated`. After the dialogue, revive and fully heal the party and restore Dexios's Mana, then resume the current turn sequence.
+
 ________________________________________
 1. GAME OVERVIEW
 1.1. Game Description
@@ -156,10 +255,11 @@ When Iobrontes selects a target:
 5.	The player performs the defensive inputs.
 6.	After the three attacks resolve, the camera returns smoothly to its normal position.
 The camera must make the selected target obvious without hiding the boss or obstructing directional indicators.
-Suggested initial camera values:
-â€¢	Zoom multiplier: approximately 1.08.
-â€¢	Camera transition duration: 0.2â€“0.3 seconds.
-â€¢	Return transition: approximately 0.3 seconds.
+Configured camera values:
+â€¢	Target zoom multiplier: 1.08.
+â€¢	Focus transition: 260 ms.
+â€¢	Selection transition: 380 ms.
+â€¢	Return transition: 300 ms.
 These values are adjustable and must not be hard-coded.
 Boss positions and scales must also be configurable. Keep both bosses visible together without allowing their sprites, attacks, or effects to obscure one another.
 ________________________________________
@@ -218,7 +318,9 @@ Turn Position	Acting Character
 8	Hazel (provisional)
 9	Iobrontes
 10	Kosmelys
-Hazel's configured slot immediately after Sahira is provisional. After turn position 10, the sequence restarts at position 1.
+11	Iobrontes
+12	Kosmelys
+Hazel's configured slot immediately after Sahira is provisional. After turn position 12, the sequence restarts at position 1.
 Furai
   â†“
 Iobrontes
@@ -239,8 +341,12 @@ Iobrontes
   â†“
 Kosmelys
   â†“
+Iobrontes
+  â†“
+Kosmelys
+  â†“
 Repeat
-Iobrontes and Kosmelys each act three times during every complete ten-position cycle. Hazel's turn is configuration-controlled; every other turn keeps its existing relative position.
+Iobrontes and Kosmelys each act four times during every complete twelve-position cycle. Hazel's turn is configuration-controlled; every other turn keeps its existing relative position.
 Incapacitated Characters
 When a playable character reaches zero health:
 â€¢	They become incapacitated.
@@ -302,7 +408,7 @@ Chaos Energy Cost: 50
 Type: Chaos-based electrical attack
 Frame: dexios_rojo
 Dexios unleashes a large red lightning attack.
-The attack deals 70 damage to Iobrontes and consumes 50 Chaos energy and inflicts 20 self-damage.
+The attack deals 70 damage to the selected living boss, consumes 50 Chaos energy, and inflicts 10 self-damage on Dexios.
 The attack must use visually distinctive red lightning effects.
 5.5. Chaos Energy
 Dexios gains 20 Chaos energy whenever he takes damage from an enemy attack.
@@ -952,7 +1058,7 @@ Stage 1 â€” Battlefield and Party Formation
 â€¢	Register Kosmelys's supplied sprites and effects from `kosmelys_assets/` without changing their visual design.
 Stage 2 â€” Combat State and Turn Order
 â€¢	Create the character statistics.
-â€¢	Implement the fixed ten-position turn sequence, with Hazel immediately after Sahira provisionally.
+â€¢	Implement the fixed twelve-position turn sequence, with Hazel immediately after Sahira provisionally.
 â€¢	Add incapacitation logic.
 â€¢	Add victory and defeat conditions.
 Stage 3 â€” Playable Character Abilities
@@ -996,7 +1102,7 @@ Stage 8 â€” Final Integration and Testing
 â€¢	Test all defensive windows.
 â€¢	Verify that animations and camera transitions do not interrupt combat.
 â€¢	Confirm victory and defeat behavior.
-â€¢	Verify the ten-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
+â€¢	Verify the twelve-position dual-boss turn order, both boss health bars, and the requirement to defeat both bosses for victory.
 â€¢	Verify independent boss states, ability selection, and defeated-boss turn skipping.
 ________________________________________
 16. VISUAL REFERENCES
@@ -1016,6 +1122,12 @@ These assets establish the visual identity and character appearances of the prot
 The code must reference them through their registered names, allowing images to be replaced or improved without requiring changes to the core combat systems.
 ________________________________________
 Core Design Specification â€” Version 0.5
+
+## APPENDIX A - HISTORICAL SOURCE ARCHIVE
+
+The material below this heading is retained so no original requirement, decision, test, or implementation detail is lost. It records how the current specification was developed; it is reference material, not a set of cumulative change requests. Apply the current behavior and configured values above when archived notes disagree.
+
+The original camera guidance used an approximate 1.08 zoom, a 0.2-0.3 second focus transition, and an approximately 0.3 second return transition. The exact configured transition timings are listed above.
 
 
 # LA DEXÃADA â€” DUAL BOSS FIGHT UPDATE
@@ -1039,6 +1151,8 @@ Reorganize the assets directory to accommodate the new Kosmelys sprites, effects
 Any new values required for the implementation, including timing, damage, animation paths, probabilities, positioning, and camera behavior, should be placed in configuration files rather than hard-coded.
 
 ---
+
+### A.1 Dual-boss combat and encounter rules
 
 # 1. BOSS HEALTH AND DUAL-BOSS INTERFACE
 
@@ -2024,6 +2138,8 @@ Nuevos cambios:
 2.	Aumenta un 0.5 segundos de tiempo entre ataques de Iobrontes y Kosmelys
 
 # LA DEXÃADA â€” REDISEÃ‘O COMPLETO DE LA INTERFAZ DE COMBATE EN PHASER
+
+### A.2 Combat interface and target selection
 
 ## 1. OBJETIVO PRINCIPAL
 
@@ -3082,6 +3198,8 @@ No quiero que reconstruyas todo el juego ni que cambies sus mecÃ¡nicas.
 
 Quiero una nueva presentaciÃ³n visual profesional, dinÃ¡mica y funcional sobre el sistema ya implementado.
 
+### A.3 Battlefield, sprite, and HUD corrections
+
 # LA DEXÃADA â€” VISUAL, UI AND GAMEPLAY CORRECTIONS
 
 Apply the following corrections to the existing Phaser combat prototype and update `DESIGN.md` accordingly.
@@ -3960,6 +4078,8 @@ After each completed stage, report what was changed and whether the build succee
 If a stage cannot be completed safely, stop and explain the blocker instead of continuing with potentially destructive modifications.
 
 # LA DEXÃADA â€” OFFENSIVE ACTION COMMAND SYSTEM
+### A.4 Offensive action commands
+
 ## Implementation Specification â€” Timing Minigames and Cinematic Attack Introductions
 
 ### CRITICAL INSTRUCTIONS
@@ -5066,6 +5186,8 @@ Implemented in `src/action-commands.ts` (config, runner, multipliers) and wired 
 
 # LA DEXÍADA — CHARACTER INTRODUCTION SCREENS
 
+### A.5 Character introduction screens
+
 ## 1. GENERAL REQUIREMENTS
 
 Add a cinematic character introduction panel that appears automatically when the player enters each character's existing tutorial/trial scene.
@@ -5478,6 +5600,8 @@ All new values must be configurable.
 **The supplied sprite filenames are final. Use them exactly as specified, including the distinction between `heredero` and `heredera`.**
 
 ---
+
+### A.6 Heir Mode and boss transformations
 
 # 2. BOSS PHASE SYSTEM
 
@@ -6355,6 +6479,8 @@ Report the modified files, any missing assets, build status, and results of the 
 
 # LA DEXÍADA — TUTORIAL COMBAT SCENE AND SAHIRA HEALING UPDATE
 
+### A.7 Tutorial combat, healing, and mode configuration
+
 ## CRITICAL INSTRUCTIONS
 
 The current Phaser combat scene is functional, including the existing boss phases, attacks, offensive action commands, defensive mechanics, characters, HUD, music, and animations.
@@ -7080,6 +7206,8 @@ When finished, report:
 
 # LA DEXÍADA — TUTORIAL COMBAT POP-UP SYSTEM
 
+### A.8 Tutorial pop-ups
+
 ## 1. CRITICAL INSTRUCTIONS
 
 The existing `escena_tutorial` is already functional. It uses the same combat mechanics as the original battle, with reduced boss damage and slower combat timing.
@@ -7587,6 +7715,8 @@ Preserve the existing functional combat system and ensure every paused enemy att
 When finished, report the files modified, the pop-ups implemented, and the results of the build and gameplay tests.
 
 # LA DEXÍADA — NARRATIVE BATTLE IMPLEMENTATION
+
+### A.9 Narrative battle, dialogue, and cinematics
 
 ## 1. OBJECTIVE
 
