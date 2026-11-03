@@ -15,6 +15,8 @@ import { audioSettings } from './audio-settings';
 import ChapterOneCombatScene, {
   CHAPTER1_COMBAT1,
   CHAPTER1_COMBAT2,
+  CHAPTER1_COMBAT3,
+  CHAPTER1_COMBAT4,
 } from './chapter1-combat-scene';
 import {
   ChapterOneSelectScene,
@@ -43,6 +45,8 @@ const config: Phaser.Types.Core.GameConfig = {
     ChapterOneSelectScene,
     new ChapterOneCombatScene(CHAPTER1_COMBAT1),
     new ChapterOneCombatScene(CHAPTER1_COMBAT2),
+    new ChapterOneCombatScene(CHAPTER1_COMBAT3),
+    new ChapterOneCombatScene(CHAPTER1_COMBAT4),
     WelcomeScene,
     SelectScene,
     CombatScene,

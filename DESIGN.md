@@ -9756,3 +9756,1391 @@ Verify all of the following:
 After implementing, report the files modified, the new scene registered, any unresolved issues, and the build/test results.
 
 **FINAL OBJECTIVE:** Add a beginner-friendly two-enemy battle that teaches target selection, using the existing functional Chapter 1 combat system, while introducing reliable Chapter 1 shortcuts and preserving Chapter 29 entirely.
+
+# LA DEXÍADA — CHAPTER 1: COMBAT 3 — WOLF
+
+Implement Chapter 1 Combat 3 in the existing Phaser project, using the new wolf sprites and sound effects.
+
+**CRITICAL: Preserve the current working implementation.** Combats 1 and 2 already function correctly and have received manual adjustments. Inspect their actual source code and reuse the existing mechanics without overwriting those adjustments.
+
+**Chapter 29 must remain completely unchanged**, including normal combat, tutorial, narrative mode, practice scenes, animations, music, controls, statistics, and timings.
+
+The current working code takes precedence over older implementation notes in DESIGN.md. This task introduces only the new encounter and its lateral-defense tutorial.
+
+## 1. ENABLE COMBAT 3
+
+In the existing `scene_ch1_select`, unlock:
+
+`COMBAT 3 — WOLF`
+
+Selecting it must launch:
+
+`scene_ch1_combat3`
+
+Keep Combats 1 and 2 fully functional and selectable. Combats 4–7 remain locked.
+
+Preserve the existing selector's appearance, navigation, fonts, spacing, and interaction behavior.
+
+## 2. COMBAT 3 SETUP
+
+Create:
+
+`scene_ch1_combat3`
+
+Encounter:
+
+**DEXIOS VS. ONE WOLF**
+
+Reuse the existing Chapter 1 combat infrastructure.
+
+### Battlefield
+
+Use the existing:
+
+`ch1_combat1_background`
+
+Only Dexios and one Wolf are visible.
+
+- Dexios stands in his existing Chapter 1 foreground position.
+- The Wolf initially stands in the enemy area, facing Dexios.
+- Maintain the existing character-grounding and sprite-scaling conventions.
+- Leave enough space on both sides of Dexios for the Wolf to approach from either direction.
+- Keep the camera, HUD, combat effects, and presentation consistent with Combats 1 and 2.
+
+Do not spawn any other enemies or party members.
+
+### Dexios statistics
+
+- HP: **65/65**
+- Mana: **40/40**
+- Chaos: **0/100**, hidden as in the earlier Chapter 1 encounters.
+- Available ability: **Triple Lightning only**.
+
+Do not unlock Electric Arc or Chaotic Lightning.
+
+### Wolf statistics
+
+- Display name: `WOLF`
+- HP: **35/35**
+- Attack: `WOLF LUNGE`
+- Unblocked damage: **10**
+- Normal Block damage: **5**
+- Perfect Parry damage: **0**
+- Dexios Perfect Parry counterattack: **5 damage to Wolf**
+
+The Wolf has exactly one attack, which can originate from either lateral direction.
+
+### Fixed turn order
+
+**Wolf → Dexios → Wolf → Dexios → repeat**
+
+The Wolf always acts first.
+
+No Speed or initiative calculations.
+
+Victory occurs when the Wolf reaches 0 HP. Defeat occurs when Dexios reaches 0 HP.
+
+## 3. EXACT WOLF SPRITE NAMES
+
+Register and use the supplied final sprites:
+
+- `wolf_base`
+- `wolf_prepare_left`
+- `wolf_prepare_right`
+- `wolf_attack_left`
+- `wolf_attack_right`
+- `wolf_hurt`
+
+Use the existing asset-directory conventions, actual extensions, and original filenames.
+
+These are the correct names. Do not substitute nonexistent generic visual frames such as `wolf_prepare` or `wolf_attack`.
+
+### Sprite meanings
+
+**wolf_base:** Normal idle stance.
+
+**wolf_prepare_left:** Preparation pose when attacking Dexios from his left side.
+
+**wolf_prepare_right:** Preparation pose when attacking Dexios from his right side.
+
+**wolf_attack_left:** Lunging attack arriving from Dexios's left.
+
+**wolf_attack_right:** Lunging attack arriving from Dexios's right.
+
+**wolf_hurt:** Reaction when the Wolf takes damage from Triple Lightning or Dexios's counterattack.
+
+Use the actual supplied left/right artwork. Do not unnecessarily flip the sprites horizontally.
+
+The wolf's sprite orientation must match its physical attack direction.
+
+## 4. WOLF AUDIO ASSETS
+
+Use the supplied audio files:
+
+- `wolf_prepare`
+- `wolf_attack`
+- `wolf_hurt`
+
+These are **sound effects**, distinct from the directional visual sprites.
+
+Register audio using separate Phaser keys when appropriate:
+
+- `wolf_prepare_sfx`
+- `wolf_attack_sfx`
+- `wolf_hurt_sfx`
+
+The registered key names may follow the existing audio manager, but the physical asset filenames must not be changed.
+
+### Audio triggers
+
+**wolf_prepare SFX**
+
+Play once when the Wolf enters its anticipation pose.
+
+Use the same sound for left and right anticipation.
+
+**wolf_attack SFX**
+
+Play once when the Wolf begins its two-second lunge.
+
+Use the same sound for both attack directions.
+
+**wolf_hurt SFX**
+
+Play when the Wolf receives actual damage:
+
+- Each damaging Triple Lightning impact.
+- Each successful Perfect Parry counterattack.
+
+Do not play the hurt sound when no damage is received.
+
+### Existing audio to reuse
+
+- Battle music: `ch1_battle`
+- Dexios attack: `dexios.mp3`, once for each Triple Lightning hit.
+- Existing Perfect Parry sound effect.
+
+Keep the existing sound volumes, audio handling, and independent music/SFX channels.
+
+Do not create duplicate music instances.
+
+Respect the existing Chapter 1 audio hotkeys:
+
+- N: toggle music.
+- M: toggle SFX.
+
+## 5. WOLF LUNGE — LATERAL ATTACKS
+
+The Wolf's only ability is:
+
+`WOLF LUNGE`
+
+Unlike the Wild Boar, which always attacks from above, the Wolf approaches from either the left or right.
+
+The player must recognize the incoming direction from the Wolf's physical movement.
+
+### Attack directions
+
+**Attack from Dexios's left:**
+
+- Wolf moves to the left side of Dexios.
+- Uses `wolf_prepare_left`.
+- Lunges using `wolf_attack_left`.
+- Correct defensive key: **A**.
+- Dexios uses `dexios_izquierda` when blocking.
+
+**Attack from Dexios's right:**
+
+- Wolf moves to the right side of Dexios.
+- Uses `wolf_prepare_right`.
+- Lunges using `wolf_attack_right`.
+- Correct defensive key: **D**.
+- Dexios uses `dexios_derecha` when blocking.
+
+Directions are defined relative to Dexios, not the Wolf's own left/right orientation.
+
+An attack originating from the screen-left side of Dexios must be defended with A. An attack originating from the screen-right side must be defended with D.
+
+### Direction sequence
+
+For this beginner encounter, use:
+
+- First Wolf attack: **LEFT**, requiring A.
+- Second Wolf attack: **RIGHT**, requiring D.
+- Subsequent attacks: randomly choose LEFT or RIGHT with equal probability.
+
+Store this behavior in encounter-specific configuration so it can be adjusted later.
+
+This guarantees that the player experiences both lateral defenses without relying entirely on randomness.
+
+## 6. PHYSICAL POSITIONING AND MOVEMENT
+
+The Wolf must visibly demonstrate where its attack will originate.
+
+### Attack preparation
+
+At the start of its turn:
+
+1. Choose the attack direction.
+2. Move the Wolf toward the appropriate flank of Dexios.
+3. Ensure this movement clearly positions the Wolf on the left or right side.
+4. Announce `WOLF LUNGE` using the established enemy attack-announcement system.
+5. Once the announcement has finished, begin the timed anticipation.
+
+This preliminary flank positioning is not part of the two-second lunge or defensive timing window.
+
+Do not start the defensive timer until the Wolf reaches its chosen attack-start position and the announcement is complete.
+
+### Wolf movement rules
+
+- The Wolf must remain visible during its approach.
+- It must face toward Dexios.
+- The direction must be visually recognizable before the attack.
+- It must not teleport abruptly between sides.
+- Positioning should be smooth and clearly readable.
+- The attack should not pass through Dexios or overshoot its intended impact point.
+- Store flank positions and movement durations in editable Chapter 1 configuration.
+
+After attacking, return the Wolf to its original battlefield position and `wolf_base`, unless it has been defeated.
+
+All positions and scales must respect the existing Chapter 1 rendering conventions.
+
+## 7. WOLF LUNGE — EXACT TIMINGS
+
+**Reuse the same timing structure already working for Wild Bite.**
+
+The Wolf has:
+
+- **1 second anticipation.**
+- **2 seconds continuous lunge toward Dexios.**
+- **0.2 seconds post-impact Perfect Parry tolerance.**
+
+The following timeline starts after the attack announcement and flank positioning are complete.
+
+| Time | Animation / action | Defensive input |
+|---|---|---|
+| 0.0–1.0 s | `wolf_prepare_left/right` | Ignored |
+| 1.0–2.0 s | First second of `wolf_attack_left/right` movement | Normal Block |
+| 2.0–3.0 s | Second second of movement | Perfect Parry |
+| 3.0 s | Wolf visually reaches Dexios | Perfect still valid |
+| 3.0–3.2 s | Post-impact grace period | Perfect Parry |
+| After 3.2 s | Resolve defense once | Closed |
+
+### Anticipation: 0–1 second
+
+- Display the appropriate `wolf_prepare_left` or `wolf_prepare_right`.
+- Play `wolf_prepare` SFX once.
+- The Wolf visibly prepares to leap.
+- Ignore defensive inputs during this stage.
+
+### Normal Block: 1–2 seconds
+
+- Switch to the appropriate `wolf_attack_left` or `wolf_attack_right`.
+- Play `wolf_attack` SFX once.
+- Begin the two-second forward lunge.
+- Accept the correct directional key for Normal Block.
+
+The Wolf must physically advance during this entire period.
+
+### Perfect Parry: 2–3 seconds
+
+- Continue the same lunge without restarting it.
+- Accept the correct directional key for Perfect Parry.
+- The Wolf reaches Dexios at exactly 3.0 seconds.
+
+### Post-impact tolerance: 3–3.2 seconds
+
+- Display the visual contact at 3.0 seconds.
+- Continue accepting Perfect Parry inputs for another 0.2 seconds.
+- Do not finalize damage before the grace period closes.
+- Resolve the defensive outcome exactly once at the end.
+
+### Defensive results
+
+| Outcome | Dexios damage | Wolf damage |
+|---|---|---|
+| Failed Defense | 10 | 0 |
+| Normal Block | 5 | 0 |
+| Perfect Parry | 0 | 5 |
+
+### Input rules
+
+- Attack from left: A is correct.
+- Attack from right: D is correct.
+- W and S are incorrect for Wolf Lunge.
+- Ignore inputs during anticipation.
+- Only the first directional input during the active defense window counts.
+- Incorrect directions produce Failed Defense.
+- Repeated inputs cannot upgrade Normal Block to Perfect Parry.
+- A valid Perfect Parry prevents all damage.
+- Missing the defensive window causes full damage.
+- Never apply damage or a counterattack more than once.
+
+### Defensive feedback
+
+**Normal Block**
+
+- Use `dexios_izquierda` or `dexios_derecha`, matching the attack side.
+- Display `BLOCK`.
+- Apply 5 damage to Dexios.
+
+**Perfect Parry**
+
+- Use the correct directional defense sprite.
+- Display `PERFECT`.
+- Play the existing Perfect Parry SFX.
+- Apply 0 damage to Dexios.
+- Execute Dexios's existing counterattack.
+- Deal exactly 5 damage to the Wolf.
+- Display `wolf_hurt` and play its hurt SFX.
+
+**Failed Defense**
+
+- Display `FAIL`.
+- Use `dexios_herido`.
+- Apply 10 damage to Dexios.
+
+Use the existing Chapter 1 defensive indicator and visual-feedback system. Adapt the warning direction and displayed keys to the selected flank.
+
+## 8. NEW TUTORIAL — LEFT AND RIGHT DEFENSE
+
+Combat 3 introduces lateral directional defense.
+
+Use the existing Chapter 1 tutorial pop-up system.
+
+Preserve its styling:
+
+- Centered dark panel.
+- Approximately 90% opacity.
+- Gold border.
+- Archeologicaps titles.
+- Readable descriptive text.
+- Enter to advance.
+- Entire combat paused while the window is visible.
+
+### Tutorial timing
+
+Show this tutorial once, immediately before the first Wolf attack begins.
+
+The Wolf must not reposition, attack, or advance its timers while the tutorial is visible.
+
+### Message 1
+
+Title:
+
+`SIDE ATTACKS`
+
+Text:
+
+"Some enemies attack from the sides instead of above. Watch where the enemy moves before striking. Press A to defend against attacks from Dexios's left, or D to defend against attacks from his right."
+
+### Message 2
+
+Title:
+
+`TIMING YOUR DEFENSE`
+
+Text:
+
+"Press the correct key early during the enemy's approach to block and reduce damage. Wait until the enemy gets closer for a Perfect Parry, which prevents all damage and lets Dexios counterattack!"
+
+After the second message:
+
+1. Close the tutorial.
+2. Resume the encounter.
+3. Start the Wolf's first LEFT attack normally.
+4. Let the player practice defending with A.
+
+The Wolf's second attack must come from the RIGHT so the player practices D.
+
+Do not repeat the tutorial on the second attack.
+
+### Tutorial safeguards
+
+- Display this tutorial only once per attempt.
+- Reset the tutorial flag when Combat 3 restarts.
+- Do not repeat the introductory turn-based tutorial from Combat 1.
+- Do not repeat the target-selection tutorial from Combat 2.
+- Enter must not trigger a combat action after dismissing the tutorial.
+- No attack timers advance while reading.
+- R and Escape remain functional during tutorial windows.
+- Keep all text in English.
+
+Do not add narrative dialogue yet.
+
+## 9. DEXIOS — TRIPLE LIGHTNING
+
+Reuse the existing Chapter 1 Triple Lightning implementation without changing its animation or timing.
+
+### Properties
+
+- Three separate hits.
+- 5 damage per hit.
+- Maximum total: 15.
+- No Mana cost.
+- No action-command minigame.
+
+### Visual sequence
+
+1. Player selects Triple Lightning.
+2. Show the established cinematic black announcement strip.
+3. Dexios physically approaches the Wolf.
+4. Display `dexios_triple1` for 0.5 seconds and apply the first 5 damage.
+5. Display `dexios_triple2` for 0.5 seconds and apply the second 5 damage.
+6. Display `dexios_triple3` for 0.5 seconds and apply the third 5 damage.
+7. Dexios returns to his original position and idle sprite.
+
+For each successful hit:
+
+- Play `dexios.mp3`.
+- Play `wolf_hurt` SFX.
+- Briefly display the `wolf_hurt` sprite.
+- Update the Wolf's HP.
+- Apply the existing subtle camera shake.
+
+The Wolf must be the only damaged target.
+
+If the Wolf reaches zero HP before the three-hit sequence finishes, complete the animation safely without further damage.
+
+Do not introduce Electric Arc yet.
+
+No target-selection interface is necessary because there is only one enemy.
+
+## 10. COMBAT HUD AND TURN ORDER
+
+Preserve the existing Chapter 1 HUD design.
+
+### Dexios
+
+Keep the established compact panel in the bottom-right corner, displaying his icon and HP.
+
+### Wolf
+
+Display:
+
+`WOLF`
+
+Its independent health bar starts at 35/35 and updates when damaged.
+
+### Turn-order panel
+
+Display only:
+
+**Wolf → Dexios → repeat**
+
+Use `wolf_base` as the turn-order portrait if a separate icon is not provided.
+
+Preserve the existing highlight and turn-transition behavior.
+
+## 11. MUSIC, HOTKEYS, AND NAVIGATION
+
+Reuse the existing Chapter 1 music:
+
+`ch1_battle`
+
+- Start it when Combat 3 begins.
+- Loop it while the battle is active.
+- Stop or fade it on victory, defeat, or scene exit.
+- Do not create overlapping music instances.
+- Respect the existing music mute state.
+
+Keep the existing Chapter 1 keyboard shortcuts:
+
+| Key | Function |
+|---|---|
+| R | Restart Combat 3 |
+| N | Toggle music |
+| M | Toggle SFX |
+| Escape | Return to `scene_ch1_select` |
+
+These shortcuts must work during:
+
+- Enemy attacks.
+- Defensive windows.
+- Player turns.
+- Ability animations.
+- Tutorial messages.
+- Victory and defeat screens.
+
+Do not reimplement the global Chapter 1 shortcuts if they are already functioning through shared utilities. Reuse them.
+
+Restarting must preserve the current music/SFX toggle preferences.
+
+Ensure proper cleanup of audio instances, timers, input listeners, camera effects, and tweens.
+
+## 12. VICTORY, DEFEAT, AND RESTART
+
+### Victory
+
+When Wolf HP reaches zero:
+
+- Finish the current action or counterattack safely.
+- Cancel pending enemy turns.
+- Stop battle music.
+- Display the existing Chapter 1 victory presentation.
+- Offer Retry and Return to Combat Select.
+
+### Defeat
+
+When Dexios reaches zero HP:
+
+- Stop the combat safely.
+- Prevent pending attacks from continuing.
+- Display the existing Chapter 1 defeat presentation.
+- Offer Retry and Return to Combat Select.
+
+### Restart values
+
+- Dexios HP: 65/65.
+- Dexios Mana: 40/40.
+- Dexios Chaos: 0/100.
+- Wolf HP: 35/35.
+- First turn: Wolf.
+- First Wolf attack: LEFT.
+- Second Wolf attack: RIGHT.
+- Tutorial flag reset.
+- Sprite positions reset.
+- Camera reset.
+- Timers and attack states cleared.
+- Battle music restarted according to the user's current music preference.
+
+Do not leave stale events, duplicated input listeners, or overlapping music after restarting.
+
+## 13. IMPLEMENTATION SAFETY
+
+Inspect the existing working Combat 1 and Combat 2 code before implementing Combat 3.
+
+Reuse their existing systems rather than rebuilding them.
+
+The new encounter should differ primarily through configuration:
+
+- One Wolf enemy instead of Wild Boars.
+- 35 HP.
+- 10 base attack damage.
+- Left/right attack selection.
+- Direction-specific sprites.
+- Direction-specific defensive input.
+- Wolf SFX.
+- New tutorial text.
+- One Wolf/Dexios alternating turn order.
+
+If shared Chapter 1 helpers require small changes, preserve their existing behavior for Combats 1 and 2.
+
+Do not globally modify Dexios's stats or defensive timing.
+
+**Chapter 29 must remain completely intact.**
+
+Do not implement Combat 4, Electric Arc, two wolves, furious boars, potion crafting, overworld exploration, or Chapter 1 narrative sequences yet.
+
+## 14. ACCEPTANCE TESTS
+
+Verify the following before finishing:
+
+1. Combat 3 is unlocked in `scene_ch1_select`.
+2. Combats 1 and 2 still work unchanged.
+3. Combats 4–7 remain locked.
+4. `scene_ch1_combat3` loads successfully.
+5. Only Dexios and one Wolf appear.
+6. Wolf starts with 35 HP; Dexios starts with 65 HP.
+7. Turn order is Wolf → Dexios.
+8. The Wolf's first attack comes from the left and requires A.
+9. Its second attack comes from the right and requires D.
+10. Subsequent attack directions are randomized.
+11. `wolf_prepare_left` and `wolf_attack_left` are used for left attacks.
+12. `wolf_prepare_right` and `wolf_attack_right` are used for right attacks.
+13. Wolf repositioning clearly communicates the incoming direction.
+14. Anticipation lasts 1 second.
+15. Lunging movement lasts 2 seconds.
+16. Normal Block applies during the first second of movement.
+17. Perfect Parry applies during the second second of movement.
+18. The 0.2-second post-impact grace period works.
+19. Normal Block deals exactly 5 damage.
+20. Failed Defense deals exactly 10 damage.
+21. Perfect Parry prevents damage and counterattacks for exactly 5.
+22. The Wolf reacts with `wolf_hurt` when damaged.
+23. `wolf_prepare`, `wolf_attack`, and `wolf_hurt` sound effects trigger at the correct moments.
+24. Triple Lightning still uses all three separate attack sprites and impacts.
+25. Its three damaging hits play `dexios.mp3` and the Wolf hurt sound.
+26. The lateral-defense tutorial appears once and pauses combat.
+27. R, N, M, and Escape work correctly.
+28. Retry resets the encounter completely.
+29. Victory occurs when the Wolf reaches 0 HP.
+30. Chapter 29 remains unchanged and functional.
+31. The existing project build succeeds.
+
+After implementation, report the files modified, registered assets, tests performed, and any remaining issues.
+
+**FINAL GOAL:** Build the third beginner-friendly Chapter 1 encounter, introducing left/right directional defense through clearly visible Wolf movement, while preserving all existing working battles and Chapter 29.
+# LA DEXÍADA — CHAPTER 1, COMBAT 4: ELECTRIC ARC
+
+Implement Chapter 1 Combat 4 in the existing Phaser project.
+
+This encounter introduces Dexios's Mana bar, his Electric Arc ability, and the first offensive timing challenge in Chapter 1.
+
+**CRITICAL: Preserve all existing working functionality.**
+
+Chapter 1 Combats 1, 2, and 3 have already been implemented and adjusted. Inspect their current source code and reuse their established combat systems, sprites, timings, scene transitions, HUD conventions, and input management.
+
+**Chapter 29 must remain completely untouched**, including its existing Electric Arc, action commands, normal battle, tutorial, narrative sequences, characters, music, and timing values.
+
+Do not rebuild the existing combat engine.
+
+## 1. ENABLE COMBAT 4
+
+Update the existing encounter selector:
+
+`scene_ch1_select`
+
+Unlock:
+
+`COMBAT 4 — TWO WOLVES`
+
+Selecting this entry starts:
+
+`scene_ch1_combat4`
+
+Combats 1–3 remain unlocked and fully functional.
+
+Combats 5–7 remain locked.
+
+Preserve the existing selector's layout and visual style.
+
+## 2. COMBAT 4 — GENERAL SETUP
+
+Create:
+
+`scene_ch1_combat4`
+
+Encounter:
+
+**DEXIOS VS. TWO WOLVES**
+
+Reuse the existing Chapter 1 battle background:
+
+`ch1_combat1_background`
+
+There are exactly three combatants:
+
+- Dexios, in the foreground.
+- Wolf 1, on the left side of the enemy formation.
+- Wolf 2, on the right side.
+
+The Wolves should stand side by side with sufficient space for independent attack animations, targeting highlights, and HP displays.
+
+Keep the current Chapter 1 depth, scaling, and sprite-grounding conventions.
+
+### Dexios
+
+- HP: **65/65**
+- Maximum Mana: **40**
+- Starting Mana: **40/40**
+- Chaos: **0/100**, not displayed yet.
+
+Available abilities:
+
+1. `TRIPLE LIGHTNING`
+2. `ELECTRIC ARC`
+
+Do not unlock Chaotic Lightning.
+
+### Wolf 1
+
+- ID: `wolf_1`
+- Name: `WOLF 1`
+- HP: **35/35**
+- Attack: `WOLF LUNGE`
+- Failed-defense damage: **10**
+- Normal-block damage: **5**
+- Perfect Parry: **0 damage and 5 counterdamage**
+
+### Wolf 2
+
+- ID: `wolf_2`
+- Name: `WOLF 2`
+- HP: **35/35**
+- Attack: `WOLF LUNGE`
+- Failed-defense damage: **10**
+- Normal-block damage: **5**
+- Perfect Parry: **0 damage and 5 counterdamage**
+
+Each Wolf must have its own health, turn slot, sprite instance, animation state, original position, and targeting state.
+
+## 3. FIXED TURN ORDER
+
+Use:
+
+**Wolf 1 → Wolf 2 → Dexios → repeat**
+
+Wolf 1 always acts first.
+
+Wolf 2 attacks only after Wolf 1 has completed its full action, including any Perfect Parry counterattack.
+
+Dexios acts after both surviving Wolves have taken their scheduled turns.
+
+When one Wolf is defeated:
+
+- Skip its future turns.
+- Do not transfer its turn to the other Wolf.
+- Keep the surviving Wolf active.
+- Continue combat normally.
+
+Victory requires both Wolves to reach zero HP.
+
+Defeat occurs when Dexios reaches zero HP.
+
+Keep the existing top-left turn-order interface with only these three combatants.
+
+## 4. MANA BAR — FIRST INTRODUCTION
+
+Combat 4 is the first Chapter 1 encounter in which Mana is visible and relevant.
+
+Add Dexios's Mana bar to his existing bottom-right HUD.
+
+Display:
+
+`MANA 40/40`
+
+Use the established blue Mana styling from La Dexíada, matching the existing UI design.
+
+The Mana bar must:
+
+- Appear below the HP bar.
+- Show current and maximum Mana numerically.
+- Update immediately when Mana is consumed.
+- Never fall below zero.
+- Never exceed 40.
+- Remain clearly readable without covering the battle.
+
+Mana starts at **40/40** every time Combat 4 begins or restarts.
+
+### Mana costs
+
+| Ability | Mana cost |
+|---|---|
+| Triple Lightning | 0 |
+| Electric Arc | 10 |
+
+Electric Arc consumes **10 Mana when the action is committed**, including when its timing challenge fails.
+
+If Dexios has fewer than 10 Mana, Electric Arc must be unavailable and clearly disabled.
+
+Triple Lightning remains available at all times.
+
+Do not introduce Mana regeneration or additional resource mechanics in this encounter.
+
+Do not automatically add the Mana bar to earlier Chapter 1 encounters unless their current implementation already supports it.
+
+## 5. EXISTING WOLF MECHANICS
+
+Reuse the fully functional Wolf mechanics from Combat 3.
+
+Each Wolf uses:
+
+`WOLF LUNGE`
+
+The attack originates from either Dexios's left or right.
+
+### Existing Wolf sprites
+
+- `wolf_base`
+- `wolf_prepare_left`
+- `wolf_prepare_right`
+- `wolf_attack_left`
+- `wolf_attack_right`
+- `wolf_hurt`
+
+### Existing Wolf SFX
+
+- `wolf_prepare`
+- `wolf_attack`
+- `wolf_hurt`
+
+Preserve the working Combat 3 attack animations, positioning, visual indicators, camera movement, and sound synchronization.
+
+### Directional defenses
+
+- Attack from Dexios's left: defend with **A**.
+- Attack from Dexios's right: defend with **D**.
+
+Use `dexios_izquierda` and `dexios_derecha` for the matching defenses.
+
+### Wild Lunge timing
+
+Keep the existing Wolf Lunge timing unchanged:
+
+- 1 second of anticipation.
+- 2 seconds of continuous forward movement.
+- First second of movement: Normal Block.
+- Second second of movement: Perfect Parry.
+- 0.2 seconds of post-impact Perfect Parry tolerance.
+
+Defensive result:
+
+| Outcome | Dexios damage | Counterattack |
+|---|---|---|
+| Failed Defense | 10 | 0 |
+| Normal Block | 5 | 0 |
+| Perfect Parry | 0 | 5 to attacking Wolf |
+
+Both Wolves can independently attack from either side.
+
+For the first round, configure Wolf 1 to attack from the left and Wolf 2 from the right, allowing the player to practice both defenses. Subsequent directions can be randomized with equal probability.
+
+This first-round direction setup applies only to Combat 4. Do not change Combat 3's existing attack sequence.
+
+Only one Wolf attacks at a time.
+
+Perfect Parry counterdamage must always be applied to the Wolf that performed the attack.
+
+## 6. TARGET SELECTION
+
+Reuse the multi-enemy targeting system implemented in Combat 2.
+
+When Dexios selects either Triple Lightning or Electric Arc:
+
+1. Show the two living Wolves as possible targets.
+2. Press 1 to select Wolf 1.
+3. Press 2 to select Wolf 2.
+4. Mouse selection must also work.
+5. Highlight the selected or hovered enemy.
+6. Confirm the target before starting the ability.
+
+Do not automatically attack while two enemies remain alive.
+
+If only one Wolf remains, select that Wolf automatically.
+
+Defeated Wolves cannot be targeted.
+
+The selected target must remain fixed throughout the entire chosen ability.
+
+Do not redirect attacks to another Wolf midway through an animation.
+
+Do not repeat Combat 2's target-selection tutorial.
+
+## 7. TRIPLE LIGHTNING — UNCHANGED
+
+Preserve the existing Chapter 1 Triple Lightning implementation.
+
+- Three hits of 5 damage.
+- Maximum total: 15 damage.
+- No Mana cost.
+- No offensive timing challenge.
+- Existing cinematic black attack-announcement strip.
+- Existing physical approach.
+- Existing sequence:
+
+`dexios_triple1 → dexios_triple2 → dexios_triple3`
+
+Each hit retains its current animation, sound, camera shake, and damage synchronization.
+
+Triple Lightning must target only the selected Wolf.
+
+**Do not modify its current gameplay behavior.**
+
+Electric Arc is the first Chapter 1 ability that introduces an offensive timing challenge.
+
+## 8. NEW ELECTRIC ARC ASSETS
+
+Register the supplied final assets using their exact physical filenames and extensions.
+
+### Visual sprites
+
+- `dexios_arc_charging`
+- `dexios_arc_releasing`
+
+### Sound effects
+
+- `electric_arc_charging`
+- `electric_arc_releasing`
+
+Use the project's existing asset-loading conventions.
+
+The charging sprite represents Dexios accumulating white electricity in his hands.
+
+The releasing sprite represents Dexios performing the charged electrical attack.
+
+Register sound effects separately from sprite assets.
+
+Do not create placeholder sprites or substitute other Dexios artwork.
+
+Reuse the existing background music:
+
+`ch1_battle`
+
+## 9. ELECTRIC ARC — ABILITY STATISTICS
+
+Ability name:
+
+`ELECTRIC ARC`
+
+Properties:
+
+- Target: one selected living Wolf.
+- Mana cost: **10**.
+- Normal damage: **35**.
+- Perfect damage: **40**.
+- Failed timing challenge: **0 damage**.
+- Charging duration: **2 seconds**.
+- Timing inputs: **A + D held simultaneously, then released**.
+
+The Mana cost is paid when the action begins, regardless of the eventual timing result.
+
+This ability consumes Dexios's turn even if the challenge fails.
+
+Do not use the existing Chapter 29 Electric Arc damage, cost, or timing settings.
+
+All new values apply only to Chapter 1 Combat 4.
+
+## 10. ELECTRIC ARC — CINEMATIC INTRODUCTION
+
+When the player chooses Electric Arc and confirms a target:
+
+1. Lock the ability and target-selection controls.
+2. Consume 10 Mana.
+3. Show the existing black cinematic attack-announcement strip.
+4. Display `ELECTRIC ARC`.
+5. Preserve the existing Chapter 1 announcement animation and hold duration.
+6. Once the announcement finishes, begin the new charging action command.
+
+Do not allow multiple simultaneous Electric Arc commands.
+
+## 11. ELECTRIC ARC — CHARGING ANIMATION
+
+When the action command starts:
+
+1. Change Dexios's sprite to `dexios_arc_charging`.
+2. Play `electric_arc_charging` SFX once.
+3. Smoothly zoom the camera toward Dexios.
+4. Keep Dexios clearly visible while maintaining the selected Wolf as the intended target.
+5. Display the offensive timing challenge prominently.
+6. Begin the 2-second charge.
+
+The camera zoom should resemble the established combat-camera style without obscuring the timing indicators.
+
+The charging SFX must play when the charging pose begins, not during the cinematic introduction.
+
+If the sound is longer than the action command, stop or fade it when charging ends. Do not let it overlap uncontrollably with the release sound.
+
+Keep camera zoom parameters configurable.
+
+## 12. ELECTRIC ARC — DIAGONAL TIMING CHALLENGE
+
+Create the new visual timing challenge discussed for Electric Arc.
+
+The challenge consists of **two diagonal progress bars converging toward a shared intersection**.
+
+### Visual layout
+
+- The left diagonal begins near the lower-left side of the timing interface.
+- It rises diagonally toward the upper-right.
+- Associate this bar with **A**.
+
+- The right diagonal begins near the lower-right side.
+- It rises diagonally toward the upper-left.
+- Associate this bar with **D**.
+
+The two bars form a symmetrical inverted-V / converging structure, meeting near the upper-center of the challenge interface.
+
+The intersection is the ideal release point.
+
+### Input instructions
+
+Display concise English instructions:
+
+`HOLD A + D`
+
+Then:
+
+`RELEASE AT THE INTERSECTION!`
+
+Both keys must be held to begin charging.
+
+Once both keys are held, the two progress indicators advance simultaneously toward the central intersection.
+
+Both indicators must remain synchronized.
+
+The indicators take **2 full seconds to reach the intersection**.
+
+The player should release the held keys as close as possible to the moment the bars meet.
+
+Use the first release after both keys have been held as the decisive release event, and evaluate the challenge once. Releasing the other key afterward must not produce a second result.
+
+Inputs must be handled only by the active action command. Do not trigger Dexios's normal defensive animations when A or D is being used for Electric Arc.
+
+### Time reference
+
+Let:
+
+**T = 2.0 seconds after charging progress begins.**
+
+T is the moment when the two bars reach the intersection.
+
+### Timing result windows
+
+| Release timing | Result | Damage |
+|---|---|---|
+| Earlier than T − 1.5 s | FAIL | 0 |
+| T − 1.5 s to T − 0.5 s | NORMAL | 35 |
+| T − 0.5 s to T + 0.5 s | PERFECT | 40 |
+| Later than T + 0.5 s | FAIL | 0 |
+
+Numerically, measured from the start of bar progression:
+
+- **0.0–0.5 s:** FAIL if released.
+- **0.5–1.5 s:** NORMAL.
+- **1.5–2.5 s:** PERFECT.
+- **After 2.5 s:** FAIL.
+
+At exactly 1.5 seconds, PERFECT takes priority over NORMAL.
+
+At exactly 2.5 seconds, the last valid PERFECT input is accepted; later releases fail.
+
+### Post-intersection grace period
+
+The bars reach their shared intersection at 2.0 seconds.
+
+They must not continue moving past their intended meeting point.
+
+Instead, retain a clear visual intersection or brief charged glow during the additional **0.5-second Perfect window**.
+
+This allows the player to release slightly after the ideal moment while keeping the interface understandable.
+
+If the player continues holding beyond 2.5 seconds, automatically resolve the challenge as FAIL. Do not allow indefinite charging.
+
+### Input safeguards
+
+- Both A and D must be held before charging progress begins.
+- Releasing before the valid NORMAL window results in FAIL.
+- The first release after a valid dual-key hold determines the result.
+- Never process the challenge twice.
+- Ignore unrelated combat inputs during the command.
+- Do not allow R or Escape to leave active timers or charging SFX behind.
+- Pause the challenge if a legitimate tutorial/modal pause occurs.
+- Clear held-key state when the action ends.
+- Ensure the next enemy defense does not inherit A/D input from this action command.
+
+## 13. ELECTRIC ARC — RESULT FEEDBACK
+
+After the player releases:
+
+Determine the result.
+
+### NORMAL
+
+- Display `NORMAL`.
+- Final damage: **35**.
+- Proceed to the physical attack animation.
+
+### PERFECT
+
+- Display `PERFECT`.
+- Final damage: **40**.
+- Proceed to the physical attack animation.
+- Use a slightly stronger electrical flash or impact effect than NORMAL, without adding extra damage beyond 40.
+
+### FAIL
+
+- Display `FAIL`.
+- Deal **0 damage**.
+- Do not execute the physical strike.
+- Do not play the releasing attack SFX.
+- Stop the charging sound.
+- Smoothly return the camera to the normal battlefield view.
+- Restore `dexios_base`.
+- Complete Dexios's turn normally.
+
+Do not refund the 10 Mana spent on a failed command.
+
+Result feedback must be clear and consistent with the established La Dexíada UI.
+
+## 14. ELECTRIC ARC — PHYSICAL RELEASE
+
+For a NORMAL or PERFECT result:
+
+1. End the charging animation.
+2. Stop the charging SFX if still playing.
+3. Transition Dexios to `dexios_arc_releasing`.
+4. Move Dexios physically toward the selected Wolf.
+5. Play `electric_arc_releasing` SFX once.
+6. Maintain the attack sprite for **1 second**.
+7. Synchronize the actual hit with the visible strike.
+8. Apply exactly 35 damage for NORMAL or 40 for PERFECT.
+9. Display `wolf_hurt`.
+10. Play `wolf_hurt` SFX once.
+11. Apply a brief camera shake and white electrical impact effect.
+12. Update the selected Wolf's HP bar.
+13. After the release animation, Dexios returns smoothly to his original position.
+14. Restore `dexios_base`.
+15. Restore the normal camera position and zoom.
+16. Complete the turn.
+
+### Important animation rules
+
+The physical attack must target the Wolf selected before the challenge began.
+
+Dexios must approach the correct Wolf, whether it is positioned on the left or right.
+
+The other Wolf must remain unaffected.
+
+The damage occurs only once, at the attack's actual impact.
+
+Do not apply additional damage because of sprite changes, camera shakes, or repeated event callbacks.
+
+The physical release lasts 1 second. Preserve the existing Chapter 1 movement and recovery conventions around that pose.
+
+If the strike defeats its target, finish the animation safely before resolving the next turn or victory.
+
+Do not allow a defeated Wolf to perform additional actions.
+
+## 15. NEW BEGINNER TUTORIAL WINDOWS
+
+Combat 4 introduces two concepts:
+
+1. Mana and ability costs.
+2. Offensive timing challenges.
+
+Use the existing Chapter 1 tutorial window system.
+
+Preserve:
+
+- Dark background with approximately 90% opacity.
+- Gold border.
+- Archeologicaps titles.
+- Readable secondary font.
+- Enter to advance.
+- Complete combat pause while tutorial messages are visible.
+
+### Tutorial A — Mana
+
+Show this message once at the beginning of Dexios's first turn, before activating the ability menu.
+
+**Title: `MANA`**
+
+Text:
+
+"Some abilities consume Mana, shown by the blue bar below Dexios's Health. Electric Arc costs 10 Mana, while Triple Lightning is free. Choose your abilities carefully!"
+
+### Tutorial B — Offensive action commands
+
+Show this message once immediately before the player's first Electric Arc timing challenge, after the ability and target have been selected but before the charging sequence begins.
+
+**Title: `ACTION COMMANDS`**
+
+Text:
+
+"Some abilities require precise timing to succeed. For Electric Arc, hold A and D to charge both sides of the attack, then release as the two bars meet. Better timing means greater damage!"
+
+After Enter:
+
+- Close the window.
+- Start the charging sprite and SFX.
+- Zoom toward Dexios.
+- Show the two diagonal bars.
+- Begin the timing challenge.
+
+### Tutorial behavior
+
+- Each message appears only once per Combat 4 attempt.
+- Restarting Combat 4 resets both tutorial flags.
+- Do not repeat the basic combat tutorials from Combat 1.
+- Do not repeat target selection from Combat 2.
+- Do not repeat lateral-defense tutorials from Combat 3.
+- Tutorial Enter must not accidentally start or finish an action command.
+- No timers, damage, movement, or challenge progress may advance during tutorial windows.
+- Music may continue while tutorials are open.
+- R and Escape must remain functional.
+
+All player-facing text must be in English.
+
+Do not add narrative dialogue yet.
+
+## 16. AUDIO
+
+Use the existing Chapter 1 battle music:
+
+`ch1_battle`
+
+It must loop during Combat 4 and follow the current music manager's behavior.
+
+### Existing audio
+
+Reuse:
+
+- `wolf_prepare`
+- `wolf_attack`
+- `wolf_hurt`
+- `dexios.mp3`
+- Existing Perfect Parry SFX.
+
+### New Electric Arc audio
+
+- `electric_arc_charging`: plays when charging begins.
+- `electric_arc_releasing`: plays once when the successful attack is released.
+
+Sound effects must respect the existing M toggle.
+
+Music must respect the existing N toggle.
+
+Do not create duplicate music playback or uncontrolled sound-effect overlap.
+
+Stop any active charging audio when the scene restarts, exits, or the command ends.
+
+Chapter 29's existing Electric Arc sounds and animations must remain unchanged.
+
+## 17. EXISTING CHAPTER 1 HOTKEYS
+
+Preserve the established shortcuts:
+
+| Key | Function |
+|---|---|
+| R | Restart Combat 4 |
+| N | Toggle music |
+| M | Toggle SFX |
+| Escape | Return to `scene_ch1_select` |
+
+R and Escape must work even during:
+
+- Electric Arc charging.
+- Action-command result feedback.
+- Attack animations.
+- Defensive windows.
+- Tutorial pop-ups.
+- Target selection.
+- Victory and defeat.
+
+Always clean up timers, tweens, sound effects, event listeners, and camera transitions before restarting or leaving the scene.
+
+Music and SFX preferences persist across scene transitions and retries.
+
+## 18. VICTORY, DEFEAT, AND RESTART
+
+### Victory
+
+Victory occurs only when **both Wolves reach zero HP**.
+
+- Finish the current action safely.
+- Stop turn progression.
+- Stop or fade out `ch1_battle`.
+- Display the existing Chapter 1 victory interface.
+- Offer Retry and Return to Combat Select.
+
+### Defeat
+
+Defeat occurs when Dexios reaches zero HP.
+
+- Cancel pending actions.
+- Stop combat progression.
+- Stop the battle music.
+- Display the existing defeat interface.
+- Offer Retry and Return to Combat Select.
+
+### Restart
+
+Restore:
+
+- Dexios HP: 65/65.
+- Dexios Mana: 40/40.
+- Dexios Chaos: 0/100.
+- Wolf 1 HP: 35/35.
+- Wolf 2 HP: 35/35.
+- First turn: Wolf 1.
+- Both Wolves alive and at their original positions.
+- No target selected.
+- Electric Arc charge state cleared.
+- All tutorial flags reset.
+- All camera positions and zoom restored.
+- All temporary sprites and effects cleared.
+- All attack timelines reset.
+
+Restart music according to the current mute preference.
+
+Do not retain an old charging sound, held-key state, duplicate listener, or unfinished attack.
+
+## 19. ARCHITECTURE AND ISOLATION
+
+Inspect the current Chapter 1 combat implementation before making changes.
+
+Prefer extending the existing encounter configuration and action-command framework rather than introducing a completely separate combat engine.
+
+The new encounter should reuse:
+
+- Chapter 1 turn scheduling.
+- Multiple-enemy targeting.
+- Wolf directional attacks.
+- Defensive timing.
+- Damage resolution.
+- Tutorial windows.
+- Cinematic attack announcements.
+- Music and SFX manager.
+- Camera controls.
+- Victory/defeat interface.
+- Scene-specific hotkeys.
+
+Add configuration for:
+
+- Two Wolves.
+- Fixed three-slot turn order.
+- Mana HUD visibility.
+- Electric Arc unlock.
+- Mana cost.
+- New charge/release sprites.
+- Diagonal timing challenge.
+- Timing-result damage.
+- Zoom and animation duration.
+- New Electric Arc audio.
+
+Do not change the existing Chapter 1 Triple Lightning or Wolf Lunge behavior.
+
+**Chapter 29's original Electric Arc must remain exactly as it is.**
+
+Do not implement later encounters, furious boars, potion crafting, the overworld, or Chaotic Lightning.
+
+## 20. ACCEPTANCE TESTS
+
+Verify all of the following:
+
+1. Combat 4 is enabled in `scene_ch1_select`.
+2. Combats 1–3 still work unchanged.
+3. Combats 5–7 remain locked.
+4. `scene_ch1_combat4` launches correctly.
+5. The battle displays Dexios and two Wolves.
+6. Both Wolves have independent 35-HP bars.
+7. Dexios begins with 65 HP and 40 Mana.
+8. The turn order is Wolf 1 → Wolf 2 → Dexios.
+9. Wolf Lunge still functions with A/D defense and 10/5/0 damage outcomes.
+10. Target selection correctly distinguishes the two Wolves.
+11. The Mana bar appears beneath Dexios's HP.
+12. Triple Lightning remains available and unchanged.
+13. Electric Arc appears as Dexios's second ability.
+14. Selecting Electric Arc consumes exactly 10 Mana.
+15. The first Mana tutorial appears once.
+16. The first Action Commands tutorial appears once.
+17. `dexios_arc_charging` displays during charging.
+18. `electric_arc_charging` plays when charging begins.
+19. The camera zooms toward Dexios without obscuring the minigame.
+20. The diagonal bars visibly converge from A and D toward one intersection.
+21. Both bars require 2 seconds to reach the intersection.
+22. Releasing before 0.5 seconds produces FAIL.
+23. Releasing between 0.5 and 1.5 seconds produces NORMAL and 35 damage.
+24. Releasing between 1.5 and 2.5 seconds produces PERFECT and 40 damage.
+25. Holding past 2.5 seconds produces FAIL.
+26. A failed command deals no damage and still consumes 10 Mana and Dexios's turn.
+27. A successful command shows `dexios_arc_releasing`.
+28. `electric_arc_releasing` plays once during the successful release.
+29. Dexios physically approaches the selected Wolf.
+30. The release sprite is held for 1 second.
+31. Only the selected Wolf takes damage.
+32. Dexios returns to his original position after the attack.
+33. Camera zoom and position always reset after success, failure, restart, or scene exit.
+34. Mana cannot fall below zero.
+35. Electric Arc becomes unavailable when Mana is insufficient.
+36. The game does not accidentally interpret A+D as defensive inputs during Electric Arc.
+37. Victory occurs only when both Wolves are defeated.
+38. All existing Chapter 1 hotkeys function.
+39. No duplicated damage, listeners, overlapping audio, stuck inputs, or unfinished timers occur.
+40. All Chapter 29 scenes, mechanics, and audio remain unaffected.
+41. The project builds successfully using its existing build command.
+
+After implementation, report the files changed, the new scene registration, asset loading results, test results, and any unresolved issues.
+
+**FINAL OBJECTIVE:** Create a polished, beginner-friendly fourth Chapter 1 encounter where two Wolves challenge Dexios and introduce Mana management and the first offensive action command through a cinematic, diagonal-bar Electric Arc minigame. Preserve all previous encounters and Chapter 29.
