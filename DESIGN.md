@@ -28,7 +28,7 @@ The system index is:
 
 ## FINAL CONFIGURED TIMING VALUES
 
-These are the current base values in milliseconds unless a different unit is shown. Tutorial combat uses a 1.5 timing multiplier; standard combat uses 1.0. Tutorial damage from bosses uses a separate 0.75 multiplier, rounded up.
+These are the current base values in milliseconds unless a different unit is shown. Tutorial combat uses a 1.5 timing multiplier; standard combat uses 1.0. Incoming-attack defensive windows and their projectile travel use an additional 1.5 multiplier in every mode, so the effective scale is 1.5 in standard combat and 2.25 in tutorial combat. Narrative mode also applies its existing 2.25 defense-window scale on top of the shared multiplier. Tutorial damage from bosses uses a separate 0.75 multiplier, rounded up.
 
 ### Camera
 
@@ -47,6 +47,7 @@ These are the current base values in milliseconds unless a different unit is sho
 | Defense opens before impact | 500 ms |
 | Perfect-parry window starts before impact | 100 ms |
 | Defense closes after impact | 100 ms |
+| Incoming-attack window multiplier | 1.5× |
 | Defense hint lead | 100 ms |
 | Result display | 1,019 ms |
 | Delay between Lightning Chain bolts | 373 ms |
@@ -73,6 +74,8 @@ These are the current base values in milliseconds unless a different unit is sho
 | Portal Shield duration | 1 playable-character turn |
 
 For Meteor Rain, the normal-block window is the first 400 ms of the 800 ms defense window, and the perfect-parry window is the following 400 ms. Each meteor resolves after both windows close. The first meteor has a 500 ms preparation phase; following meteors have no preparation phase.
+
+The table lists base values. Apply the incoming-attack window multiplier to defense-window boundaries and incoming projectile travel; tutorial combat also applies its existing 1.5 timing multiplier, and narrative mode also applies its configured 2.25 defense-window scale.
 
 ### Offensive action commands
 
@@ -137,7 +140,7 @@ The prototype must:
 14.	Keep the two bosses' health, status, abilities, and turns independent; victory requires defeating both bosses.
 15.	Preserve the standard combat scene and provide a separate tutorial-configured scene with the same combat logic.
 
-The standard scene remains `escena_combate_dificil`. The tutorial scene, `escena_tutorial`, reuses the same combat implementation with a configured 0.75 multiplier on god-origin damage (rounded up with `Math.ceil`) and a 1.5 multiplier on combat and action-command timings. Player-origin damage, boss HP, attack counts, healing amounts, turn order, and the standard scene's damage and timing remain unchanged. `escena_select` presents equally sized 700 × 360 Tutorial and Combat ovals symmetrically at X=560 and X=1360. The left button is labeled `tutorial`, uses `assets/backgrounds/tutorial.png`, and starts a fresh tutorial encounter; the existing `COMBAT START` artwork, label, and destination remain unchanged apart from its position.
+The standard scene remains `escena_combate_dificil`. The tutorial scene, `escena_tutorial`, reuses the same combat implementation with a configured 0.75 multiplier on god-origin damage (rounded up with `Math.ceil`) and a 1.5 multiplier on combat and action-command timings. Incoming-attack defensive windows and projectile travel also receive a shared 1.5 multiplier in both modes; tutorial mode stacks its timing multiplier on top. Player-origin damage, boss HP, attack counts, healing amounts, and turn order remain unchanged. `escena_select` presents equally sized 700 × 360 Tutorial and Combat ovals symmetrically at X=560 and X=1360. The left button is labeled `tutorial`, uses `assets/backgrounds/tutorial.png`, and starts a fresh tutorial encounter; the existing `COMBAT START` artwork, label, and destination remain unchanged apart from its position.
 1.3. Out of Scope
 This prototype will not include exploration, interactive dialogue, inventory, character progression, equipment selection, additional bosses beyond Iobrontes and Kosmelys, multiple arenas, or a complete save system.
 Character speed statistics will also be excluded. Turn order will remain fixed throughout the encounter.
@@ -681,29 +684,29 @@ The appropriate directional frame becomes visible.
 A warning marker appears on the side corresponding to the attack.
 Defensive inputs during this phase are ignored without penalty.
 Phase 2 â€” Projectile Travel
-Duration: 0.373 seconds
+Base duration: 0.373 seconds. Incoming projectile travel is 1.5× in standard combat and 2.25× in tutorial combat.
 The lightning projectile travels toward the targeted character.
 A timing ring appears around the target and contracts toward them.
 The ring reaches its final size at the moment of visual impact.
 Phase 3 â€” Defensive Resolution
 All timing is measured relative to the moment of impact, called T.
-The defensive window opens 0.5 seconds before impact and closes 0.1 seconds after impact.
+The defensive window opens 0.75 seconds before impact and closes 0.15 seconds after impact in standard combat. Tutorial combat uses a 2.25× total scale: it opens 1.125 seconds before impact and closes 0.225 seconds after impact. Narrative mode additionally applies its configured 2.25 defense-window scale.
 Timing	Correct Input Result	Indicator
-Before T âˆ’ 0.5 s	Ignored	Neutral
-T âˆ’ 0.5 s to T âˆ’ 0.1 s	Imperfect block	Yellow
-T âˆ’ 0.1 s to T + 0.1 s	Perfect parry	White, glowing
-After T + 0.1 s	No valid defense	Inactive
+Before T âˆ’ 0.75 s (standard) / T âˆ’ 1.125 s (tutorial)	Ignored	Neutral
+T âˆ’ 0.75 s to T âˆ’ 0.15 s (standard) / T âˆ’ 1.125 s to T âˆ’ 0.225 s (tutorial)	Imperfect block	Yellow
+T âˆ’ 0.15 s to T + 0.15 s (standard) / T âˆ’ 0.225 s to T + 0.225 s (tutorial)	Perfect parry	White, glowing
+After T + 0.15 s (standard) / T + 0.225 s (tutorial)	No valid defense	Inactive
 Only the first directional input made during the active window is accepted.
 An incorrect directional input results in a failed defense.
 Inputs made before the defensive window opens do not automatically trigger a defense later.
 9.3. Impact and Damage Synchronization
 The visual impact and the final damage calculation must be handled separately.
 The lightning visually reaches the target at time T.
-However, the defensive window remains active until T + 0.1 seconds.
+However, the defensive window remains active until T + 0.15 seconds in standard combat or T + 0.225 seconds in tutorial combat.
 Therefore:
 1.	At time T, the lightning reaches the character visually.
 2.	The game records the apparent impact but does not finalize damage.
-3.	The player may still perform a perfect parry until T + 0.1 seconds.
+3.	The player may still perform a perfect parry until the mode-specific defensive-window close time.
 4.	When the defensive window closes, the game determines the result.
 5.	The correct damage, block, or counterattack result is applied.
 6.	The corresponding feedback is displayed.
@@ -944,9 +947,9 @@ Each Lightning Chain must be treated as one enemy action containing three separa
 â€¢	Chain-level perfect-parry tracking.
 â€¢	A final counterattack when applicable.
 â€¢	Automatic cancellation if the target becomes incapacitated.
-Watch the Thunder is one enemy action targeting all active party members. It has a 0.6-second casting time followed by a 0.3-second team jump window, deals 50 damage to each character who does not jump, and has no directional or parry outcomes.
+Watch the Thunder is one enemy action targeting all active party members. It has a 0.6-second base casting time followed by a 0.3-second base team jump window; the shared incoming-window multiplier applies to the jump window, and tutorial combat also applies its own timing multiplier. It deals 50 damage to each character who does not jump and has no directional or parry outcomes.
 Divine Retribution activates a two-playable-turn electric shield using iobrontes_armadura and armadura.mp3. The next damaging attack against Iobrontes deals its normal damage and triggers 30 damage to its attacker; the shield then ends. It also ends after two playable-character turns, whether or not either character attacked, and Iobrontes returns to iobrontes_base on either ending.
-Kosmelys independently selects Cosmic Rays (50%), Portal Shield (30%), or Meteor Rain (20%). If Portal Shield is unavailable because it is already active, redistribute its probability proportionally among the available abilities. Cosmic Rays targets one conscious character with both sequential projectiles, changes each projectile's direction once at its travel midpoint, and resolves each projectile once. Meteor Rain resolves five meteors strictly sequentially: the first has a 0.5-second casting phase and 0.5-second travel, and each following meteor begins falling as soon as the preceding perfect-parry window closes, with 0.7-second travel. Every meteor uses normal-block and perfect-parry windows relative to impact, character-specific results, and any eligible counterattacks. Portal Shield redirects one entire offensive ability to a conscious party member and observes its one-character-turn duration.
+Kosmelys independently selects Cosmic Rays (50%), Portal Shield (30%), or Meteor Rain (20%). If Portal Shield is unavailable because it is already active, redistribute its probability proportionally among the available abilities. Cosmic Rays targets one conscious character with both sequential projectiles, changes each projectile's direction once at its travel midpoint, and resolves each projectile once. Meteor Rain resolves five meteors strictly sequentially: the first has a 0.5-second base casting phase and 0.5-second base travel, and each following meteor begins falling as soon as the preceding defense window closes, with 0.7-second base travel. Apply the incoming-window multiplier to meteor travel and defense windows; tutorial combat also applies its own timing multiplier. Every meteor uses character-specific results and any eligible counterattacks. Portal Shield redirects one entire offensive ability to a conscious party member and observes its one-character-turn duration.
 The next turn must not begin until the current enemy action, including its damage and any applicable counterattack, has resolved.
 13.5. Damage and Resource Processing
 Every damaging action must:
@@ -1012,7 +1015,7 @@ Defense and Camera
 36.	WASD controls only the character being targeted by Lightning Chain.
 37.	Space triggers a simultaneous team jump only during the Watch the Thunder jump window.
 38.	The timing ring correctly displays the active defensive or jump window.
-39.	Damage resolution occurs after the Lightning Chain defensive window closes at T + 0.1 seconds.
+39.	Damage resolution occurs after the Lightning Chain defensive window closes at T + 0.15 seconds in standard combat or T + 0.225 seconds in tutorial combat.
 40.	Defensive results are calculated separately for every Lightning Chain bolt.
 41.	The camera returns to its normal position after Lightning Chain.
 Visuals and Audio
@@ -1022,13 +1025,13 @@ Visuals and Audio
 45.	Watch the Thunder and Cosmic Strike alternate without individually looping during combat.
 46.	Sound effects accompany major combat actions.
 47.	The battle remains visually readable at 1920 Ã— 1080 resolution.
-48.	Kosmelys's Cosmic Rays targets one party member for both projectiles; each changes direction at its midpoint, moves the same effect to the new directional origin without resetting remaining travel time, and resolves damage exactly once.
+48.	Kosmelys's Cosmic Rays targets one party member for both projectiles; each changes direction at its midpoint, shows no WASD key for the initial direction and shows the new key immediately after the change, moves the same effect to the new directional origin without resetting remaining travel time, and resolves damage exactly once.
 49.	Cosmic Rays applies the specified Dexios, Furai, and Sahira defensive and counterattack rules.
 50.	Meteor Rain launches five meteors one at a time, with no overlapping projectile, targeting indicator, defensive window, or unresolved event; each new meteor begins falling as soon as the previous perfect-parry window closes.
-51.	The first Meteor Rain meteor has a 0.5-second casting phase and 0.5-second travel; following meteors begin falling immediately after the preceding window closes and travel for 0.7 seconds. Every meteor has a 0.4-second normal-block window from T âˆ’ 0.7 to T âˆ’ 0.3, a 0.4-second perfect-parry window from T âˆ’ 0.3 to T + 0.1, and resolves only after T + 0.1.
+51.	The first Meteor Rain meteor has a 0.5-second base casting phase and 0.5-second base travel; following meteors begin falling immediately after the preceding window closes and have 0.7-second base travel. Apply the 1.5 shared incoming-window multiplier to meteor travel and defense windows, with tutorial timing scaling on top. Standard normal-block and perfect-parry windows are each 0.6 seconds; tutorial windows are each 0.9 seconds. Damage resolves after the mode-specific window close.
 52.	Dexios counterattacks Kosmelys for 5 damage after every meteor he perfectly parries.
 53.	Furai deals one 20-damage Tiger Parry after Meteor Rain only if he was targeted at least once and perfectly parried every meteor assigned to him.
-54.	Sahira blocks any meteor with a correct W input in the full 0.8-second window; she has no perfect-parry result or counterattack.
+54.	Sahira blocks any meteor with a correct W input in the full 1.2-second standard window or 1.8-second tutorial window; she has no perfect-parry result or counterattack.
 55.	Meteor Rain applies Chaos generation, target exclusion for incapacitated characters, and the no-zoom camera behavior.
 56.	Kosmelys's ability selection uses the 50% / 30% / 20% distribution and proportionally redistributes unavailable Portal Shield probability.
 57.	The four Kosmelys sound effects play at their specified cast, direction-change, activation, redirection, and meteor-fall events without interrupting music.
@@ -1348,13 +1351,13 @@ This refers to movement speed, not total animation duration.
 
 Therefore, Cosmic Rays projectiles should travel more slowly than Lightning Chain projectiles.
 
-If the effective Lightning Chain travel time is 0.373 seconds for the same travel distance, the corresponding Cosmic Rays travel time should be approximately:
+The base Lightning Chain travel time is 0.373 seconds. After the incoming-window multiplier, standard Lightning Chain travel is approximately 0.560 seconds and its corresponding Cosmic Rays travel is approximately:
 
-0.373 / 0.60 = 0.622 seconds.
+0.560 / 0.60 = 0.933 seconds.
 
-This calculation is a reference. The implementation should compare effective projectile movement rather than blindly copying durations if projectile distances differ.
+Tutorial timings apply their additional 1.5 combat multiplier to those durations. This calculation is a reference; compare effective projectile movement rather than blindly copying durations if projectile distances differ.
 
-The speed reduction must not accidentally be applied twice.
+Apply the 60% movement-speed ratio once, independently of the combat timing multipliers.
 
 The projectile must remain visually readable throughout the direction change.
 
@@ -1379,12 +1382,13 @@ Because the projectile changes direction halfway through its journey, the implem
 
 Required behavior:
 
-1. Show the projectile's initial direction during the first half of its movement.
+1. Show the projectile's initial direction visually during the first half of its movement, but leave the direction-key indicator empty and do not display its WASD key.
 2. Change the direction exactly at the midpoint.
-3. Open the valid defensive input period at or after the direction change, so the player cannot resolve the attack before its final direction has been revealed.
-4. Display the usual defense timing indicator.
-5. Evaluate the input exclusively against the new direction.
-6. Resolve the attack once its defensive window closes, exactly once.
+3. Show the WASD key for the new direction as soon as the direction changes.
+4. Open the valid defensive input period at or after the direction change, so the player cannot resolve the attack before its final direction has been revealed.
+5. Display the usual defense timing indicator.
+6. Evaluate the input exclusively against the new direction.
+7. Resolve the attack once its defensive window closes, exactly once.
 
 The existing character-specific block damage rules remain active. A failed defense causes 15 damage. Successful imperfect blocks follow the existing character-specific blocking rules, and a perfect parry prevents damage. Configure precise Cosmic Rays input thresholds because the direction change leaves less reaction time than Lightning Chain.
 
@@ -1574,20 +1578,20 @@ If a character becomes incapacitated before a later meteor selects its target, t
 
 ## 5.3. Individual Meteor Timing and Defensive Windows
 
-The first meteor has a 0.5-second casting/preparation phase followed by 0.5 seconds of visible travel. Each subsequent meteor begins falling as soon as the previous meteor's defense window closes and travels for 0.7 seconds. The impact time is T. Each meteor's 0.8-second defense window is:
+The first meteor has a 0.5-second base casting/preparation phase followed by 0.5 seconds of base visible travel. Each subsequent meteor begins falling as soon as the previous meteor's defense window closes and has 0.7 seconds of base travel. Apply the 1.5 incoming-window multiplier to travel and defense-window durations; tutorial mode adds its 1.5 combat multiplier. The impact time is T.
 
 | Timing relative to impact T | Result |
 |---|---|
-| Before T âˆ’ 0.7 s | Input ignored |
-| T âˆ’ 0.7 s to T âˆ’ 0.3 s | Normal block (0.4 s) |
-| T âˆ’ 0.3 s to T + 0.1 s | Perfect parry (0.4 s) |
-| After T + 0.1 s | Failed defense if no valid input was registered |
+| Standard: before T âˆ’ 1.05 s; tutorial: before T âˆ’ 1.575 s | Input ignored |
+| Standard: T âˆ’ 1.05 s to T âˆ’ 0.45 s; tutorial: T âˆ’ 1.575 s to T âˆ’ 0.675 s | Normal block (0.6 s standard; 0.9 s tutorial) |
+| Standard: T âˆ’ 0.45 s to T + 0.15 s; tutorial: T âˆ’ 0.675 s to T + 0.225 s | Perfect parry (0.6 s standard; 0.9 s tutorial) |
+| After T + 0.15 s standard or T + 0.225 s tutorial | Failed defense if no valid input was registered |
 
-For the first meteor, the attack sequence starts at 0 ms and impact occurs at 1000 ms; its active window opens at 300 ms, the perfect-parry period begins at 700 ms, and the window closes at 1100 ms. Each following meteor's impact occurs 700 ms after it starts falling; its active window opens immediately, the perfect-parry period begins at 400 ms, and the window closes at 800 ms. Do not resolve damage at the visual impact time.
+In standard combat, the first meteor uses 500 ms of preparation and 750 ms of travel, so impact occurs at 1250 ms; its active window opens at 200 ms, the perfect-parry period begins at 800 ms, and the window closes at 1400 ms. Tutorial values are 750 ms of preparation and 1125 ms of travel; impact occurs at 1875 ms, the active window opens at 300 ms, the perfect-parry period begins at 1200 ms, and the window closes at 2100 ms. Each following meteor's window opens as it starts falling. Its travel is 1050 ms in standard combat and 1575 ms in tutorial combat; the perfect-parry period begins 600 ms / 900 ms after launch, and the window closes 150 ms / 225 ms after impact. Do not resolve damage at the visual impact time.
 
 The timing indicator is yellow during the normal-block window, white and glowing during the perfect-parry window, and inactive after the window closes. Sahira has no perfect-parry mechanic: any correct W input during either active period is a normal successful block.
 
-The meteor reaches the target visually at T, but damage is not finalized at that moment. Wait until T + 0.1 seconds, then resolve the result and apply damage or counterattack. This allows a valid perfect parry shortly after visual impact. Every meteor resolves damage exactly once.
+The meteor reaches the target visually at T, but damage is not finalized at that moment. Wait until the mode-specific defense window closes (T + 0.15 seconds in standard combat or T + 0.225 seconds in tutorial combat), then resolve the result and apply damage or counterattack. This allows a valid perfect parry shortly after visual impact. Every meteor resolves damage exactly once.
 
 ## 5.4. Sequential Meteor Sequence â€” No Overlap
 
@@ -1600,7 +1604,7 @@ For each of the five meteors, in order:
 3. For the first meteor, begin the 0.5-second casting phase. For each following meteor, begin its fall immediately after the previous defensive window closes.
 4. Launch `meteoro.png` toward the target; the first meteor travels for 0.5 seconds and each following meteor travels for 0.7 seconds.
 5. Allow the player to defend using W during the active defensive window.
-6. Wait until the defensive window closes at T + 0.1 seconds.
+6. Wait until the mode-specific defensive window closes.
 7. Resolve the block, perfect parry, or failed defense.
 8. Apply damage and any applicable counterattack.
 9. Display the defensive result and remove the resolved meteor.
@@ -1634,7 +1638,7 @@ Example: for the targets Dexios, Furai, Sahira, Furai, Dexios, Furai must perfec
 **Sahira**
 
 - She has no perfect-parry or counterattack mechanic.
-- Any correct W input during the full 0.8-second window prevents all damage.
+- Any correct W input during the full 1.2-second standard window or 1.8-second tutorial window prevents all damage.
 - A failed defense causes 20 damage.
 - Do not display a Perfect Parry result. Show a single successful-block indicator throughout the active window.
 
@@ -1659,7 +1663,7 @@ Play `meteor_fall.mp3` once for each meteor when its visible descent begins. The
 
 Each meteor deals 20 damage if it is not successfully defended against.
 
-Damage is calculated separately for each meteor only after its defensive window closes at T + 0.1 seconds.
+Damage is calculated separately for each meteor only after its mode-specific defensive window closes.
 
 If a meteor is prevented by Hippopotamus Shield, consume one shield charge for that hit.
 
@@ -1992,11 +1996,11 @@ After implementing the dual-boss update, verify the following behavior.
 - All meteor attacks originate from above.
 - Meteors can target the same character repeatedly.
 - Meteors resolve strictly one at a time: no more than one meteor, targeting indicator, defensive window, or unresolved event is active.
-- The first meteor has a 0.5-second casting phase and 0.5-second travel; every following meteor begins falling as soon as the previous defense window closes and travels for 0.7 seconds.
-- Every meteor's normal-block window runs from T âˆ’ 0.7 to T âˆ’ 0.3, and its perfect-parry window runs from T âˆ’ 0.3 to T + 0.1; damage resolves only after T + 0.1.
+- The first meteor has a 0.5-second base casting phase and 0.5-second base travel; every following meteor begins falling as soon as the previous defense window closes and has 0.7-second base travel. Apply the shared incoming-window multiplier to travel and defense windows, and tutorial scaling on top.
+- Every meteor's normal-block and perfect-parry windows each last 0.6 seconds in standard combat and 0.9 seconds in tutorial combat; damage resolves only after the mode-specific window closes.
 - Dexios counterattacks for 5 damage after every Meteor Rain perfect parry.
 - Furai counterattacks once for 20 damage after all five meteors only if every meteor targeting him was perfectly parried and he was targeted at least once.
-- Sahira blocks any meteor with a correct W input during the full 0.8-second window, without a perfect-parry result.
+- Sahira blocks any meteor with a correct W input during the full 1.2-second standard window or 1.8-second tutorial window, without a perfect-parry result.
 - `meteor_fall.mp3` plays when each meteor begins its visible descent.
 - Meteor Rain does not zoom the camera toward individual targets.
 - Kosmelys's ability probabilities are 50% Cosmic Rays, 30% Portal Shield, and 20% Meteor Rain; when Portal Shield is unavailable, redistribute its probability proportionally across the available attacks.
@@ -6747,13 +6751,15 @@ In `escena_tutorial`, all combat attack timings and action-command timings must 
 
 The purpose is to make the combat easier by allowing the player more time to react.
 
+Incoming-attack defensive windows and their projectile travel also receive a shared 1.5 multiplier in every mode. Tutorial defensive windows and incoming projectile travel therefore use a combined 2.25 multiplier; do not apply the shared multiplier to unrelated combat or action-command durations.
+
 ### Formula
 
 ```javascript
 tutorialDuration = originalDuration * 1.5;
 ```
 
-The original combat scene must continue using its existing timing values.
+The original combat scene retains its existing non-window timing values and action-command timings.
 
 ## 4.1. Enemy Attacks
 
@@ -6769,7 +6775,7 @@ Apply the 1.5 multiplier to:
 - Relevant attack animation durations.
 - Combat timing indicators.
 
-This must apply to all normal and Heir boss attacks.
+The tutorial multiplier applies to all normal and Heir boss attacks. In addition, the shared incoming-window multiplier applies to their defensive windows and projectile travel in every mode.
 
 ### Example — Lightning Chain
 
@@ -6779,11 +6785,11 @@ Tutorial wind-up:
 
 0.2805 seconds.
 
-If projectile travel is 0.373 seconds:
+If base projectile travel is 0.373 seconds:
 
 Tutorial travel:
 
-0.5595 seconds.
+0.83925 seconds (0.373 × 1.5 shared window scale × 1.5 tutorial scale).
 
 The complete attack sequence must remain synchronized.
 
@@ -6797,23 +6803,27 @@ Tutorial casting duration:
 
 0.9 seconds.
 
-Normal jump window:
+Base jump window:
 
 0.3 seconds.
 
-Tutorial jump window:
+Standard jump window:
 
 0.45 seconds.
+
+Tutorial jump window:
+
+0.675 seconds.
 
 The same modifier must apply independently to both sweeps in Heir Mode.
 
 ### Example — Meteor Rain
 
-If a meteor normally takes 0.7 seconds to travel:
+If a meteor's base travel is 0.7 seconds:
 
 Tutorial travel duration:
 
-1.05 seconds.
+1.575 seconds.
 
 Keep meteors strictly sequential.
 
@@ -6823,17 +6833,22 @@ Scale every timing-window boundary consistently relative to the intended impact 
 
 For example:
 
-Normal:
+Base values:
 
 - Normal block: T−0.5 to T−0.1.
 - Perfect Parry: T−0.1 to T+0.1.
 
-Tutorial:
+Standard combat (1.5 shared scale):
 
 - Normal block: T−0.75 to T−0.15.
 - Perfect Parry: T−0.15 to T+0.15.
 
-The resulting windows must be 1.5 times longer.
+Tutorial combat (2.25 combined scale):
+
+- Normal block: T−1.125 to T−0.225.
+- Perfect Parry: T−0.225 to T+0.225.
+
+The resulting windows are 1.5 times longer in standard combat and 2.25 times longer in tutorial combat, compared with the base values.
 
 Do not merely slow the projectile visually while leaving the input windows unchanged.
 
@@ -6886,7 +6901,7 @@ If necessary, adjust animation durations or tween speeds to match the tutorial t
 
 Do not change the artwork itself.
 
-Avoid applying the 1.5 multiplier twice to the same duration.
+Apply the shared incoming-window multiplier once and the tutorial timing multiplier once. Their combined 2.25 scale applies only to incoming defensive windows and projectile travel.
 
 ## 4.5. What Must Remain Unchanged
 
@@ -6904,7 +6919,7 @@ Do not modify:
 - Music playback speed.
 - General non-combat interface animations.
 
-Only combat-related attack timing and timing challenges receive the 1.5 multiplier.
+The tutorial 1.5 multiplier applies to combat timings and timing challenges. The shared incoming-window multiplier applies only to incoming defensive windows and projectile travel in every mode.
 
 ---
 
@@ -7149,12 +7164,12 @@ Verify all of the following:
 11. Fractional tutorial damage rounds upward.
 12. Player damage remains unchanged.
 13. Normal and Heir attack counts remain unchanged.
-14. Defensive timing windows are 1.5 times longer.
-15. Projectile travel and preparation durations are 1.5 times longer.
+14. Incoming defense windows and projectile travel use a 1.5 shared multiplier in standard combat and a 2.25 combined multiplier in tutorial combat; impact, indicators, and resolution remain synchronized.
+15. Tutorial preparation durations remain 1.5 times longer; the shared incoming-window multiplier does not alter preparation phases.
 16. Offensive action commands allow 1.5 times the original duration.
 17. Moving timing indicators remain synchronized with their input windows.
 18. Perfect-Parry behavior remains unchanged.
-19. The original combat scene retains its normal timing and damage.
+19. The original combat scene retains its normal non-window timing and damage; incoming defense windows and projectile travel use the shared 1.5 multiplier.
 20. The Tutorial button appears on the left of `select-scene`.
 21. The existing Combat button appears on the right.
 22. Both buttons are symmetrical relative to the screen's vertical center.

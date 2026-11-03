@@ -321,6 +321,7 @@ export default class CombatScene extends Phaser.Scene {
 
   private readonly practiceId: CharacterId | null;
   private readonly modeConfig: CombatModeConfig;
+  private readonly defenseWindowScale: number;
   private readonly combatTiming: Record<keyof typeof GAME_CONFIG.timing, number>;
 
   private get defenseWindowStartMs(): number {
@@ -355,11 +356,13 @@ export default class CombatScene extends Phaser.Scene {
     this.narrativeMode = narrativeMode;
     this.modeConfig = GAME_CONFIG.combatModes[combatMode];
     const multiplier = this.modeConfig.combatTimingMultiplier;
-    const windowScale = narrativeMode ? GAME_CONFIG.narrativeMode.defenseWindowScale : 1;
+    const windowScale = (narrativeMode ? GAME_CONFIG.narrativeMode.defenseWindowScale : 1)
+      * GAME_CONFIG.timing.incomingAttackWindowMultiplier;
+    this.defenseWindowScale = windowScale;
     this.combatTiming = {
       ...GAME_CONFIG.timing,
       windUpMs: GAME_CONFIG.timing.windUpMs * multiplier,
-      projectileTravelMs: GAME_CONFIG.timing.projectileTravelMs * multiplier,
+      projectileTravelMs: GAME_CONFIG.timing.projectileTravelMs * multiplier * windowScale,
       defenseOpensBeforeImpactMs: GAME_CONFIG.timing.defenseOpensBeforeImpactMs * multiplier * windowScale,
       perfectParryStartsBeforeImpactMs: GAME_CONFIG.timing.perfectParryStartsBeforeImpactMs * multiplier * windowScale,
       defenseClosesAfterImpactMs: GAME_CONFIG.timing.defenseClosesAfterImpactMs * multiplier * windowScale,
@@ -378,8 +381,8 @@ export default class CombatScene extends Phaser.Scene {
       cosmicPerfectParryWindowMs: GAME_CONFIG.timing.cosmicPerfectParryWindowMs * multiplier * windowScale,
       cosmicWindUpMs: GAME_CONFIG.timing.cosmicWindUpMs * multiplier,
       meteorPreparationMs: GAME_CONFIG.timing.meteorPreparationMs * multiplier,
-      meteorTravelMs: GAME_CONFIG.timing.meteorTravelMs * multiplier,
-      meteorFollowUpTravelMs: GAME_CONFIG.timing.meteorFollowUpTravelMs * multiplier,
+      meteorTravelMs: GAME_CONFIG.timing.meteorTravelMs * multiplier * windowScale,
+      meteorFollowUpTravelMs: GAME_CONFIG.timing.meteorFollowUpTravelMs * multiplier * windowScale,
       meteorDefenseOpensBeforeImpactMs: GAME_CONFIG.timing.meteorDefenseOpensBeforeImpactMs * multiplier * windowScale,
       meteorNormalBlockWindowMs: GAME_CONFIG.timing.meteorNormalBlockWindowMs * multiplier * windowScale,
       meteorPerfectBlockWindowMs: GAME_CONFIG.timing.meteorPerfectBlockWindowMs * multiplier * windowScale,
@@ -2793,7 +2796,6 @@ export default class CombatScene extends Phaser.Scene {
     this.defenseOutcome = null;
     this.hasImpacted = false;
     this.warning.setPosition(...this.warningPosition(this.targetCharacter, this.cosmicInitialDirection));
-    this.warningArrow.setText(this.directionPrompt(this.cosmicInitialDirection));
     this.warning.setVisible(true).setAlpha(1);
     this.setKosmelysFrame(
       this.getBossFrames('kosmelys').attack[this.cosmicInitialDirection],
@@ -2801,9 +2803,8 @@ export default class CombatScene extends Phaser.Scene {
     this.turnText.setText(
       `COSMIC RAYS · ${this.cosmicProjectileIndex + 1} / ${this.cosmicProjectileCount}`,
     );
-    this.targetText.setText(
-      `${this.directionControl(this.cosmicInitialDirection)} · INITIAL DIRECTION`,
-    );
+    this.warningArrow.setText('');
+    this.targetText.setText('INITIAL DIRECTION · WATCH FOR CHANGE');
     this.time.delayedCall(
       this.combatTiming.cosmicWindUpMs + this.combatTiming.defenseHintLeadMs,
       () => {
@@ -5115,7 +5116,7 @@ export default class CombatScene extends Phaser.Scene {
         this.attackDirection,
         direction,
         elapsed,
-        this.modeConfig.combatTimingMultiplier,
+        this.modeConfig.combatTimingMultiplier * this.defenseWindowScale,
       );
       this.defenseOutcome = this.targetCharacter === 'sahira' && outcome === 'perfect'
         ? 'blocked'

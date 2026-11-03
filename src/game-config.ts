@@ -369,6 +369,7 @@ export const GAME_CONFIG = {
     defenseOpensBeforeImpactMs: 500,
     perfectParryStartsBeforeImpactMs: 100,
     defenseClosesAfterImpactMs: 100,
+    incomingAttackWindowMultiplier: 1.5,
     defenseHintLeadMs: 100,
     resultDurationMs: 1019,
     nextBoltDelayMs: 373,
