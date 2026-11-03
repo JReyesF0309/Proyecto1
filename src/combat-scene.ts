@@ -2796,7 +2796,7 @@ export default class CombatScene extends Phaser.Scene {
     this.defenseOutcome = null;
     this.hasImpacted = false;
     this.warning.setPosition(...this.warningPosition(this.targetCharacter, this.cosmicInitialDirection));
-    this.warning.setVisible(true).setAlpha(1);
+    this.warning.setVisible(false);
     this.setKosmelysFrame(
       this.getBossFrames('kosmelys').attack[this.cosmicInitialDirection],
     );

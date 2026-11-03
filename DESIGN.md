@@ -1382,7 +1382,7 @@ Because the projectile changes direction halfway through its journey, the implem
 
 Required behavior:
 
-1. Show the projectile's initial direction visually during the first half of its movement, but leave the direction-key indicator empty and do not display its WASD key.
+1. Show the projectile's initial direction visually during the first half of its movement, but keep the direction warning (including its purple box and key) hidden.
 2. Change the direction exactly at the midpoint.
 3. Show the WASD key for the new direction as soon as the direction changes.
 4. Open the valid defensive input period at or after the direction change, so the player cannot resolve the attack before its final direction has been revealed.
