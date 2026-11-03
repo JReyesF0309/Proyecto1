@@ -8150,3 +8150,1609 @@ Do not rebuild existing combat systems.
 - Dialogue text and controls keep an inset from the panel edges, portraits sit above the panel, and Hazel's Flame Dance/Figure Shards command illustrations are trimmed to visible artwork before fitting the black action strip vertically.
 
 Report the modified files, implemented events, missing assets, and build results.
+
+# LA DEXÍADA — CHAPTER 1: FIRST COMBAT IMPLEMENTATION
+
+Implement the Chapter 1 navigation structure and the first fully playable combat encounter in the existing Phaser project, using the supplied final sprites, background artwork, music, and sound effects.
+
+**CRITICAL REQUIREMENT: CHAPTER 29 MUST REMAIN COMPLETELY UNCHANGED.**
+
+Chapter 29 is already complete and functional. Preserve its existing scenes, combat mechanics, player and boss statistics, action commands, defensive timings, narrative events, tutorials, cinematics, animations, assets, music, sound effects, UI, and gameplay behavior.
+
+Reuse existing combat infrastructure where appropriate, but isolate every Chapter 1-specific change through new scenes and configuration.
+
+Do not redesign the existing game or implement unrelated features.
+
+## 1. NEW INITIAL CHAPTER SELECTION
+
+Create a new Phaser scene:
+
+`scene_chapter_select`
+
+Make it the game's initial scene.
+
+Display two selectable chapters:
+
+- **CHAPTER 1 — TRAINING BEYOND THE WALLS**
+- **CHAPTER 29 — COSMIC RAYS**
+
+Use the established visual identity of La Dexíada:
+
+- Dark interface.
+- Gold borders and accents.
+- Archeologicaps for uppercase titles.
+- The existing readable font for descriptions.
+- Keyboard and mouse interaction.
+- Clear selection feedback.
+
+### Navigation
+
+Selecting Chapter 1 opens a new Chapter 1 welcome scene.
+
+Selecting Chapter 29 opens the **existing Chapter 29 welcome scene**, preserving its original navigation flow.
+
+Do not rename, rebuild, or replace the Chapter 29 scenes.
+
+Only the initial entry point should change.
+
+## 2. CHAPTER 1 WELCOME SCENE
+
+Create:
+
+`scene_ch1_welcome`
+
+Reuse the existing Chapter 29 welcome scene's format, typography, layout, transition behavior, and interaction style, without modifying the original scene.
+
+Display:
+
+**CHAPTER 1**
+
+**TRAINING BEYOND THE WALLS**
+
+For now:
+
+- No background illustration.
+- No background music.
+- Simple dark background.
+- No narrative dialogue yet.
+
+Continuing opens:
+
+`scene_ch1_select`
+
+Keep this welcome scene entirely independent from Chapter 29.
+
+## 3. CHAPTER 1 COMBAT SELECTOR
+
+Create:
+
+`scene_ch1_select`
+
+This is a temporary encounter-testing menu. The overworld will be implemented later.
+
+Display seven encounter entries:
+
+1. `COMBAT 1 — WILD BOAR`
+2. `COMBAT 2 — TWO WILD BOARS`
+3. `COMBAT 3 — WOLF`
+4. `COMBAT 4 — TWO WOLVES`
+5. `COMBAT 5 — TWO FURIOUS BOARS`
+6. `COMBAT 6 — MIXED ENCOUNTER`
+7. `COMBAT 7 — CHAPTER BOSS`
+
+Only **Combat 1** is currently unlocked.
+
+All other entries must appear disabled or locked. Do not create fake battles or placeholder encounters for them.
+
+Selecting Combat 1 launches:
+
+`scene_ch1_combat1`
+
+Include an option to return to `scene_chapter_select`.
+
+Keep the encounter entries configuration-driven so the remaining six battles can be added later without restructuring the selector.
+
+## 4. CHAPTER 1 COMBAT 1 — GENERAL SETUP
+
+Create:
+
+`scene_ch1_combat1`
+
+Encounter:
+
+**DEXIOS VS. WILD BOAR**
+
+Only these two combatants exist in this encounter.
+
+Reuse the existing Phaser combat systems where possible:
+
+- Turn-based combat.
+- Combat states and turn progression.
+- Ability selection.
+- Health and damage processing.
+- Directional defense.
+- Normal Block.
+- Perfect Parry.
+- Counterattacks.
+- Cinematic attack announcements.
+- Camera movement and shake.
+- Sprite state changes.
+- Tutorial pop-ups.
+- Victory and defeat screens.
+
+All Chapter 1-specific behavior must be configured independently from Chapter 29.
+
+### Battlefield background
+
+Use the supplied artwork:
+
+`ch1_combat1_background`
+
+This is the actual background for Combat 1.
+
+Load the asset from its real path and extension in the project.
+
+Display it behind all combatants and effects, covering the 1920 × 1080 game viewport while preserving its aspect ratio as appropriately as possible.
+
+Do not use the Chapter 29 Temple of Thunder background in this encounter.
+
+### Character composition
+
+Because this encounter contains only one playable character and one enemy, position the combatants more centrally than in Chapter 29.
+
+- Dexios occupies the foreground, facing the Wild Boar.
+- The Wild Boar stands farther away, facing Dexios.
+- Leave enough distance for physical approach animations.
+- Preserve proper character scale and visual grounding.
+- Use the existing 2D anime character artwork.
+- Maintain the established foreground/background depth conventions.
+
+Character positions, sprite scale, and attack destinations must be configurable.
+
+Do not spawn Furai, Sahira, Hazel, Iobrontes, or Kosmelys.
+
+Do not display unused character HUDs.
+
+## 5. COMBAT STATISTICS
+
+### Dexios
+
+- Maximum HP: **65**
+- Starting HP: **65**
+- Maximum Mana: **40**
+- Starting Mana: **40**
+- Initial Chaos: **0 / 100**
+- Available ability: **Triple Lightning only**
+
+Do not unlock Electric Arc or Chaotic Lightning.
+
+The Chaos system is reserved for later Chapter 1 encounters. Do not display a Chaos meter yet.
+
+### Wild Boar
+
+- Display name: `WILD BOAR`
+- Maximum HP: **20**
+- Starting HP: **20**
+- Available attack: `WILD BITE`
+- Unblocked damage: **6**
+- Attack direction: **UP**
+- Required defensive key: **W**
+
+The Wild Boar has no additional attacks.
+
+### Turn order
+
+Use this fixed sequence:
+
+**Wild Boar → Dexios → Wild Boar → Dexios → repeat**
+
+The Wild Boar always acts first.
+
+No initiative or Speed statistics.
+
+A defeated combatant must not receive another turn.
+
+## 6. COMBAT HUD AND CONTROLS
+
+Reuse the established black-and-gold combat UI design, adapted to this smaller encounter.
+
+### Dexios HUD
+
+Display a compact Dexios panel in the **bottom-right corner**.
+
+Include:
+
+- `dexios_icono`.
+- Character name.
+- HP bar.
+- Current and maximum HP.
+
+Mana remains internally tracked, but a Mana bar is optional for this first encounter because Triple Lightning has no cost.
+
+Do not display Chaos yet.
+
+Do not display empty party slots.
+
+### Wild Boar HUD
+
+Display the Wild Boar's name and HP bar near the upper area of the screen.
+
+Keep the UI compact and unobtrusive.
+
+### Turn-order HUD
+
+Keep the established turn-order presentation in the **top-left corner**.
+
+Display only Wild Boar and Dexios, representing their alternating turns.
+
+Use the Wild Boar's supplied artwork for its turn indicator if a dedicated enemy icon is unavailable.
+
+### Ability menu
+
+During Dexios's turn, display only:
+
+`TRIPLE LIGHTNING`
+
+Reuse existing keyboard and menu interaction conventions.
+
+Do not show unavailable abilities.
+
+### Defensive input
+
+Only W is required for Wild Bite.
+
+Inputs must not accidentally activate combat actions while tutorial windows or animations are active.
+
+## 7. ASSET REGISTRATION — EXACT NAMES
+
+Use the final assets supplied in the project.
+
+**All sprite and asset names are lowercase.**
+
+Inspect the existing asset directory and use each file's actual path, extension, and capitalization. Do not invent paths or assume all media files have identical extensions.
+
+### Existing Dexios sprite assets
+
+Reuse these existing resources:
+
+- `dexios_base`
+- `dexios_derecha`
+- `dexios_izquierda`
+- `dexios_arriba`
+- `dexios_abajo`
+- `dexios_salto`
+- `dexios_herido`
+- `dexios_ataque_amarillo`
+- `dexios_ataque_blanco`
+- `dexios_ataque_rojo`
+- `dexios_icono`
+- `dexios_dialogo_molesto`
+- `dexios_planta`
+- `dexios_ataque`
+
+Only load resources required by this scene if the existing preload architecture supports selective loading.
+
+Preserve all existing Chapter 29 asset registrations.
+
+### New Wild Boar sprites
+
+- `boar_base`
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+
+### New Dexios attack sprites
+
+- `dexios_triple1`
+- `dexios_triple2`
+- `dexios_triple3`
+
+### New background
+
+- `ch1_combat1_background`
+
+### New music
+
+- `ch1_battle`
+
+### New Wild Boar sound effects
+
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+
+### Existing Dexios sound effect
+
+- `dexios.mp3`
+
+Also reuse the existing Perfect Parry sound effect.
+
+### Important: sprite/audio filename collisions
+
+Some supplied files share the same filename stem but have different media types.
+
+For example:
+
+- `boar_attack` exists as a visual sprite.
+- `boar_attack` also exists as an audio file.
+- The same applies to `boar_prepare` and `boar_hurt`.
+
+Preserve their original filenames.
+
+Register them with distinct, descriptive Phaser asset keys when necessary, for example:
+
+- Sprite: `boar_attack`
+- Audio: `boar_attack_sfx`
+- Sprite: `boar_prepare`
+- Audio: `boar_prepare_sfx`
+- Sprite: `boar_hurt`
+- Audio: `boar_hurt_sfx`
+- Music: `ch1_battle_music`
+
+These are internal registration keys, not instructions to rename the physical files.
+
+### Asset rules
+
+- Use the final supplied artwork.
+- Do not create placeholder shapes or substitute artwork.
+- Do not generate temporary Wild Boar sprites.
+- Preserve original sprite proportions and transparency.
+- Maintain consistent scale and grounding across poses.
+- Do not modify or rename existing Chapter 29 assets.
+
+## 8. MUSIC SYSTEM
+
+Use the supplied Chapter 1 battle music:
+
+`ch1_battle`
+
+### Playback behavior
+
+When `scene_ch1_combat1` begins:
+
+1. Start `ch1_battle` from the beginning.
+2. Play it as background battle music.
+3. Loop it continuously while the fight remains active.
+4. Keep the music independent of the Chapter 29 music system.
+
+The music must continue normally during combat actions, defense windows, and tutorial pop-ups.
+
+### On victory or defeat
+
+- Stop or smoothly fade out `ch1_battle`.
+- Do not automatically play `nike.mp3` or any Chapter 29 victory music.
+- Do not restart the battle music while displaying the results screen.
+
+### On scene exit or restart
+
+- Stop and clean up the active Chapter 1 music instance.
+- Restarting Combat 1 starts a fresh instance from the beginning.
+- Never create overlapping copies of `ch1_battle`.
+- Returning to the encounter selector must stop the combat music.
+
+### Other scenes
+
+- `scene_chapter_select`: no new music required.
+- `scene_ch1_welcome`: no music.
+- `scene_ch1_select`: no music required.
+- `scene_ch1_combat1`: `ch1_battle` plays.
+
+Preserve the Chapter 29 music system completely.
+
+Follow existing browser audio-unlock handling and configurable audio-volume conventions.
+
+## 9. WILD BOAR SOUND EFFECTS
+
+Use the supplied sound effects to make the Wild Boar's behavior clear and impactful.
+
+### `boar_prepare`
+
+Play **once** when the Wild Boar enters its preparation animation.
+
+Synchronize it with:
+
+`boar_prepare`
+
+This sound should announce that the enemy is preparing to attack.
+
+### `boar_attack`
+
+Play **once** when the Wild Boar switches to its attack sprite and begins lunging toward Dexios.
+
+Synchronize it with:
+
+`boar_attack`
+
+Do not replay the attack sound continuously during the two-second movement.
+
+### `boar_hurt`
+
+Play whenever the Wild Boar actually receives a damaging hit.
+
+Use it for:
+
+- Each successful Triple Lightning impact.
+- Dexios's Perfect Parry counterattack.
+
+For Triple Lightning, this sound must accompany each of the three separate hits, alongside `dexios.mp3`.
+
+Do not play `boar_hurt` when the Wild Boar receives no damage.
+
+### Sound behavior
+
+- Sound effects must not interrupt or restart `ch1_battle`.
+- Each event must trigger its appropriate SFX once.
+- Ensure rapid repeated hits remain audible without uncontrolled layering.
+- Use the existing audio manager and volume settings where possible.
+- Clean up scene-specific audio listeners on shutdown.
+
+## 10. TRIPLE LIGHTNING — DEXIOS
+
+Triple Lightning is Dexios's only available attack in Combat 1.
+
+### Ability statistics
+
+- Name: `TRIPLE LIGHTNING`
+- Hits: **3**
+- Damage per hit: **5**
+- Total base damage: **15**
+- Mana cost: **0**
+- No timing challenge in this encounter.
+
+### Cinematic introduction
+
+When the player selects Triple Lightning:
+
+1. Lock further ability input.
+2. Display the existing cinematic black horizontal attack-announcement strip.
+3. Preserve its existing gold border and animation behavior.
+4. Display `TRIPLE LIGHTNING`.
+5. Hold the announcement for **1 second**.
+6. Complete the strip's exit transition.
+7. Begin the physical attack animation.
+
+This presentation must reuse the established system without changing Chapter 29's attack announcements.
+
+### Physical attack sequence
+
+Dexios must visibly approach the Wild Boar before striking.
+
+Use this exact sprite sequence:
+
+**`dexios_triple1 → dexios_triple2 → dexios_triple3`**
+
+#### First hit
+
+- Display `dexios_triple1`.
+- Hold the attack pose for **0.5 seconds**.
+- Apply **5 damage** at the start of the hit's impact.
+- Play `dexios.mp3`.
+- Play `boar_hurt` SFX if damage is applied.
+- Briefly display `boar_hurt`.
+- Apply a small camera shake.
+
+#### Second hit
+
+- Display `dexios_triple2`.
+- Hold the attack pose for **0.5 seconds**.
+- Apply another **5 damage**.
+- Play `dexios.mp3` again.
+- Play `boar_hurt` SFX again if damage is applied.
+- Display the Wild Boar's damage reaction.
+- Apply another small camera shake.
+
+#### Third hit
+
+- Display `dexios_triple3`.
+- Hold the attack pose for **0.5 seconds**.
+- Apply the final **5 damage**.
+- Play `dexios.mp3` a third time.
+- Play `boar_hurt` SFX again if damage is applied.
+- Display the final damage reaction.
+- Apply a third small camera shake.
+
+### Attack completion
+
+After the third animation:
+
+1. Dexios smoothly moves back to his original combat position.
+2. Restore `dexios_base`.
+3. Restore the Wild Boar's idle sprite if it remains alive.
+4. Restore any temporary camera offset or zoom.
+5. End the action.
+6. Proceed to the next turn or victory.
+
+### Important requirements
+
+- Each hit must visibly connect with the enemy.
+- Use three different sprites, not repeated frames.
+- Damage must be applied separately for every hit.
+- `dexios.mp3` must play **three times**, once per strike.
+- `boar_hurt` must play on each damaging impact.
+- Each hit must have a separate camera shake.
+- Keep shakes subtle and comfortable for inexperienced players.
+- Do not apply 15 damage simultaneously.
+- Never damage a defeated target.
+- If the Wild Boar reaches zero HP before the sequence finishes, complete the remaining animation safely without additional damage or hurt sounds.
+- Do not start another turn until the entire sequence finishes.
+
+Make movement distances, timing, camera intensity, and sprite scaling configurable.
+
+## 11. WILD BOAR — WILD BITE
+
+The Wild Boar has exactly one attack:
+
+`WILD BITE`
+
+This attack comes from above and must be defended with **W**.
+
+### Attack properties
+
+- Base damage: **6**
+- Normal Block damage: **3**
+- Perfect Parry damage: **0**
+- Perfect Parry counterattack: **5 damage to Wild Boar**
+
+### Full attack duration
+
+Wild Bite consists of:
+
+- **1 second of anticipation.**
+- **2 seconds of continuous forward lunging.**
+- **0.2 seconds of post-impact Perfect Parry tolerance.**
+
+Total attack-local timeline: **3.2 seconds**.
+
+The attack announcement occurs before this timeline begins.
+
+### Attack timeline
+
+| Elapsed time | Animation / movement | Defensive input |
+|---|---|---|
+| 0.0–1.0 s | `boar_prepare` | Ignored |
+| 1.0–2.0 s | `boar_attack`, first half of lunge | Normal Block |
+| 2.0–3.0 s | `boar_attack`, second half of lunge | Perfect Parry |
+| 3.0 s | Visual impact on Dexios | Perfect still available |
+| 3.0–3.2 s | Post-impact tolerance | Perfect Parry |
+| After 3.2 s | Resolve outcome | Closed |
+
+### Phase A — Attack announcement
+
+At the beginning of the Wild Boar's turn:
+
+1. Announce `WILD BITE` using the existing enemy attack-announcement system.
+2. Wait for the announcement to disappear.
+3. Begin the attack-local timeline at 0.0 seconds.
+
+Do not start anticipation while the announcement is still visible.
+
+### Phase B — Anticipation (0–1 second)
+
+- Display `boar_prepare`.
+- Move the Wild Boar slightly forward into a preparation position.
+- Play `boar_prepare` SFX once.
+- Hold the preparation for **1 full second**.
+- Defensive inputs during this phase are ignored.
+
+No Block or Perfect Parry can be registered during anticipation.
+
+### Phase C — First half of lunge (1–2 seconds)
+
+- Switch to `boar_attack`.
+- Play `boar_attack` SFX once.
+- Begin a continuous **two-second** movement toward Dexios.
+- Activate the Normal Block window.
+
+If the player presses W during this first second of movement, register Normal Block.
+
+The Wild Boar must visibly advance during this period.
+
+### Phase D — Second half of lunge (2–3 seconds)
+
+Continue the same movement without stopping or restarting the animation.
+
+Activate the Perfect Parry window.
+
+If the player presses W during this second second of movement, register Perfect Parry.
+
+The Wild Boar reaches Dexios at exactly **3 seconds** after anticipation began.
+
+### Phase E — Post-impact grace period (3–3.2 seconds)
+
+At 3.0 seconds:
+
+- Register the visual collision with Dexios.
+- Hold or extend the contact feedback briefly.
+- Keep accepting Perfect Parry inputs for an additional **0.2 seconds**.
+
+Do not finalize damage at visual impact.
+
+At 3.2 seconds, close the defensive window and resolve the outcome exactly once.
+
+### Defensive result matrix
+
+| Result | Dexios damage received | Wild Boar damage |
+|---|---|---|
+| Failed Defense | 6 | 0 |
+| Normal Block | 3 | 0 |
+| Perfect Parry | 0 | 5 |
+
+### Input rules
+
+- The correct defensive key is W.
+- Before the lunge, defensive inputs are ignored.
+- From 1.0 to 2.0 seconds, W registers Normal Block.
+- From 2.0 to 3.2 seconds, W registers Perfect Parry.
+- The first directional input during the active window determines the outcome.
+- Wrong directional input during the active window counts as Failed Defense.
+- Repeated W presses cannot upgrade a Normal Block into Perfect Parry.
+- Missing the window results in Failed Defense.
+- No damage or counterattack may resolve more than once.
+- Exact timing boundaries must not produce duplicate events.
+
+### Normal Block
+
+- Display `dexios_arriba`.
+- Display `BLOCK`.
+- Apply **3 damage** to Dexios.
+
+### Perfect Parry
+
+- Display `dexios_arriba`.
+- Display `PERFECT`.
+- Play the existing Perfect Parry SFX.
+- Prevent all incoming damage.
+- Trigger Dexios's existing counterattack behavior.
+- Apply exactly **5 damage** to the Wild Boar.
+- Play `boar_hurt` SFX.
+- Briefly display `boar_hurt`.
+
+If the counterattack defeats the Wild Boar, finish its visual feedback and transition to victory without granting an extra turn.
+
+### Failed Defense
+
+- Display `dexios_herido`.
+- Display `FAIL`.
+- Apply **6 damage** to Dexios.
+
+### Return to idle
+
+After resolving Wild Bite:
+
+1. Complete any counterattack.
+2. Return the Wild Boar to its original position if still alive.
+3. Restore `boar_base`.
+4. Restore Dexios's idle state.
+5. Clear defensive indicators.
+6. Continue to Dexios's turn if the battle has not ended.
+
+### Timing isolation
+
+These generous defensive windows apply exclusively to Chapter 1 Combat 1.
+
+Do not change the existing Chapter 29 defensive windows or enemy attacks.
+
+## 12. BEGINNER TUTORIAL WINDOWS
+
+Reuse the existing tutorial pop-up appearance from Chapter 29 without modifying its existing text or behavior.
+
+### Visual appearance
+
+- Centered dark panel.
+- Approximately 90% opacity.
+- Gold border.
+- Archeologicaps for uppercase titles.
+- Readable secondary font for message text.
+- Enter to advance or close.
+
+Pause combat completely while a tutorial window is open.
+
+All attack timers, defensive windows, combat animations, damage resolution, and turn progression must remain paused.
+
+The background battle music may continue normally.
+
+### Tutorial A — First Wild Boar turn
+
+Display the following messages before the first Wild Bite announcement.
+
+**Message 1**
+
+Title: `WELCOME TO COMBAT`
+
+Text:
+
+"Combat in La Dexíada is turn-based. Characters act one at a time, following the turn order shown in the upper-left corner."
+
+**Message 2**
+
+Title: `DEFENDING`
+
+Text:
+
+"Enemies can attack from different directions. Press the matching WASD key to defend. This Wild Boar attacks from above, so press W."
+
+**Message 3**
+
+Title: `PERFECT PARRY`
+
+Text:
+
+"A normal block reduces damage, but a Perfect Parry prevents all damage and lets Dexios counterattack. Watch the enemy's movement and time your defense!"
+
+After closing the final message:
+
+1. Resume gameplay.
+2. Announce Wild Bite.
+3. Begin the full 1-second preparation and 2-second lunge.
+
+### Tutorial B — Dexios's first turn
+
+Display this tutorial before the first ability-selection menu.
+
+**Message 1**
+
+Title: `YOUR TURN`
+
+Text:
+
+"Now it's Dexios's turn! Select an ability to attack your enemy. Each chosen ability uses one turn."
+
+**Message 2**
+
+Title: `TRIPLE LIGHTNING`
+
+Text:
+
+"Triple Lightning strikes the enemy three times. Each hit deals 5 damage, for a total of 15. This basic ability costs no Mana."
+
+After closing the final message, activate the ability menu.
+
+### Tutorial safeguards
+
+- Each tutorial sequence appears only once per encounter attempt.
+- Restarting Combat 1 resets its tutorial flags.
+- Enter must not accidentally select an ability while dismissing a tutorial.
+- No attacks can begin while a tutorial is visible.
+- No overlapping tutorial windows.
+- No stale keyboard input.
+- All tutorial text remains in English.
+- Do not add narrative dialogue yet.
+- Chapter 29's tutorial content and mechanics remain unchanged.
+
+## 13. VICTORY AND DEFEAT
+
+### Victory
+
+Victory occurs when the Wild Boar reaches 0 HP.
+
+- Finish the current damaging animation or counterattack safely.
+- Stop pending enemy actions.
+- Disable combat input.
+- Stop or fade out `ch1_battle`.
+- Display the existing victory presentation adapted for Combat 1.
+- Provide `RETRY` and `RETURN TO COMBAT SELECT`.
+
+`RETURN TO COMBAT SELECT` opens `scene_ch1_select`.
+
+Do not play the Chapter 29 victory music.
+
+### Defeat
+
+Defeat occurs when Dexios reaches 0 HP.
+
+- Stop combat progression.
+- Cancel unresolved attack events safely.
+- Disable combat input.
+- Stop or fade out `ch1_battle`.
+- Display the existing defeat presentation.
+- Provide `RETRY` and `RETURN TO COMBAT SELECT`.
+
+### Retry
+
+Restarting Combat 1 must restore:
+
+- Dexios HP: 65/65.
+- Dexios Mana: 40/40.
+- Dexios Chaos: 0/100.
+- Wild Boar HP: 20/20.
+- Initial turn: Wild Boar.
+- Initial sprite positions.
+- Initial idle frames.
+- Camera position and zoom.
+- Tutorial flags.
+- Defensive input state.
+- Attack timelines.
+- Any pending animation or audio events.
+
+Restart `ch1_battle` from the beginning.
+
+Do not leave duplicated event listeners, overlapping music, or stale timers.
+
+## 14. IMPLEMENTATION ARCHITECTURE
+
+Reuse the existing combat infrastructure wherever safe.
+
+Do not duplicate the entire Chapter 29 combat engine unnecessarily.
+
+Prefer configurable systems and cleanly separated scene behavior.
+
+Create independent Chapter 1 configuration for:
+
+- Player statistics.
+- Enemy statistics.
+- Available abilities.
+- Turn sequence.
+- Sprite references.
+- Battlefield layout.
+- Background artwork.
+- Attack movement.
+- Attack animation timings.
+- Defensive windows.
+- Counterattack behavior.
+- HUD layout.
+- Tutorial messages.
+- Music and sound effects.
+- Victory and defeat navigation.
+
+### Critical Chapter 29 isolation
+
+Chapter 1 must not alter:
+
+- Chapter 29 Dexios HP, Mana, or Chaos.
+- Chapter 29 Triple Lightning.
+- Chapter 29 action-command minigames.
+- Chapter 29 turn order.
+- Chapter 29 parry timing.
+- Chapter 29 enemy damage.
+- Chapter 29 tutorial multipliers.
+- Chapter 29 narrative dialogue.
+- Iobrontes's entrance cinematic.
+- Boss Heir Modes.
+- Existing sprite animation behavior.
+- Existing music sequencing.
+- Existing victory and defeat logic.
+- Any existing playable character abilities.
+
+If shared code must be adjusted, preserve existing Chapter 29 behavior as the default and enable Chapter 1 changes only through an explicit scene-specific configuration.
+
+## 15. ACCEPTANCE TESTS
+
+Verify the following before finishing.
+
+### Navigation
+
+1. The game starts at `scene_chapter_select`.
+2. Chapter 29 opens its original welcome screen and works unchanged.
+3. Chapter 1 opens `scene_ch1_welcome`.
+4. The Chapter 1 welcome screen has no music or background illustration.
+5. `scene_ch1_select` displays seven encounters with only Combat 1 enabled.
+6. Combat 1 starts `scene_ch1_combat1`.
+
+### Assets and audio
+
+7. `ch1_combat1_background` displays correctly.
+8. All supplied Wild Boar sprites load correctly.
+9. All three Triple Lightning sprites load correctly.
+10. `ch1_battle` plays and loops exclusively during Combat 1.
+11. `boar_prepare` SFX plays once at the beginning of anticipation.
+12. `boar_attack` SFX plays once at the beginning of the lunge.
+13. `boar_hurt` SFX plays on every damaging hit against the Wild Boar.
+14. `dexios.mp3` plays independently for each Triple Lightning strike.
+15. Music does not overlap, restart unexpectedly, or continue after leaving the combat.
+
+### Combat mechanics
+
+16. Dexios starts with 65 HP.
+17. The Wild Boar starts with 20 HP.
+18. The Wild Boar acts first.
+19. Turn order alternates Wild Boar and Dexios.
+20. Dexios has only Triple Lightning available.
+21. The first Wild Bite triggers the beginner defense tutorial.
+22. Tutorial pop-ups pause combat correctly.
+23. Wild Bite uses exactly 1 second of anticipation and 2 seconds of movement.
+24. Defensive input during anticipation is ignored.
+25. W during the first second of movement produces Normal Block and 3 damage.
+26. W during the second second of movement produces Perfect Parry and 0 damage.
+27. Perfect Parry counterattacks for 5 damage.
+28. A 0.2-second grace period remains after visual impact.
+29. Wrong or missing defense causes 6 damage.
+30. All damage resolves exactly once.
+31. Repeated inputs cannot upgrade an earlier block.
+32. The first Dexios turn triggers the Triple Lightning tutorial.
+33. Triple Lightning displays the cinematic black strip for 1 second.
+34. Dexios physically approaches the Wild Boar.
+35. The attack plays `dexios_triple1`, `dexios_triple2`, and `dexios_triple3` in order.
+36. Each attack sprite lasts 0.5 seconds.
+37. Each strike deals exactly 5 damage and produces a separate impact, sound, and subtle camera shake.
+38. Dexios returns to his original position after attacking.
+39. A Perfect Parry followed by a complete Triple Lightning can defeat the 20-HP Wild Boar.
+40. Victory, defeat, retry, and return navigation all work.
+41. Restarting the battle fully resets gameplay, tutorials, animations, and audio.
+
+### Regression tests
+
+42. Chapter 29's welcome scene remains unchanged.
+43. Chapter 29 normal combat remains unchanged.
+44. Chapter 29 tutorial remains unchanged.
+45. Chapter 29 narrative combat and cinematics remain unchanged.
+46. Existing Chapter 29 sound effects, music, attacks, stats, timings, HUD, and Heir Modes still work correctly.
+
+## FINAL SCOPE
+
+Implement only:
+
+- `scene_chapter_select`
+- `scene_ch1_welcome`
+- `scene_ch1_select`
+- `scene_ch1_combat1`
+- Wild Boar combat and Wild Bite.
+- Dexios's new Triple Lightning animation for Chapter 1.
+- Beginner tutorial windows.
+- Chapter 1 battle music and sound effects.
+- Combat 1 victory, defeat, retry, and navigation.
+
+Do not implement the overworld, additional encounters, wolves, furious boars, potions, Electric Arc, Chaotic Lightning, or the Chapter 1 boss yet.
+
+Do not add narrative dialogues yet.
+
+**The finished result must be a polished, beginner-friendly, fully playable first encounter with final artwork and audio, while keeping Chapter 29 completely intact.**
+
+# LA DEXÍADA — CHAPTER 1 COMBAT 2 + GLOBAL CHAPTER 1 HOTKEYS
+
+Extend the existing, working Phaser project by implementing Chapter 1 Combat 2 and adding consistent keyboard shortcuts throughout Chapter 1.
+
+**IMPORTANT: The current implementation is the source of truth.** Combat 1 has already been implemented, tested, and manually adjusted. Inspect its actual source code before modifying anything. Preserve all of its current behavior, positioning, animations, UI adjustments, timings, and audio synchronization.
+
+**CHAPTER 29 MUST REMAIN COMPLETELY UNCHANGED**, including its normal, tutorial, narrative, and practice scenes.
+
+Do not rebuild the chapter selection, welcome screens, or Combat 1. They already exist.
+
+## 1. KEYBOARD SHORTCUTS — CHAPTER 1
+
+Implement these shortcuts across the Chapter 1 flow, including its welcome scene, encounter selector, Combat 1, and Combat 2.
+
+| Key | Action |
+|---|---|
+| R | Restart the current scene |
+| N | Toggle background music on/off |
+| M | Toggle sound effects on/off |
+| Escape | Return to the previous scene |
+
+### R — Restart
+
+Pressing R must immediately restart the current Chapter 1 scene.
+
+In combat, this must work during:
+
+- Player turns and ability selection.
+- Enemy turns and defensive windows.
+- Attack animations.
+- Tutorial pop-ups.
+- Target selection.
+- Victory and defeat screens.
+
+Restart the entire encounter from its initial state, including HP, Mana, enemies, turn order, tutorial flags, camera, sprites, and pending actions.
+
+Cancel and clean up all previous timers, tweens, event listeners, attack callbacks, and combat sequences before restarting.
+
+Prevent key-repeat events from causing multiple restarts.
+
+Restarting a combat must not reset the user's music/SFX preferences.
+
+### N — Toggle music
+
+Pressing N toggles Chapter 1 background music.
+
+- If music is playing, mute or pause it immediately.
+- If music is disabled, re-enable the current scene's appropriate music.
+- Use the existing audio system where possible.
+- Do not create duplicate music instances.
+- Music preferences must persist when restarting a Chapter 1 encounter or moving between Chapter 1 scenes.
+- Muting music must not mute SFX.
+- Do not start battle music on scenes that do not normally use it.
+- After victory or defeat, re-enabling music must not restart an already concluded battle soundtrack.
+
+Combat 1 and Combat 2 both use the existing `ch1_battle` track.
+
+### M — Toggle SFX
+
+Pressing M toggles Chapter 1 sound effects.
+
+This includes:
+
+- `dexios.mp3`
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+- The existing Perfect Parry SFX.
+- Other applicable Chapter 1 gameplay sound effects.
+
+Muting SFX must not stop background music.
+
+The SFX preference persists between Chapter 1 scenes and restarts.
+
+Use the existing sound manager and avoid uncontrolled overlapping sound instances.
+
+### Escape — Previous scene
+
+Escape must immediately return to the previous Chapter 1 navigation scene:
+
+- `scene_ch1_combat1` → `scene_ch1_select`
+- `scene_ch1_combat2` → `scene_ch1_select`
+- `scene_ch1_select` → `scene_ch1_welcome`
+- `scene_ch1_welcome` → `scene_chapter_select`
+
+On `scene_chapter_select`, Escape may do nothing because it has no parent scene.
+
+Escape must work even during an attack, a tutorial, target selection, or a result screen.
+
+Properly stop and clean up combat timers, animations, audio, and listeners before changing scenes.
+
+For Chapter 1, Escape is reserved for returning to the previous scene; it must not simultaneously cancel targeting or perform another action.
+
+### Hotkey implementation rules
+
+Create a reusable Chapter 1 input handler or helper, rather than implementing four unrelated copies.
+
+Each keyboard action must be processed only once per key press.
+
+Do not register duplicate listeners after restarting or navigating between scenes.
+
+Handle the shortcuts before normal combat input so they remain responsive during temporary input locks.
+
+The hotkeys must not interfere with WASD defense, number-key ability selection, or Enter tutorial navigation.
+
+Keep this implementation isolated from Chapter 29. Do not replace or alter Chapter 29's existing keyboard controls.
+
+## 2. ENABLE COMBAT 2
+
+Update the existing encounter selector:
+
+`scene_ch1_select`
+
+Enable:
+
+`COMBAT 2 — TWO WILD BOARS`
+
+Selecting this entry must start:
+
+`scene_ch1_combat2`
+
+Combat 1 remains available and unchanged.
+
+Encounters 3–7 remain locked.
+
+Do not recreate the selector or modify its established visual layout beyond enabling Combat 2.
+
+## 3. CREATE SCENE_CH1_COMBAT2
+
+Create the new scene:
+
+`scene_ch1_combat2`
+
+Encounter:
+
+**DEXIOS VS. TWO WILD BOARS**
+
+Reuse the working Combat 1 systems wherever possible, including:
+
+- Combat scene layout.
+- Dexios's statistics.
+- Sprite scaling and grounding.
+- Triple Lightning animation.
+- Wild Bite timing.
+- Directional defense.
+- Perfect Parry and counterattack.
+- Tutorial pop-up system.
+- Combat HUD.
+- Turn-order display.
+- Attack-announcement strip.
+- Victory and defeat screens.
+- Music and SFX.
+- Camera effects.
+
+Do not overwrite or break the functional Combat 1 implementation.
+
+Prefer reusable encounter configuration and independently managed enemy instances. Avoid unnecessarily duplicating the entire combat engine.
+
+## 4. BATTLEFIELD AND ENEMY POSITIONS
+
+Use the existing Chapter 1 background:
+
+`ch1_combat1_background`
+
+Do not create or require a new environment asset.
+
+Display two Wild Boars standing **side by side** in the enemy area:
+
+- **Wild Boar 1:** Left.
+- **Wild Boar 2:** Right.
+
+Both face Dexios, who remains alone in the foreground.
+
+Position them at a similar depth and scale.
+
+Leave sufficient horizontal separation so their silhouettes, hit reactions, and selection highlights remain individually readable.
+
+Their positions must allow each Wild Boar to perform Wild Bite independently without colliding visually with the other enemy.
+
+Each Wild Boar must have its own:
+
+- Stable unique ID.
+- HP and combat state.
+- Sprite instance.
+- Original battlefield position.
+- Current animation state.
+- Alive/defeated flag.
+- Turn slot.
+- Target-selection indicator.
+- Attack animation and movement state.
+
+Do not implement the two Wild Boars as a single shared enemy entity.
+
+Their positions and scales must be configurable.
+
+## 5. CHARACTER STATISTICS
+
+### Dexios
+
+Keep the Chapter 1 values:
+
+- HP: **65 / 65**
+- Mana: **40 / 40**
+- Initial Chaos: **0 / 100**
+- Only available ability: **Triple Lightning**
+
+Do not unlock Electric Arc or Chaotic Lightning.
+
+Keep the existing Combat 1 Dexios HUD, attack animation, and resource behavior.
+
+### Wild Boar 1
+
+- Unique ID: `boar_1`
+- Display name: `WILD BOAR 1`
+- HP: **20 / 20**
+- Available attack: `WILD BITE`
+- Unblocked damage: **6**
+
+### Wild Boar 2
+
+- Unique ID: `boar_2`
+- Display name: `WILD BOAR 2`
+- HP: **20 / 20**
+- Available attack: `WILD BITE`
+- Unblocked damage: **6**
+
+Both Wild Boars use the same sprites, attack properties, and sound effects as the existing Combat 1 Wild Boar.
+
+They must have independent HP, turns, animations, and damage resolution.
+
+## 6. FIXED TURN ORDER
+
+Use the following turn sequence:
+
+**Wild Boar 1 → Wild Boar 2 → Dexios → repeat**
+
+The first Wild Boar attacks first.
+
+The second Wild Boar attacks only after the first has fully completed Wild Bite, including defensive resolution, possible counterattack, and return animation.
+
+Dexios acts after both surviving Wild Boars have completed their scheduled turns.
+
+### Defeated enemy behavior
+
+When a Wild Boar reaches 0 HP:
+
+- Mark that individual enemy as defeated.
+- Stop its pending actions.
+- Disable its targeting.
+- Skip all its future turn slots.
+- Do not transfer its turns to the surviving Wild Boar.
+- Do not remove the surviving enemy's existing turn.
+
+Example:
+
+If Wild Boar 1 is defeated, the remaining sequence becomes:
+
+**Wild Boar 2 → Dexios → repeat**
+
+If Wild Boar 2 is defeated:
+
+**Wild Boar 1 → Dexios → repeat**
+
+Victory occurs only when **both Wild Boars have 0 HP**.
+
+If Dexios reaches 0 HP, resolve defeat immediately after the current damaging event finishes safely. Do not continue additional enemy turns.
+
+### Turn-order HUD
+
+Show three entries in the top-left:
+
+1. Wild Boar 1
+2. Wild Boar 2
+3. Dexios
+
+Distinguish the two Wild Boars by position or their numeric labels, even if they use the same portrait.
+
+Update the active-turn indicator correctly.
+
+Skip defeated enemy turns.
+
+Do not display unrelated Chapter 29 combatants.
+
+## 7. NEW MECHANIC — ENEMY TARGET SELECTION
+
+Combat 2 introduces target selection for Dexios.
+
+This is the primary new gameplay mechanic.
+
+### Player flow
+
+During Dexios's turn:
+
+1. Display his existing ability menu.
+2. The only available ability is `TRIPLE LIGHTNING`.
+3. When Triple Lightning is selected, open a target-selection interface.
+4. Show both living Wild Boars as available targets.
+5. Wait for the player to select one of them.
+6. Confirm the target.
+7. Show the existing Triple Lightning cinematic introduction.
+8. Execute the complete Triple Lightning sequence against the selected Wild Boar only.
+9. Finish the attack and proceed to the next scheduled turn.
+
+### Selection controls
+
+Use the established target-selection conventions from the project.
+
+Support:
+
+- Press **1** to target Wild Boar 1 (left).
+- Press **2** to target Wild Boar 2 (right).
+- Clicking a living Wild Boar or its target-selection UI entry.
+
+Clearly highlight the currently selected or hovered enemy.
+
+Use a readable visual indicator such as a gold outline, selection marker, or existing target-selection highlight.
+
+Do not allow selection of a defeated Wild Boar.
+
+Do not attack automatically before the target has been confirmed while both enemies remain alive.
+
+### When only one Wild Boar remains
+
+If there is only one living enemy, automatically select that enemy when Triple Lightning is chosen.
+
+Do not require an unnecessary target-selection step when there is no meaningful choice.
+
+### Important targeting behavior
+
+The selected target remains fixed for the entire Triple Lightning action.
+
+Do not redirect later strikes to the other Wild Boar.
+
+Each attack must reference the selected enemy's unique ID, not an ambiguous shared sprite or enemy index that may change when one enemy dies.
+
+Clear target-selection indicators after confirmation or battle termination.
+
+Prevent overlapping target menus, double confirmation, or execution of multiple attacks from one selection.
+
+## 8. TRIPLE LIGHTNING — TWO-ENEMY COMPATIBILITY
+
+Preserve the existing, fully functional Combat 1 Triple Lightning implementation.
+
+Do not redesign its current movement, presentation, or audio synchronization.
+
+The attack still uses:
+
+`dexios_triple1 → dexios_triple2 → dexios_triple3`
+
+Properties:
+
+- Three hits.
+- **5 damage per hit.**
+- **15 total possible damage.**
+- No Mana cost.
+- No timed action command.
+- Existing cinematic black announcement strip.
+- Existing physical approach toward the target.
+- Existing hit reactions and small camera shakes.
+- `dexios.mp3` on each strike.
+- `boar_hurt` SFX on each damaging impact.
+
+### Changes required for Combat 2
+
+Dexios must approach the **selected Wild Boar**, whether it is on the left or right.
+
+Calculate the attack destination relative to the chosen enemy's position.
+
+Do not always move toward Wild Boar 1 or the center of the enemy formation.
+
+Only the selected target:
+
+- Receives damage.
+- Displays `boar_hurt`.
+- Plays its hurt sound.
+- Updates its HP bar.
+
+The other Wild Boar remains idle and does not receive damage.
+
+If the selected Wild Boar reaches 0 HP before all three hits finish, complete the animation safely without damaging the defeated enemy or automatically transferring the remaining hits.
+
+Dexios must return to his original position after the attack.
+
+Do not change the already-tested Triple Lightning behavior in Combat 1 or Chapter 29.
+
+## 9. WILD BITE — REUSE EXISTING MECHANICS
+
+Each Wild Boar independently uses the exact Wild Bite mechanics already implemented in Combat 1.
+
+**Do not redesign or retune the working attack.**
+
+Retain the following intended configuration:
+
+- 1 second of anticipation.
+- 2 seconds of forward movement toward Dexios.
+- First second of movement: Normal Block window.
+- Second second of movement: Perfect Parry window.
+- 0.2-second Perfect Parry tolerance after visual impact.
+- Required key: W.
+
+### Defensive outcomes
+
+| Result | Damage to Dexios | Counterattack |
+|---|---|---|
+| Failed Defense | 6 | 0 |
+| Normal Block | 3 | 0 |
+| Perfect Parry | 0 | 5 to the attacking Wild Boar |
+
+Use the exact current Combat 1 behavior for:
+
+- `boar_prepare`
+- `boar_attack`
+- `boar_base`
+- `dexios_arriba`
+- `dexios_herido`
+- BLOCK / PERFECT / FAIL feedback.
+- Camera movement and restoration.
+- Attack sounds.
+- Defensive input registration.
+- Damage resolution.
+
+### Independent attacker identification
+
+When Wild Boar 1 attacks, Dexios's Perfect Parry must damage **Wild Boar 1**.
+
+When Wild Boar 2 attacks, the counterattack must damage **Wild Boar 2**.
+
+Never apply a counterattack to the wrong enemy.
+
+Each boar's lunge must begin from its own original position and return there after the action.
+
+Only one Wild Bite animation and defensive window may be active at a time.
+
+If a Perfect Parry defeats the attacking Wild Boar, complete the counterattack animation and proceed to the next valid turn or victory.
+
+## 10. ENEMY HUD AND DAMAGE FEEDBACK
+
+Display independent enemy health indicators.
+
+- Wild Boar 1: 20/20 HP.
+- Wild Boar 2: 20/20 HP.
+
+Both health bars must update independently.
+
+The active enemy and selected enemy must be visually distinguishable.
+
+Maintain a readable layout without covering the characters or attack effects.
+
+When one Wild Boar is defeated, its health bar should show 0 HP or transition to the established defeated appearance, while the surviving Wild Boar remains clearly visible.
+
+Do not hide the surviving Wild Boar's HUD.
+
+When a Wild Boar receives a hit, only its own sprite displays `boar_hurt`.
+
+## 11. NEW BEGINNER TUTORIAL — TARGET SELECTION
+
+Combat 2 teaches the player to select between multiple enemies.
+
+Reuse the Chapter 1 tutorial window style:
+
+- Dark background with approximately 90% opacity.
+- Gold border.
+- Archeologicaps uppercase title.
+- Readable body text.
+- Enter to advance.
+- Combat paused while the tutorial is visible.
+
+Display this tutorial **once**, the first time Dexios selects Triple Lightning while both Wild Boars are alive, immediately before the target-selection interface becomes interactive.
+
+### Tutorial text
+
+**Title: `CHOOSING A TARGET`**
+
+"Some battles have more than one enemy. After selecting an ability, choose which enemy to attack. Press 1 for the Wild Boar on the left or 2 for the one on the right. You can also click an enemy to select it."
+
+After pressing Enter:
+
+- Close the tutorial.
+- Activate target selection.
+- Do not automatically attack.
+- Do not allow the Enter key that closed the tutorial to confirm a target.
+
+### Tutorial rules
+
+- Show the new tutorial only once per Combat 2 attempt.
+- Reset it when Combat 2 restarts.
+- Do not repeat Combat 1's basic turn and defense tutorials unnecessarily.
+- Do not change the existing Combat 1 tutorial.
+- Do not change Chapter 29 tutorial behavior.
+- R and Escape must remain functional while the tutorial is open.
+
+All player-facing text must be in English.
+
+## 12. ASSETS, MUSIC, AND SOUND EFFECTS
+
+Reuse all existing Chapter 1 assets. No new artwork or audio is required for Combat 2.
+
+### Background
+
+`ch1_combat1_background`
+
+### Wild Boar sprites
+
+- `boar_base`
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+
+Both Wild Boars may share the same loaded textures but must use separate sprite instances.
+
+### Dexios attack sprites
+
+- `dexios_triple1`
+- `dexios_triple2`
+- `dexios_triple3`
+
+Reuse Dexios's existing idle, defensive, damaged, and icon sprites.
+
+### Music
+
+`ch1_battle`
+
+Use the same battle music as Combat 1.
+
+- Play during Combat 2.
+- Loop while the encounter is active.
+- Respect the N music toggle.
+- Stop or fade out on victory, defeat, restart, or scene exit as appropriate.
+- Never play overlapping duplicate instances.
+
+### SFX
+
+Reuse:
+
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+- `dexios.mp3`
+- Existing Perfect Parry SFX.
+
+Each boar must play its attack SFX only during its own turn.
+
+Dexios's three strikes retain their separate sound events.
+
+Respect the M SFX toggle.
+
+Preserve existing sprite/audio asset-key distinctions where identical filename stems exist.
+
+Do not rename physical assets.
+
+## 13. VICTORY, DEFEAT, AND RETRY
+
+### Victory
+
+Victory requires both Wild Boars to be defeated.
+
+Defeating only one Wild Boar must not end the combat.
+
+Once the second Wild Boar reaches zero HP:
+
+- Finish any active attack animation or counterattack safely.
+- Prevent further enemy turns.
+- Disable combat input.
+- Stop battle music.
+- Show the existing Chapter 1 victory interface.
+- Offer Retry and Return to Combat Select.
+
+### Defeat
+
+Defeat occurs if Dexios reaches zero HP.
+
+Stop the combat safely and show the existing Chapter 1 defeat interface.
+
+Offer the same retry and return options.
+
+### Retry
+
+Restart Combat 2 with:
+
+- Dexios: 65/65 HP.
+- Dexios Mana: 40/40.
+- Chaos: 0/100.
+- Wild Boar 1: 20/20 HP.
+- Wild Boar 2: 20/20 HP.
+- Initial turn: Wild Boar 1.
+- Both Wild Boars at their original positions.
+- No active target.
+- Tutorial flags reset.
+- Camera restored.
+- All pending timers, tweens, and previous input events cleared.
+
+Keep the user's music and SFX toggle preferences.
+
+## 14. SCENE ISOLATION AND CODE SAFETY
+
+Preserve the working Chapter 1 Combat 1 exactly as it currently behaves.
+
+Do not revert the manual fixes that have already been made to its scene.
+
+If code must be reused, extract or extend existing working components conservatively.
+
+The only intended changes to existing Chapter 1 scenes are:
+
+- Enable the new hotkeys.
+- Enable Combat 2 in the selector.
+- Add navigation to `scene_ch1_combat2`.
+
+Combat 2 must have its own enemy instances, battle state, tutorial flags, and encounter configuration.
+
+Do not alter Chapter 29's:
+
+- Scene navigation.
+- Combat turn order.
+- Dexios abilities.
+- Defensive timing.
+- Bosses and Heir Modes.
+- Tutorial.
+- Narrative battle.
+- Music and SFX behavior.
+- HUD.
+- Keyboard controls.
+
+**Do not implement the overworld, wolves, furious boars, Electric Arc, potions, or later Chapter 1 encounters yet.**
+
+## 15. ACCEPTANCE TESTS
+
+Verify all of the following:
+
+1. Chapter 1 Combat 1 still behaves exactly as before, apart from the newly requested shortcuts.
+2. `scene_ch1_select` allows Combat 1 and Combat 2.
+3. Combats 3–7 remain locked.
+4. Combat 2 displays Dexios and two distinct Wild Boars standing side by side.
+5. Both Wild Boars start with 20 HP each.
+6. Dexios starts with 65 HP and 40 Mana.
+7. The turn order is Wild Boar 1 → Wild Boar 2 → Dexios.
+8. Each Wild Boar uses Wild Bite independently.
+9. Wild Bite retains its existing preparation, movement, defense timing, damage, SFX, and animation behavior.
+10. A Perfect Parry always counterattacks the Wild Boar that actually attacked.
+11. On Dexios's turn, selecting Triple Lightning opens target selection while two enemies are alive.
+12. Pressing 1 selects the left Wild Boar; pressing 2 selects the right Wild Boar.
+13. Mouse selection works.
+14. The selected Wild Boar receives the three separate Triple Lightning hits.
+15. The unselected Wild Boar receives no damage or hurt effects.
+16. Dexios approaches the correct target and returns to his original position.
+17. Defeating one Wild Boar skips only that enemy's future turns.
+18. With one enemy alive, target selection defaults to the surviving enemy.
+19. Victory occurs only when both Wild Boars are defeated.
+20. The target-selection tutorial appears once and correctly pauses combat.
+21. R immediately restarts the active Chapter 1 scene, even during an attack or tutorial.
+22. N toggles only music; M toggles only SFX.
+23. Audio preferences persist across Chapter 1 scene transitions and restarts.
+24. Escape always returns to the previous Chapter 1 scene.
+25. No duplicate event handlers, audio tracks, damage events, or overlapping attack sequences.
+26. Chapter 29's normal, tutorial, narrative, and practice scenes still work unchanged.
+27. The project builds successfully using its existing build command.
+
+After implementing, report the files modified, the new scene registered, any unresolved issues, and the build/test results.
+
+**FINAL OBJECTIVE:** Add a beginner-friendly two-enemy battle that teaches target selection, using the existing functional Chapter 1 combat system, while introducing reliable Chapter 1 shortcuts and preserving Chapter 29 entirely.

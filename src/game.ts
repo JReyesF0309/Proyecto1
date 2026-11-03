@@ -12,6 +12,15 @@ import { EB_GARAMOND_FONT_FAMILY, GAME_CONFIG, GAME_FONT_FAMILY } from './game-c
 import WelcomeScene from './welcome-scene';
 import PauseScene from './pause-scene';
 import { audioSettings } from './audio-settings';
+import ChapterOneCombatScene, {
+  CHAPTER1_COMBAT1,
+  CHAPTER1_COMBAT2,
+} from './chapter1-combat-scene';
+import {
+  ChapterOneSelectScene,
+  ChapterOneWelcomeScene,
+  ChapterSelectScene,
+} from './chapter1-scenes';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -29,6 +38,11 @@ const config: Phaser.Types.Core.GameConfig = {
     roundPixels: false,
   },
   scene: [
+    ChapterSelectScene,
+    ChapterOneWelcomeScene,
+    ChapterOneSelectScene,
+    new ChapterOneCombatScene(CHAPTER1_COMBAT1),
+    new ChapterOneCombatScene(CHAPTER1_COMBAT2),
     WelcomeScene,
     SelectScene,
     CombatScene,
@@ -67,7 +81,9 @@ window.addEventListener('keydown', (event) => {
     const running = game.scene.getScenes(false)
       .filter((scene) => scene.sys.isActive() || scene.sys.isPaused())
       .map((scene) => scene.scene.key);
-    if (running.includes('escena_bienvenida')) {
+    if (running.includes('escena_bienvenida')
+      || running.some((sceneKey) => sceneKey.startsWith('scene_ch'))) {
+      // Chapter selection and Chapter 1 handle Escape in chapter1-hotkeys.ts.
       return;
     }
     const target = running.includes('escena_select') ? 'escena_bienvenida' : 'escena_select';
