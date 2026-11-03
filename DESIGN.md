@@ -11144,3 +11144,638 @@ Verify all of the following:
 After implementation, report the files changed, the new scene registration, asset loading results, test results, and any unresolved issues.
 
 **FINAL OBJECTIVE:** Create a polished, beginner-friendly fourth Chapter 1 encounter where two Wolves challenge Dexios and introduce Mana management and the first offensive action command through a cinematic, diagonal-bar Electric Arc minigame. Preserve all previous encounters and Chapter 29.
+
+# LA DEXÍADA — CHAPTER 1: COMBATS 5 AND 6
+
+Implement Chapter 1 Combat 5 and Combat 6 in the existing Phaser project.
+
+Combat 5 introduces jumping with Space to dodge Furious Boar attacks. Combat 6 combines all three enemy types already introduced throughout Chapter 1.
+
+**CRITICAL: Preserve the existing working game.**
+
+Chapter 1 Combats 1–4 are already implemented, tested, and manually adjusted. Inspect the actual current source code before making changes. Reuse existing encounter logic, targeting, animations, attack timings, audio management, and UI.
+
+**CHAPTER 29 MUST REMAIN COMPLETELY UNCHANGED**, including its combat, tutorial, narrative mode, practice scenes, character statistics, attacks, controls, music, and animations.
+
+The current working code takes precedence over older notes in DESIGN.md.
+
+## 1. ENABLE COMBATS 5 AND 6
+
+Update the existing Chapter 1 selector:
+
+`scene_ch1_select`
+
+Enable:
+
+- `COMBAT 5 — TWO FURIOUS BOARS`
+- `COMBAT 6 — MIXED ENCOUNTER`
+
+Connect them to two new scenes:
+
+- `scene_ch1_combat5`
+- `scene_ch1_combat6`
+
+Combats 1–4 must remain available and unchanged.
+
+Combat 7 remains locked.
+
+Preserve the selector's current design, positioning, fonts, controls, and navigation.
+
+Do not implement the overworld or any narrative sequences.
+
+## 2. SHARED DEXIOS CONFIGURATION
+
+Both new encounters use the established Chapter 1 Dexios configuration.
+
+### Statistics
+
+- Maximum HP: 65
+- Starting HP: 65
+- Maximum Mana: 40
+- Starting Mana: 40
+- Initial Chaos: 0/100, hidden.
+
+### Available abilities
+
+**TRIPLE LIGHTNING**
+
+- Three separate hits of 5 damage.
+- Maximum total: 15.
+- No Mana cost.
+- No timing challenge.
+- Existing sprite sequence: `dexios_triple1`, `dexios_triple2`, `dexios_triple3`.
+- Keep the physical movement, sound effects, camera shakes, and timing currently working in previous encounters.
+
+**ELECTRIC ARC**
+
+- Mana cost: 10.
+- NORMAL damage: 35.
+- PERFECT damage: 40.
+- FAIL damage: 0.
+- A failed command still consumes 10 Mana and Dexios's turn.
+- Reuse the existing diagonal A+D charging minigame from Combat 4.
+- Reuse `dexios_arc_charging` and `dexios_arc_releasing`.
+- Reuse `electric_arc_charging` and `electric_arc_releasing` SFX.
+- Preserve the existing camera zoom, animation, timing windows, and recovery behavior.
+
+Do not rebuild Electric Arc.
+
+Do not introduce Chaotic Lightning yet.
+
+The bottom-right Dexios HUD must display HP and the blue Mana bar, as already established in Combat 4.
+
+### Target selection
+
+Reuse the existing multi-enemy targeting implementation.
+
+- Allow keyboard and mouse selection.
+- Use stable enemy IDs.
+- Display a clear selection highlight.
+- Only living enemies are selectable.
+- Attacks damage only their selected target.
+- If only one enemy remains, select it automatically.
+- Do not redirect the remaining hits of Triple Lightning if its target is defeated during the sequence.
+
+## 3. FURIOUS BOAR — NEW ENEMY TYPE
+
+Introduce the new enemy:
+
+`FURIOUS BOAR`
+
+### Statistics
+
+- Maximum HP: 25.
+- Starting HP: 25.
+- Attack damage: 15.
+- Attack name: `RAGE CHARGE`.
+- Required defensive action: Space.
+- A successful dodge prevents all damage.
+- There is no Perfect Parry counterattack against Rage Charge.
+
+This enemy has exactly one attack.
+
+Its primary purpose is teaching a new defensive mechanic.
+
+### Exact sprite assets
+
+Use the supplied final artwork:
+
+- `rageboar_base`
+- `rageboar_prepare`
+- `rageboar_attack`
+- `rageboar_hurt`
+
+Preserve the actual asset filenames, extensions, transparent backgrounds, and existing scaling conventions.
+
+Do not create placeholders or rename the files.
+
+### Audio
+
+**Furious Boars use the same sound effects as normal Wild Boars.**
+
+Reuse:
+
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+
+Do not require new `rageboar` sound files.
+
+Audio triggers:
+
+- Play `boar_prepare` once when anticipation begins.
+- Play `boar_attack` once when the charge begins.
+- Play `boar_hurt` whenever the Furious Boar receives actual damage, including individual Triple Lightning strikes and a successful Electric Arc.
+
+Use the existing sound manager.
+
+Respect the M SFX toggle.
+
+## 4. RAGE CHARGE — ATTACK SEQUENCE
+
+Rage Charge must reuse the Wild Boar's existing physical attack structure and durations.
+
+The Furious Boar prepares, then charges physically toward Dexios.
+
+### Timeline
+
+The attack-announcement strip finishes before the attack-local timeline begins.
+
+| Elapsed time | Animation | Defensive behavior |
+|---|---|---|
+| 0.0–1.0 s | `rageboar_prepare` | Anticipation; inputs ignored |
+| 1.0–2.0 s | `rageboar_attack` | First second of the charge |
+| 2.0–3.0 s | `rageboar_attack` | Space dodge window |
+| 3.0 s | Visual impact | Dodge still available |
+| 3.0–3.2 s | Impact grace period | Space dodge window |
+| After 3.2 s | Resolve attack | Window closed |
+
+### Anticipation
+
+1. Announce `RAGE CHARGE` using the established enemy announcement system.
+2. After the announcement, switch to `rageboar_prepare`.
+3. Play `boar_prepare` SFX.
+4. Hold the anticipation for 1 second.
+5. Ignore defensive input during anticipation.
+
+### Charge
+
+1. Switch to `rageboar_attack`.
+2. Play `boar_attack` SFX once.
+3. Begin the same continuous two-second forward movement used by the normal Wild Boar.
+4. Clearly show the Furious Boar approaching Dexios.
+5. Maintain the correct collision destination, scaling, and camera framing.
+
+The Furious Boar reaches Dexios after exactly two seconds of charging.
+
+### Jump defense
+
+Unlike Wild Bite, Rage Charge cannot be defended by a normal directional block.
+
+**Dexios must jump with Space to avoid the attack.**
+
+A successful Space input during the final second of the charge, from 2.0 to 3.0 seconds, or within the 0.2-second post-impact grace period, results in a successful dodge.
+
+Use the existing sprite:
+
+`dexios_salto`
+
+Dexios must visibly jump over the incoming charge rather than simply change to a static defensive pose.
+
+Animate a brief vertical elevation and return, keeping his actual battlefield position consistent.
+
+Use a grounded shadow or the existing visual grounding system to make the jump readable.
+
+Ensure Dexios is visibly airborne at the moment the charge passes beneath him. Synchronize the jumping animation with the final visual contact, including when the player presses early within the successful window.
+
+### Jump input behavior
+
+- Space is the only valid avoidance input.
+- Inputs during anticipation do not count.
+- Space pressed before the successful jump window is too early and must not be saved for later.
+- Space pressed during the successful window triggers one jump.
+- Repeated Space presses must not generate additional jumps or outcomes.
+- W, A, S, and D do not block Rage Charge.
+- There is no NORMAL/PERFECT distinction for this attack.
+- A successful dodge deals 0 damage to Dexios.
+- A failed or missing dodge deals 15 damage.
+- Jumping does not counterattack the Furious Boar.
+
+Keep the beginner-friendly timing indicator clearly visible, using a Space/jump instruction instead of a directional W/A/S/D indicator.
+
+Do not resolve the damage until the 3.2-second attack-local window closes, preserving the existing post-impact grace-period behavior.
+
+### Successful dodge
+
+- Display `DODGE`.
+- Dexios takes 0 damage.
+- No counterattack occurs.
+- The Furious Boar finishes its charge.
+- Dexios lands and returns to `dexios_base`.
+- The Furious Boar returns to its initial position and `rageboar_base`.
+
+### Failed dodge
+
+- Display `FAIL`.
+- Apply exactly 15 damage.
+- Display `dexios_herido`.
+- Restore both combatants to their normal positions and poses after the feedback.
+
+Never process damage more than once.
+
+All timing values and jump animation parameters must be configurable.
+
+These new jump mechanics apply exclusively to Rage Charge in Chapter 1. Do not modify existing Chapter 29 jumping or defense logic.
+
+## 5. COMBAT 5 — TWO FURIOUS BOARS
+
+Create:
+
+`scene_ch1_combat5`
+
+### Battlefield
+
+Reuse:
+
+`ch1_combat1_background`
+
+Combatants:
+
+- Dexios in the foreground.
+- Furious Boar 1 on the left.
+- Furious Boar 2 on the right.
+
+Both Furious Boars have 25 HP.
+
+Use separate enemy instances with independent health, sprite states, positions, turn slots, and targeting.
+
+Position them side by side at a similar visual depth.
+
+Avoid sprite overlap when either enemy charges.
+
+### Turn order
+
+**Furious Boar 1 → Furious Boar 2 → Dexios → repeat**
+
+Furious Boar 1 attacks first.
+
+Only one attack may occur at a time.
+
+After a Furious Boar is defeated, skip its future turns without transferring its turn to the surviving enemy.
+
+### Abilities
+
+Each Furious Boar uses Rage Charge exclusively.
+
+Both require Space to dodge.
+
+Dexios can use Triple Lightning and Electric Arc against either enemy.
+
+The existing multi-enemy target-selection system must work correctly.
+
+### Victory and defeat
+
+Victory requires both Furious Boars to reach 0 HP.
+
+Defeat occurs when Dexios reaches 0 HP.
+
+Reuse the current Chapter 1 victory, defeat, retry, and return-to-selector interfaces.
+
+## 6. COMBAT 5 — NEW TUTORIAL
+
+Introduce the jump-dodge mechanic with a dedicated tutorial window.
+
+Use the existing Chapter 1 tutorial styling:
+
+- Centered dark panel.
+- Approximately 90% opacity.
+- Gold border.
+- Archeologicaps for titles.
+- Readable secondary font.
+- Enter to continue.
+- Full gameplay pause during messages.
+
+Show the tutorial once, immediately before the first Furious Boar begins its first Rage Charge.
+
+### Message 1
+
+Title:
+
+`JUMPING TO DODGE`
+
+Text:
+
+"Not every attack can be blocked! Furious Boars charge with powerful attacks that Dexios must jump over. Press SPACE as the enemy approaches to avoid taking damage."
+
+### Message 2
+
+Title:
+
+`WATCH YOUR TIMING`
+
+Text:
+
+"Wait until the Furious Boar gets close, then press SPACE to jump over its attack. A successful dodge prevents all damage, but unlike a Perfect Parry, it does not trigger a counterattack."
+
+After pressing Enter on the second message:
+
+1. Close the tutorial.
+2. Resume gameplay.
+3. Announce Rage Charge.
+4. Begin its complete anticipation and charging animation.
+
+The first charge must not progress while the tutorial is open.
+
+Do not repeat tutorials for turns, target selection, lateral defense, Mana, or Electric Arc.
+
+Reset the new tutorial flag when Combat 5 restarts.
+
+## 7. COMBAT 6 — MIXED ENCOUNTER
+
+Create:
+
+`scene_ch1_combat6`
+
+This is the final standard encounter before the Chapter 1 boss.
+
+It combines the previously introduced enemy types and defensive actions.
+
+**Do not introduce any new mechanics or tutorial messages.**
+
+### Enemy formation
+
+Spawn exactly three enemies:
+
+1. Wild Boar.
+2. Furious Boar.
+3. Wolf.
+
+Arrange them in three distinct positions across the enemy area, with sufficient horizontal separation for targeting and physical movement.
+
+Use a visually balanced formation and the same Chapter 1 background.
+
+Maintain each enemy's established sprite scale and depth.
+
+Each enemy must have an independent HP bar, turn slot, targeting state, attack animation, and defeated state.
+
+### Enemy statistics and mechanics
+
+**Enemy 1 — Wild Boar**
+
+- ID: `boar_1`
+- HP: 20/20.
+- Attack: `WILD BITE`.
+- Base damage: 6.
+- Normal Block damage: 3.
+- Perfect Parry: 0 damage and 5 counterdamage.
+- Required key: W.
+- Existing Wild Bite animations and timing.
+- Existing `boar_*` sprites and sounds.
+
+**Enemy 2 — Furious Boar**
+
+- ID: `rageboar_1`
+- HP: 25/25.
+- Attack: `RAGE CHARGE`.
+- Base damage: 15.
+- Successful Space dodge: 0 damage.
+- No counterattack from jumping.
+- Required key: Space.
+- New `rageboar_*` sprites.
+- Reuse normal Wild Boar sound effects.
+- Reuse the exact Rage Charge system created for Combat 5.
+
+**Enemy 3 — Wolf**
+
+- ID: `wolf_1`
+- HP: 35/35.
+- Attack: `WOLF LUNGE`.
+- Base damage: 10.
+- Normal Block damage: 5.
+- Perfect Parry: 0 damage and 5 counterdamage.
+- Required keys: A or D, depending on attack origin.
+- Existing Combat 3/4 Wolf Lunge timing, sprites, positioning, and sound effects.
+- Preserve the current Wolf directional attack-selection logic rather than introducing a new one.
+
+### Fixed turn order
+
+**Wild Boar → Furious Boar → Wolf → Dexios → repeat**
+
+Every surviving enemy attacks once per complete cycle.
+
+Dexios acts after all surviving enemies have performed their scheduled turns.
+
+Each enemy uses its own existing attack.
+
+Only one enemy attack or defensive window may be active at a time.
+
+When an enemy is defeated:
+
+- Remove or skip only its own future turns.
+- Keep all other turn slots in the original relative order.
+- Do not transfer turns to surviving enemies.
+- Keep their HP and targeting systems independent.
+
+### Player abilities
+
+Dexios has:
+
+- Triple Lightning.
+- Electric Arc.
+
+Mana is visible and begins at 40/40.
+
+Use the existing targeting interface to select among three enemies:
+
+- 1: Wild Boar.
+- 2: Furious Boar.
+- 3: Wolf.
+
+Mouse selection must also work.
+
+Do not renumber surviving enemies unpredictably after one is defeated; retain stable IDs and consistent UI labels.
+
+Only living enemies can be targeted.
+
+If one enemy remains, automatically select that enemy.
+
+### Defensive behavior
+
+The fight combines three already-learned defenses:
+
+- **W** against Wild Bite.
+- **Space** against Rage Charge.
+- **A/D** against Wolf Lunge.
+
+The defensive controls must depend on the currently attacking enemy and must never overlap.
+
+Space must not accidentally activate during Wolf Lunge, and A/D must not trigger their offensive action-command behavior during an enemy attack.
+
+Preserve the existing state-based input handling.
+
+### No new tutorial
+
+Combat 6 is an opportunity to demonstrate mastery of previously introduced systems.
+
+Do not display a new tutorial or repeat earlier instruction panels.
+
+Keep attack indicators and ordinary HUD hints visible as usual.
+
+### Victory
+
+Victory occurs when all three enemies are defeated.
+
+Defeat occurs when Dexios reaches 0 HP.
+
+Reuse the existing result and navigation systems.
+
+## 8. MUSIC AND AUDIO
+
+Both new encounters use:
+
+`ch1_battle`
+
+Loop it during combat using the existing Chapter 1 music manager.
+
+Stop or fade the active battle music when an encounter ends or the player leaves the scene.
+
+Do not create duplicate music instances.
+
+### Sound effects
+
+**Wild Boar**
+
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+
+**Furious Boar**
+
+Use the same:
+
+- `boar_prepare`
+- `boar_attack`
+- `boar_hurt`
+
+**Wolf**
+
+- `wolf_prepare`
+- `wolf_attack`
+- `wolf_hurt`
+
+**Dexios**
+
+- Existing Triple Lightning sounds.
+- Existing Electric Arc charging and releasing sounds.
+- Existing Perfect Parry SFX.
+
+Sound effects must trigger only for the relevant enemy/action and must respect the established audio manager.
+
+### Existing hotkeys
+
+Preserve:
+
+- R — Restart the current combat.
+- N — Toggle music.
+- M — Toggle SFX.
+- Escape — Return to `scene_ch1_select`.
+
+These controls must work during attacks, jumps, action commands, tutorials, target selection, and result screens.
+
+Restarting or changing scenes must clean up active audio, timers, tweens, listeners, and temporary visual effects.
+
+Preserve mute preferences between Chapter 1 encounters.
+
+## 9. SCENE RESTART AND STATE MANAGEMENT
+
+Every Combat 5 restart must restore:
+
+- Dexios HP: 65/65.
+- Dexios Mana: 40/40.
+- Furious Boar 1 HP: 25/25.
+- Furious Boar 2 HP: 25/25.
+- First turn: Furious Boar 1.
+- Jump tutorial not yet shown.
+- Original sprite positions and camera state.
+- No active defensive input or attack.
+
+Every Combat 6 restart must restore:
+
+- Dexios HP: 65/65.
+- Dexios Mana: 40/40.
+- Wild Boar HP: 20/20.
+- Furious Boar HP: 25/25.
+- Wolf HP: 35/35.
+- First turn: Wild Boar.
+- No target selected.
+- Original sprite positions and camera state.
+- No pending attack state.
+
+Both scenes must reset all transient effects, action commands, pending timers, and combat listeners.
+
+Music/SFX preferences must persist.
+
+## 10. TECHNICAL IMPLEMENTATION REQUIREMENTS
+
+Inspect the current source files for Combats 1–4 before implementing these new scenes.
+
+Reuse existing code wherever safe.
+
+In particular:
+
+- Reuse Wild Bite movement and attack timing for Rage Charge.
+- Reuse the existing Wolf Lunge implementation.
+- Reuse multi-enemy selection and fixed turn-order logic.
+- Reuse Triple Lightning and Electric Arc without modifying their current working implementations.
+- Reuse the existing tutorial pop-up component.
+- Reuse the established Chapter 1 HUD, music manager, and victory/defeat interface.
+
+Create or extend reusable enemy definitions for `wild_boar`, `furious_boar`, and `wolf`, each containing its relevant statistics, visual assets, audio mappings, attack type, and defensive requirements.
+
+Keep encounter-specific positioning, enemy lists, and turn orders configurable.
+
+Do not hardcode special cases that will break later encounters.
+
+**Do not modify the original Chapter 29 gameplay.**
+
+Do not implement Combat 7, the boss, overworld exploration, potion crafting, or narrative dialogue.
+
+## 11. ACCEPTANCE TESTS
+
+Verify:
+
+1. Combats 5 and 6 are unlocked in `scene_ch1_select`.
+2. Combats 1–4 continue working as before.
+3. Combat 7 remains locked.
+4. Combat 5 displays two independent Furious Boars with 25 HP each.
+5. Combat 5 turn order is Furious Boar 1 → Furious Boar 2 → Dexios.
+6. Rage Charge uses the correct four `rageboar_*` sprites.
+7. Rage Charge reuses the normal Wild Boar audio.
+8. Rage Charge has one second of anticipation and two seconds of forward movement.
+9. Dexios can dodge Rage Charge using Space during its designated jump window.
+10. A successful jump takes zero damage and produces no counterattack.
+11. Failed jumping causes exactly 15 damage.
+12. The jump tutorial appears exactly once and pauses the fight.
+13. Dexios's `dexios_salto` sprite and jump animation work correctly.
+14. Triple Lightning and Electric Arc both work against Furious Boars.
+15. Combat 5 ends only when both Furious Boars are defeated.
+16. Combat 6 displays one Wild Boar, one Furious Boar, and one Wolf.
+17. Their HP values are 20, 25, and 35.
+18. Combat 6 follows Wild Boar → Furious Boar → Wolf → Dexios.
+19. Wild Bite requires W with its original 6/3/0 damage outcomes.
+20. Rage Charge requires Space and deals 15 damage if not dodged.
+21. Wolf Lunge requires A/D with its original 10/5/0 damage outcomes.
+22. Perfect Parry counterattacks only the enemy responsible for the current attack.
+23. Target selection supports all three enemies correctly.
+24. Defeating one enemy never prematurely ends the fight or affects the remaining enemies' HP.
+25. Electric Arc consumes exactly 10 Mana and retains its existing NORMAL/PERFECT/FAIL behavior.
+26. Combat 6 introduces no new tutorial messages.
+27. R, N, M, and Escape work correctly in both encounters.
+28. Victory, defeat, retry, and scene navigation function correctly.
+29. No duplicated timers, event listeners, sound effects, damage, or overlapping attack sequences.
+30. Chapter 29 remains unchanged and fully functional.
+31. The project builds successfully using the existing build command.
+
+After implementation, report the modified files, new scenes, registered assets, any test results, and unresolved issues.
+
+**FINAL OBJECTIVE:** Implement Chapter 1 Combats 5 and 6 as complete playable encounters. Combat 5 teaches jumping to dodge Furious Boar attacks, while Combat 6 combines Wild Boar, Furious Boar, and Wolf mechanics into a beginner-friendly mastery encounter, without changing previous battles or Chapter 29.

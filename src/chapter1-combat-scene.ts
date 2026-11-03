@@ -12,6 +12,11 @@ import boarAttackUrl from '../assets/Boar/boar_attack.png';
 import boarBaseUrl from '../assets/Boar/boar_base.png';
 import boarHurtUrl from '../assets/Boar/boar_hurt.png';
 import boarPrepareUrl from '../assets/Boar/boar_prepare.png';
+import rageboarAttackUrl from '../assets/rageboar/rageboar_attack.png';
+import rageboarBaseUrl from '../assets/rageboar/rageboar_base.png';
+import rageboarHurtUrl from '../assets/rageboar/rageboar_hurt.png';
+import rageboarPrepareUrl from '../assets/rageboar/rageboar_prepare.png';
+import dexiosJumpUrl from '../assets/dexios/dexios_salto.png';
 import wolfAttackLeftUrl from '../assets/wolf/wolf_attack_left.png';
 import wolfAttackRightUrl from '../assets/wolf/wolf_attack_right.png';
 import wolfBaseUrl from '../assets/wolf/wolf_base.png';
@@ -75,6 +80,8 @@ export interface BoarSpawn {
   height: number;
   // Vertical offset while lunging, so a boar can pass in front of its neighbour.
   lungeY: number;
+  // Overrides the encounter's kit so one fight can mix enemy types.
+  kit?: EnemyKit;
 }
 
 type AttackSide = 'up' | 'left' | 'right';
@@ -91,6 +98,8 @@ export interface EnemyKit {
   counter: number;
   attackName: string;
   prepareText: string;
+  // 'jump' enemies can only be avoided with Space and never allow a counterattack.
+  defense?: 'directional' | 'jump';
   // Lateral enemies pick a flank before each attack; others always attack from above.
   lateral?: {
     flankX: { left: number; right: number };
@@ -111,6 +120,31 @@ const BOAR_KIT: EnemyKit = {
   counter: 5,
   attackName: 'WILD BITE',
   prepareText: 'THE BOAR PREPARES TO CHARGE',
+};
+
+const RAGEBOAR_KIT: EnemyKit = {
+  maxHp: 25,
+  base: 'rageboar_base',
+  hurt: 'rageboar_hurt',
+  prepare: { up: 'rageboar_prepare', left: 'rageboar_prepare', right: 'rageboar_prepare' },
+  attack: { up: 'rageboar_attack', left: 'rageboar_attack', right: 'rageboar_attack' },
+  // Furious Boars deliberately share the Wild Boar sound effects.
+  sfx: { prepare: 'boar_prepare_sfx', attack: 'boar_attack_sfx', hurt: 'boar_hurt_sfx' },
+  damage: { failed: 15, blocked: 15 },
+  counter: 0,
+  attackName: 'RAGE CHARGE',
+  prepareText: 'THE FURIOUS BOAR PREPARES TO CHARGE',
+  defense: 'jump',
+};
+
+// Jump dodge timings are measured from the start of the attack, like the Wild Bite window.
+const JUMP_DODGE = {
+  windowFromMs: PREPARATION_MS + LUNGE_MS - 1000,
+  windowUntilMs: PREPARATION_MS + LUNGE_MS + PARRY_GRACE_MS,
+  impactMs: PREPARATION_MS + LUNGE_MS,
+  airMs: 640,
+  height: 230,
+  chargeEndOffset: 120,
 };
 
 const WOLF_KIT: EnemyKit = {
@@ -148,6 +182,8 @@ export interface Chapter1CombatConfig {
   // Enables the Mana HUD, the Electric Arc ability and its two tutorials.
   electricArc?: boolean;
   skipTargetTutorial?: boolean;
+  skipArcTutorials?: boolean;
+  jumpTutorial?: boolean;
   boars: BoarSpawn[];
 }
 
@@ -165,6 +201,7 @@ const ELECTRIC_ARC = {
   approachMs: 400,
   approachGap: 520,
   spriteHeight: 720,
+  releasingHeight: 712.8,
   zoom: 1.15,
   zoomCenterX: 800,
   zoomCenterY: 540,
@@ -211,6 +248,7 @@ export const CHAPTER1_COMBAT4: Chapter1CombatConfig = {
   sceneKey: 'scene_ch1_combat4',
   turnSlots: 4,
   introTutorials: false,
+  nextSceneKey: 'scene_ch1_combat5',
   kit: {
     ...WOLF_KIT,
     lateral: {
@@ -225,6 +263,53 @@ export const CHAPTER1_COMBAT4: Chapter1CombatConfig = {
   boars: [
     { id: 'wolf_1', name: 'WOLF 1', turnLabel: 'WOLF 1', x: 1290, y: 800, height: 290, lungeY: 0 },
     { id: 'wolf_2', name: 'WOLF 2', turnLabel: 'WOLF 2', x: 1710, y: 800, height: 290, lungeY: 0 },
+  ],
+};
+
+export const CHAPTER1_COMBAT5: Chapter1CombatConfig = {
+  sceneKey: 'scene_ch1_combat5',
+  turnSlots: 4,
+  introTutorials: false,
+  nextSceneKey: 'scene_ch1_combat6',
+  kit: RAGEBOAR_KIT,
+  electricArc: true,
+  skipArcTutorials: true,
+  skipTargetTutorial: true,
+  jumpTutorial: true,
+  boars: [
+    { id: 'rageboar_1', name: 'FURIOUS BOAR 1', turnLabel: 'FURIOUS 1', x: 1250, y: 800, height: 320, lungeY: 0 },
+    { id: 'rageboar_2', name: 'FURIOUS BOAR 2', turnLabel: 'FURIOUS 2', x: 1700, y: 800, height: 320, lungeY: 70 },
+  ],
+};
+
+export const CHAPTER1_COMBAT6: Chapter1CombatConfig = {
+  sceneKey: 'scene_ch1_combat6',
+  turnSlots: 4,
+  introTutorials: false,
+  electricArc: true,
+  skipArcTutorials: true,
+  skipTargetTutorial: true,
+  boars: [
+    { id: 'boar_1', name: 'WILD BOAR', turnLabel: 'BOAR', x: 1010, y: 800, height: 270, lungeY: 0, kit: BOAR_KIT },
+    { id: 'rageboar_1', name: 'FURIOUS BOAR', turnLabel: 'FURIOUS', x: 1390, y: 800, height: 300, lungeY: 70, kit: RAGEBOAR_KIT },
+    {
+      id: 'wolf_1',
+      name: 'WOLF',
+      turnLabel: 'WOLF',
+      x: 1770,
+      y: 800,
+      height: 280,
+      lungeY: 0,
+      kit: {
+        ...WOLF_KIT,
+        lateral: {
+          flankX: { left: 160, right: 1060 },
+          lungeOffset: 270,
+          flankMs: 600,
+          firstSides: ['left', 'right'],
+        },
+      },
+    },
   ],
 };
 
@@ -261,7 +346,7 @@ type ChapterCombatPhase =
   | 'arc-charge'
   | 'arc-release'
   | 'result';
-type DefenseResult = 'failed' | 'blocked' | 'perfect';
+type DefenseResult = 'failed' | 'blocked' | 'perfect' | 'dodged';
 
 interface TutorialMessage {
   title: string;
@@ -319,6 +404,17 @@ const ACTION_COMMAND_TUTORIAL: TutorialMessage[] = [
   },
 ];
 
+const JUMP_TUTORIAL: TutorialMessage[] = [
+  {
+    title: 'JUMPING TO DODGE',
+    text: 'Not every attack can be blocked! Furious Boars charge with powerful attacks that Dexios must jump over. Press SPACE as the enemy approaches to avoid taking damage.',
+  },
+  {
+    title: 'WATCH YOUR TIMING',
+    text: 'Wait until the Furious Boar gets close, then press SPACE to jump over its attack. A successful dodge prevents all damage, but unlike a Perfect Parry, it does not trigger a counterattack.',
+  },
+];
+
 const TARGET_TUTORIAL: TutorialMessage[] = [
   {
     title: 'CHOOSING A TARGET',
@@ -362,6 +458,10 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   private attackSide: AttackSide = 'up';
   private attackCount = 0;
   private sideTutorialShown = false;
+  private jumpTutorialShown = false;
+  private jumpShadow?: Phaser.GameObjects.Ellipse;
+  private jumpHint?: Phaser.GameObjects.Text;
+  private jumpTimer?: Phaser.Time.TimerEvent;
   private manaTutorialShown = false;
   private actionTutorialShown = false;
   private pendingAbility: 'triple' | 'arc' = 'triple';
@@ -424,7 +524,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     if (this.phase === 'target-select') {
-      if (event.key === '1' || event.key === '2') {
+      if (/^[1-9]$/.test(event.key) && Number(event.key) <= this.boars.length) {
         this.selectTarget(this.boars[Number(event.key) - 1]);
       }
       return;
@@ -441,6 +541,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
 
   private get kit(): EnemyKit {
     return this.config.kit ?? BOAR_KIT;
+  }
+
+  private kitOf(boar: BoarState | BoarSpawn): EnemyKit {
+    const spawn = 'spawn' in boar ? boar.spawn : boar;
+    return spawn.kit ?? this.kit;
   }
 
   preload(): void {
@@ -461,6 +566,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       ['boar_attack', boarAttackUrl],
       ['boar_hurt', boarHurtUrl],
       ['wolf_base', wolfBaseUrl],
+      ['rageboar_base', rageboarBaseUrl],
+      ['rageboar_prepare', rageboarPrepareUrl],
+      ['rageboar_attack', rageboarAttackUrl],
+      ['rageboar_hurt', rageboarHurtUrl],
+      ['dexios_salto', dexiosJumpUrl],
       ['wolf_prepare_left', wolfPrepareLeftUrl],
       ['wolf_prepare_right', wolfPrepareRightUrl],
       ['wolf_attack_left', wolfAttackLeftUrl],
@@ -503,8 +613,12 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.playerTutorialShown = !this.config.introTutorials;
     this.resultEnter = undefined;
     this.targetTutorialShown = !!this.config.skipTargetTutorial;
-    this.manaTutorialShown = !this.config.electricArc;
-    this.actionTutorialShown = !this.config.electricArc;
+    this.manaTutorialShown = !this.config.electricArc || !!this.config.skipArcTutorials;
+    this.actionTutorialShown = !this.config.electricArc || !!this.config.skipArcTutorials;
+    this.jumpTutorialShown = !this.config.jumpTutorial;
+    this.jumpTimer = undefined;
+    this.jumpShadow = undefined;
+    this.jumpHint = undefined;
     this.pendingAbility = 'triple';
     this.heldKeys.clear();
     this.arcTarget = undefined;
@@ -543,6 +657,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       'boar_attack',
       'boar_hurt',
       'wolf_base',
+      'rageboar_base',
+      'rageboar_prepare',
+      'rageboar_attack',
+      'rageboar_hurt',
+      'dexios_salto',
       'wolf_prepare_left',
       'wolf_prepare_right',
       'wolf_attack_left',
@@ -582,6 +701,9 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     const elapsed = this.time.now - this.wildBiteStartedAt;
+    if (this.jumpHint?.visible) {
+      this.jumpHint.setPosition(this.dexiosOriginalX, GROUND_Y - DEXIOS_HEIGHT - 40);
+    }
     if (elapsed < PREPARATION_MS || elapsed > WILD_BITE_TOTAL_MS) {
       this.timingRing.clear();
       return;
@@ -629,10 +751,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       .setDepth(12);
     this.setSpriteFrame(this.dexios, 'dexios_base', DEXIOS_HEIGHT);
     this.boars = this.config.boars.map((spawn, index) => {
-      const sprite = this.add.image(spawn.x, spawn.y, this.kit.base)
+      const kit = this.kitOf(spawn);
+      const sprite = this.add.image(spawn.x, spawn.y, kit.base)
         .setOrigin(0.5, 1)
         .setDepth(4);
-      this.setSpriteFrame(sprite, this.kit.base, spawn.height);
+      this.setSpriteFrame(sprite, kit.base, spawn.height);
       const marker = this.add.graphics().setDepth(6);
       const keyLabel = this.add.text(spawn.x, spawn.y - spawn.height - 78, String(index + 1), {
         fontFamily: EB_GARAMOND_FONT_FAMILY,
@@ -644,7 +767,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(7).setVisible(false);
       const boar: BoarState = {
         spawn,
-        health: this.kit.maxHp,
+        health: kit.maxHp,
         alive: true,
         sprite,
         marker,
@@ -697,7 +820,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.turnPortraits.forEach((portrait, index) => {
       const who = actors[(start + index) % actors.length];
       const boar = this.boars.find((candidate) => candidate.spawn.id === who);
-      portrait.setTexture(boar ? this.kit.base : 'dexios_icono');
+      portrait.setTexture(boar ? this.kitOf(boar).base : 'dexios_icono');
       const max = boar ? 43 : 47;
       const source = portrait.texture.getSourceImage() as HTMLImageElement;
       portrait.setDisplaySize(source.width * max / source.height, max);
@@ -719,7 +842,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.boarHud = this.boars.map((boar, index) => {
       const top = 28 + index * 116;
       const panel = this.add.graphics().setDepth(50);
-      const portrait = this.add.image(1290, top + panelHeight / 2, this.kit.base).setDepth(51);
+      const portrait = this.add.image(1290, top + panelHeight / 2, this.kitOf(boar).base).setDepth(51);
       const boarImage = portrait.texture.getSourceImage() as HTMLImageElement;
       portrait.setDisplaySize(portraitSize * boarImage.width / boarImage.height, portraitSize);
       this.add.text(1350, top + (multiple ? 10 : 15), boar.spawn.name, {
@@ -914,6 +1037,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     this.activeBoar = boar;
+    this.attackSide = 'up';
     this.phase = 'enemy-announcement';
     this.abilityMenu?.setVisible(false);
     this.highlightTurn(boar.spawn.id);
@@ -925,15 +1049,23 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       });
       return;
     }
-    if (this.kit.lateral) {
+    const kit = this.kitOf(boar);
+    if (kit.defense === 'jump' && !this.jumpTutorialShown) {
+      this.showTutorial(JUMP_TUTORIAL, () => {
+        this.jumpTutorialShown = true;
+        this.startEnemyTurn(fromIndex);
+      });
+      return;
+    }
+    if (kit.lateral) {
       this.beginFlank(boar);
       return;
     }
-    this.announce(this.kit.attackName, () => this.beginWildBite());
+    this.announce(kit.attackName, () => this.beginWildBite());
   }
 
-  private chooseAttackSide(): AttackSide {
-    const lateral = this.kit.lateral;
+  private chooseAttackSide(boar: BoarState): AttackSide {
+    const lateral = this.kitOf(boar).lateral;
     if (!lateral) {
       return 'up';
     }
@@ -943,7 +1075,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   }
 
   private beginFlank(boar: BoarState): void {
-    const lateral = this.kit.lateral;
+    const lateral = this.kitOf(boar).lateral;
     if (!lateral) {
       return;
     }
@@ -955,7 +1087,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       });
       return;
     }
-    this.attackSide = this.chooseAttackSide();
+    this.attackSide = this.chooseAttackSide(boar);
     boar.sprite.setDepth(8);
     this.setStatus(`${this.boars.length > 1 ? '' : 'THE '}${boar.spawn.name} CIRCLES TO DEXIOS'S ${this.attackSide.toUpperCase()}`);
     this.tweens.add({
@@ -966,7 +1098,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
       onComplete: () => {
         if (this.phase === 'enemy-announcement') {
-          this.announce(this.kit.attackName, () => this.beginWildBite());
+          this.announce(this.kitOf(boar).attackName, () => this.beginWildBite());
         }
       },
     });
@@ -977,16 +1109,17 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     if (this.phase !== 'enemy-announcement' || !boar) {
       return;
     }
+    const kit = this.kitOf(boar);
     this.phase = 'enemy-prepare';
     this.defenseResult = null;
     this.wildBiteStartedAt = this.time.now;
     boar.sprite.setDepth(8);
-    this.setSpriteFrame(boar.sprite, this.kit.prepare[this.attackSide], boar.spawn.height);
-    this.playEffect(this.kit.sfx.prepare);
+    this.setSpriteFrame(boar.sprite, kit.prepare[this.attackSide], boar.spawn.height);
+    this.playEffect(kit.sfx.prepare);
     this.setStatus(this.boars.length > 1
       ? `${boar.spawn.name} PREPARES TO CHARGE`
-      : this.kit.prepareText);
-    const lateral = this.kit.lateral;
+      : kit.prepareText);
+    const lateral = kit.lateral;
     const nudge = this.attackSide === 'left' ? 40 : -40;
     this.tweens.add({
       targets: boar.sprite,
@@ -1002,14 +1135,21 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     if (this.phase !== 'enemy-prepare' || !boar) {
       return;
     }
+    const kit = this.kitOf(boar);
+    const jump = kit.defense === 'jump';
     this.phase = 'enemy-lunge';
-    this.setSpriteFrame(boar.sprite, this.kit.attack[this.attackSide], boar.spawn.height);
-    this.playEffect(this.kit.sfx.attack);
-    const lateral = this.kit.lateral;
-    const targetX = !lateral
-      ? this.dexiosOriginalX + 250
-      : this.dexiosOriginalX + (this.attackSide === 'left' ? -lateral.lungeOffset : lateral.lungeOffset);
-    this.setStatus(`${this.kit.attackName} · BLOCK WITH ${SIDE_KEYS[this.attackSide].label}, THEN PARRY`);
+    this.setSpriteFrame(boar.sprite, kit.attack[this.attackSide], boar.spawn.height);
+    this.playEffect(kit.sfx.attack);
+    const lateral = kit.lateral;
+    const targetX = jump
+      ? this.dexiosOriginalX + JUMP_DODGE.chargeEndOffset
+      : !lateral
+        ? this.dexiosOriginalX + 250
+        : this.dexiosOriginalX + (this.attackSide === 'left' ? -lateral.lungeOffset : lateral.lungeOffset);
+    this.setStatus(jump
+      ? `${kit.attackName} · PRESS SPACE TO JUMP`
+      : `${kit.attackName} · BLOCK WITH ${SIDE_KEYS[this.attackSide].label}, THEN PARRY`);
+    this.showJumpHint(jump);
     this.tweens.add({
       targets: boar.sprite,
       x: targetX,
@@ -1022,13 +1162,67 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
         return;
       }
       this.cameras.main.shake(100, 0.0012);
-      this.setStatus('IMPACT · PERFECT PARRY STILL AVAILABLE');
+      this.setStatus(jump ? 'IMPACT · JUMP NOW!' : 'IMPACT · PERFECT PARRY STILL AVAILABLE');
     });
     this.time.delayedCall(LUNGE_MS + PARRY_GRACE_MS, () => this.resolveWildBite());
   }
 
+  private showJumpHint(visible: boolean): void {
+    if (!this.jumpHint) {
+      this.jumpHint = this.add.text(0, 0, 'SPACE', {
+        fontFamily: GAME_FONT_FAMILY,
+        fontSize: '34px',
+        fontStyle: 'bold',
+        letterSpacing: 4,
+        color: '#ffd65c',
+        stroke: '#17121b',
+        strokeThickness: 6,
+      }).setOrigin(0.5).setDepth(21);
+    }
+    this.jumpHint.setVisible(visible);
+  }
+
+  private registerJumpInput(key: string): void {
+    if (this.defenseResult !== null || key !== ' ') {
+      return;
+    }
+    const elapsed = this.time.now - this.wildBiteStartedAt;
+    if (elapsed < JUMP_DODGE.windowFromMs || elapsed > JUMP_DODGE.windowUntilMs) {
+      return;
+    }
+    this.defenseResult = 'dodged';
+    this.setStatus('DODGE');
+    // Time the take-off so Dexios is at the top of the jump when the charge passes under him.
+    const peakAt = JUMP_DODGE.impactMs;
+    const startAt = Math.max(elapsed, peakAt - JUMP_DODGE.airMs / 2);
+    this.jumpTimer = this.time.delayedCall(startAt - elapsed, () => this.performJump());
+  }
+
+  private performJump(): void {
+    this.setSpriteFrame(this.dexios, 'dexios_salto', DEXIOS_HEIGHT);
+    if (!this.jumpShadow) {
+      this.jumpShadow = this.add.ellipse(0, GROUND_Y - 6, 260, 34, 0x000000, 0.4).setDepth(11);
+    }
+    this.jumpShadow.setPosition(this.dexios.x, GROUND_Y - 6).setVisible(true);
+    this.tweens.add({
+      targets: this.dexios,
+      y: GROUND_Y - JUMP_DODGE.height,
+      duration: JUMP_DODGE.airMs / 2,
+      ease: 'Sine.easeOut',
+      yoyo: true,
+      onComplete: () => {
+        this.dexios.setY(GROUND_Y);
+        this.jumpShadow?.setVisible(false);
+      },
+    });
+  }
+
   private registerWildBiteInput(key: string): void {
     if (this.defenseResult !== null) {
+      return;
+    }
+    if (this.activeBoar && this.kitOf(this.activeBoar).defense === 'jump') {
+      this.registerJumpInput(key);
       return;
     }
     const direction = key.toLowerCase();
@@ -1071,8 +1265,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.timingRing.clear();
     const result = this.defenseResult ?? 'failed';
     const defendSprite = SIDE_KEYS[this.attackSide].sprite;
-    const { failed, blocked } = this.kit.damage;
-    if (result === 'failed') {
+    const attackerKit = this.activeBoar ? this.kitOf(this.activeBoar) : this.kit;
+    const { failed, blocked } = attackerKit.damage;
+    if (result === 'dodged') {
+      this.setStatus('DODGE · NO DAMAGE');
+    } else if (result === 'failed') {
       this.dexiosHealth = Math.max(0, this.dexiosHealth - failed);
       this.setSpriteFrame(this.dexios, 'dexios_herido', DEXIOS_HEIGHT);
       this.setStatus(`FAIL · DEXIOS TAKES ${failed} DAMAGE`);
@@ -1085,9 +1282,9 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       this.playEffect('perfect_parry_sfx');
       const attacker = this.activeBoar;
       if (attacker?.alive) {
-        this.damageBoar(attacker, this.kit.counter);
-        this.playEffect(this.kit.sfx.hurt);
-        this.setStatus(`PERFECT PARRY · COUNTERATTACK FOR ${this.kit.counter}`);
+        this.damageBoar(attacker, attackerKit.counter);
+        this.playEffect(attackerKit.sfx.hurt);
+        this.setStatus(`PERFECT PARRY · COUNTERATTACK FOR ${attackerKit.counter}`);
       } else {
         this.setStatus('PERFECT PARRY');
       }
@@ -1125,16 +1322,21 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     }
     attacker.sprite.setDepth(4);
     if (attacker.alive) {
-      this.setSpriteFrame(attacker.sprite, this.kit.base, attacker.spawn.height);
+      this.setSpriteFrame(attacker.sprite, this.kitOf(attacker).base, attacker.spawn.height);
     } else {
       this.markDefeated(attacker);
     }
+    this.jumpTimer?.remove(false);
+    this.jumpTimer = undefined;
+    this.jumpHint?.setVisible(false);
+    this.jumpShadow?.setVisible(false);
+    this.dexios.setY(GROUND_Y);
     this.setSpriteFrame(this.dexios, 'dexios_base', DEXIOS_HEIGHT);
     this.startEnemyTurn(this.boars.indexOf(attacker) + 1);
   }
 
   private markDefeated(boar: BoarState): void {
-    this.setSpriteFrame(boar.sprite, this.kit.hurt, boar.spawn.height);
+    this.setSpriteFrame(boar.sprite, this.kitOf(boar).hurt, boar.spawn.height);
     boar.sprite.setAlpha(0.4);
   }
 
@@ -1203,7 +1405,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   private openTargetSelection(): void {
     this.phase = 'target-select';
     this.hoveredBoar = undefined;
-    this.setStatus('CHOOSE A TARGET · PRESS 1 OR 2');
+    this.setStatus(this.boars.length > 2 ? 'CHOOSE A TARGET · PRESS 1, 2 OR 3' : 'CHOOSE A TARGET · PRESS 1 OR 2');
     this.drawTargetMarkers();
   }
 
@@ -1336,7 +1538,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     this.heldKeys.clear();
-    this.setSpriteFrame(this.dexios, 'dexios_arc_releasing', ELECTRIC_ARC.spriteHeight);
+    this.setSpriteFrame(this.dexios, 'dexios_arc_releasing', ELECTRIC_ARC.releasingHeight);
     this.tweens.add({
       targets: this.dexios,
       x: target.spawn.x - ELECTRIC_ARC.approachGap,
@@ -1348,7 +1550,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
         }
         this.playEffect('electric_arc_releasing');
         this.damageBoar(target, damage);
-        this.playEffect(this.kit.sfx.hurt);
+        this.playEffect(this.kitOf(target).sfx.hurt);
         this.cameras.main.shake(160, 0.004);
         this.cameras.main.flash(120, 255, 255, 255);
         this.time.delayedCall(ELECTRIC_ARC.releaseHoldMs, () => {
@@ -1468,7 +1670,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     if (target.alive) {
       this.damageBoar(target, 5);
       this.playEffect('dexios_sfx');
-      this.playEffect(this.kit.sfx.hurt);
+      this.playEffect(this.kitOf(target).sfx.hurt);
     } else {
       this.playEffect('dexios_sfx');
     }
@@ -1501,7 +1703,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
         }
         this.boars.forEach((boar) => {
           if (boar.alive) {
-            this.setSpriteFrame(boar.sprite, this.kit.base, boar.spawn.height);
+            this.setSpriteFrame(boar.sprite, this.kitOf(boar).base, boar.spawn.height);
           } else if (boar === target) {
             this.markDefeated(boar);
           }
@@ -1518,7 +1720,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     boar.health = Math.max(0, boar.health - damage);
     boar.alive = boar.health > 0;
     this.updateHealthBars();
-    this.setSpriteFrame(boar.sprite, this.kit.hurt, boar.spawn.height);
+    this.setSpriteFrame(boar.sprite, this.kitOf(boar).hurt, boar.spawn.height);
   }
 
   private showTutorial(messages: TutorialMessage[], after: () => void): void {
@@ -1615,8 +1817,8 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       if (!hud) {
         return;
       }
-      this.drawHealthBar(hud.hpBar, 1350, hud.top + (hud.height < 110 ? 66 : 63), 500, boar.health, this.kit.maxHp);
-      hud.hpText.setText(`${boar.health} / ${this.kit.maxHp}`);
+      this.drawHealthBar(hud.hpBar, 1350, hud.top + (hud.height < 110 ? 66 : 63), 500, boar.health, this.kitOf(boar).maxHp);
+      hud.hpText.setText(`${boar.health} / ${this.kitOf(boar).maxHp}`);
       hud.hpText.setAlpha(boar.alive ? 1 : 0.55);
       const selected = this.selectedBoar === boar;
       const active = this.activeBoar === boar || this.hoveredBoar === boar;
@@ -1794,7 +1996,8 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.input.keyboard?.off('keydown', this.onKeyDown, this);
     this.input.keyboard?.off('keyup', this.onKeyUp, this);
     this.stopArcChargeSound();
-    this.heldKeys.clear();
+    this.jumpTimer?.remove(false);
+    this.jumpTimer = undefined;
     this.unbindMusic?.();
     this.unbindMusic = undefined;
     this.battleMusic?.stop();
