@@ -11779,3 +11779,1931 @@ Verify:
 After implementation, report the modified files, new scenes, registered assets, any test results, and unresolved issues.
 
 **FINAL OBJECTIVE:** Implement Chapter 1 Combats 5 and 6 as complete playable encounters. Combat 5 teaches jumping to dodge Furious Boar attacks, while Combat 6 combines Wild Boar, Furious Boar, and Wolf mechanics into a beginner-friendly mastery encounter, without changing previous battles or Chapter 29.
+
+# LA DEXÍADA — CHAPTER 1: COMBAT 7 — THE BEAST
+
+Implement the final boss encounter of Chapter 1 in the existing Phaser project.
+
+This is Combat 7, featuring **THE BEAST**, a large purple monstrous creature with two consecutive 80-HP phases, multiple directional attacks, a fire attack that requires jumping, and a new underground attack introduced in Phase 2.
+
+**CRITICAL REQUIREMENT: Preserve everything that already works.**
+
+Chapter 1 Combats 1–6 are implemented and have received manual adjustments. Inspect the actual working source code before making changes. Reuse existing combat systems rather than reconstructing them.
+
+**CHAPTER 29 MUST REMAIN COMPLETELY UNCHANGED**, including all combat modes, tutorials, narrative events, sound effects, music, statistics, attacks, camera systems, and cinematic sequences.
+
+The current code is the source of truth for existing mechanics.
+
+For now, this boss encounter ends with a normal victory screen after defeating the second phase.
+
+**DO NOT IMPLEMENT CHAOTIC LIGHTNING OR THE FINAL NARRATIVE CINEMATIC YET.**
+
+---
+
+## 1. ENABLE COMBAT 7
+
+Update the existing Chapter 1 encounter selector:
+
+`scene_ch1_select`
+
+Unlock:
+
+`COMBAT 7 — THE BEAST`
+
+Selecting it must launch:
+
+`scene_ch1_combat7`
+
+All seven Chapter 1 encounters should now be selectable.
+
+Preserve the existing selector layout, visual design, controls, transitions, and navigation.
+
+Do not modify the other encounter entries.
+
+## 2. BOSS BATTLE SCENE
+
+Create:
+
+`scene_ch1_combat7`
+
+Encounter:
+
+**DEXIOS VS. THE BEAST**
+
+There are exactly two combatants:
+
+- Dexios in the foreground.
+- The Beast in the enemy area.
+
+The Beast must appear substantially larger and more imposing than the Wild Boars and Wolves from previous encounters.
+
+Maintain the established hand-drawn anime art style, correct sprite proportions, grounded positions, and combat HUD conventions.
+
+### Battlefield background
+
+Use the supplied final image:
+
+`ch1_combat7_background`
+
+This is a distinct background from the first six Chapter 1 battles.
+
+Load the real asset from its existing directory, preserving its actual filename and extension.
+
+Display it across the 1920 × 1080 battle viewport with appropriate aspect-ratio handling.
+
+Do not use `ch1_combat1_background` in Combat 7.
+
+### Battle music
+
+Reuse the existing Chapter 1 combat music:
+
+`ch1_battle`
+
+Do not introduce new battle music for this boss yet.
+
+Preserve the current music manager, volume configuration, and N/M mute controls.
+
+The same battle music continues through both boss phases without restarting during the transformation.
+
+---
+
+## 3. CHARACTER STATISTICS
+
+### Dexios
+
+Use the existing Chapter 1 configuration:
+
+- Maximum HP: 65.
+- Starting HP: 65.
+- Maximum Mana: 40.
+- Starting Mana: 40.
+- Chaos: 0/100, hidden and unavailable.
+
+Available abilities:
+
+**TRIPLE LIGHTNING**
+
+- 3 hits.
+- 5 damage per hit.
+- Maximum total damage: 15.
+- No Mana cost.
+- No action-command minigame.
+
+**ELECTRIC ARC**
+
+- Mana cost: 10.
+- NORMAL: 35 damage.
+- PERFECT: 40 damage.
+- FAIL: 0 damage.
+- Retain the existing two-diagonal-bar A+D timing challenge implemented in Combat 4.
+- A failed command still consumes Mana and Dexios's turn.
+
+Do not modify the current implementation of either ability.
+
+Keep Dexios's existing HP and Mana HUD in the bottom-right.
+
+### The Beast
+
+Display name:
+
+`THE BEAST`
+
+The boss has **two distinct combat phases**.
+
+**PHASE 1**
+
+- Maximum HP: 80.
+- Starting HP: 80.
+
+**PHASE 2**
+
+- Maximum HP: 80.
+- Starting HP: 80, fully restored at the transition.
+
+The Beast therefore has two consecutive 80-HP bars, not one 160-HP bar.
+
+When the first HP bar reaches zero, initiate Phase 2 instead of ending the battle.
+
+When the second HP bar reaches zero, resolve victory.
+
+### Fixed turn order
+
+**The Beast → Dexios → repeat**
+
+The Beast acts first.
+
+Each Beast turn consists of exactly one selected ability.
+
+Do not begin Dexios's turn until the Beast's attack, defense resolution, damage, counterattack, and recovery animations have fully completed.
+
+---
+
+## 4. EXACT BOSS ASSETS
+
+Use the final supplied sprites with these exact names.
+
+### General sprites
+
+- `beast_base`
+- `beast_hurt`
+
+### Savage Jump — Attack from above
+
+- `beast_preparing_up`
+- `beast_attack_up`
+
+### Wild Claw — Attack from Dexios's left
+
+- `beast_preparing_left`
+- `beast_attack_left`
+
+### Wild Claw — Attack from Dexios's right
+
+- `beast_preparing_right`
+- `beast_attack_right`
+
+### Rampant Excavation — Attack from below
+
+- `beast_preparing_down`
+- `beast_attack_down`
+
+### Beast Fire — Jump-dodge attack
+
+- `beast_preparing_fire`
+- `beast_attack_fire`
+
+### Fire projectile/effect
+
+- `fire`
+
+### Background
+
+- `ch1_combat7_background`
+
+All assets are provided artwork.
+
+Inspect the actual project directories for their correct extensions and paths.
+
+Do not rename files, create placeholder sprites, or replace existing art.
+
+Preserve the supplied artwork's proportions and visual orientation.
+
+### Sprite behavior
+
+Use `beast_base` during idle.
+
+Use the corresponding `beast_preparing_*` sprite for the full one-second preparation.
+
+Use the corresponding `beast_attack_*` sprite during the subsequent attack animation.
+
+When the boss takes damage, briefly display `beast_hurt`, then return to its appropriate idle or active animation state.
+
+Do not interrupt an unfinished attack with an idle animation.
+
+The boss must have its own stable sprite instance, original position, current phase, active attack state, and HP.
+
+---
+
+## 5. BOSS ABILITIES
+
+The Beast has four named abilities, one of which can originate from two different directions.
+
+| Ability | Required input | Available phase |
+|---|---|---|
+| SAVAGE JUMP | W | 1 and 2 |
+| WILD CLAW — LEFT | A | 1 and 2 |
+| WILD CLAW — RIGHT | D | 1 and 2 |
+| BEAST FIRE | SPACE | 1 and 2 |
+| RAMPANT EXCAVATION | S | 2 only |
+
+Left and Right Wild Claw are two directional variants of the same named ability, not different attack names.
+
+Before each attack, use the existing enemy attack-announcement system.
+
+All attacks share the same preparation and approach durations described below.
+
+## 6. BOSS ATTACK TIMING — EXACT VALUES
+
+The Beast attacks faster than the previous Chapter 1 enemies.
+
+Use these fixed values:
+
+- Preparation: **1.0 second**.
+- Attack movement or projectile travel: **1.6 seconds**.
+- Normal Block window: first **0.8 seconds** of attack movement.
+- Perfect Parry window: last **0.8 seconds** of movement and **0.1 second after impact**.
+
+### Attack-local timeline
+
+The attack timer begins only after the attack-name announcement finishes and the boss is positioned appropriately.
+
+| Time | State | Valid result |
+|---|---|---|
+| 0.0–1.0 s | Preparation | Inputs ignored |
+| 1.0–1.8 s | First half of attack | NORMAL BLOCK |
+| 1.8–2.6 s | Second half of attack | PERFECT PARRY |
+| 2.6 s | Visual impact | Perfect remains valid |
+| 2.6–2.7 s | Grace period | PERFECT PARRY |
+| After 2.7 s | Resolve | Defense closed |
+
+The physical attack reaches Dexios exactly 2.6 seconds after the start of the attack-local timeline.
+
+Final damage resolution happens after the 0.1-second grace period.
+
+### Directional defense outcomes
+
+For Savage Jump, Wild Claw, and Rampant Excavation:
+
+| Result | Damage to Dexios | Damage to Beast |
+|---|---|---|
+| FAILED DEFENSE | 10 | 0 |
+| NORMAL BLOCK | 5 | 0 |
+| PERFECT PARRY | 0 | 5 |
+
+### Input behavior
+
+- Defensive inputs during preparation are ignored.
+- Only the first directional input during the active defense window determines the result.
+- Incorrect direction causes Failed Defense.
+- Repeated inputs cannot improve a Normal Block into a Perfect Parry.
+- Exact window boundaries must be handled consistently.
+- Do not apply damage twice.
+- Do not resolve damage before the post-impact grace period closes.
+
+Use the established Chapter 1 feedback:
+
+- `BLOCK`
+- `PERFECT`
+- `FAIL`
+
+A successful Perfect Parry triggers Dexios's existing 5-damage counterattack.
+
+The active attack must fully resolve before the next turn begins.
+
+---
+
+## 7. SAVAGE JUMP — DEFEND WITH W
+
+Attack name:
+
+`SAVAGE JUMP`
+
+Available in both phases.
+
+This is a physical attack coming **from above**, not the jumping dodge mechanic.
+
+Dexios must block upward with **W**.
+
+### Preparation
+
+1. Announce `SAVAGE JUMP`.
+2. Display `beast_preparing_up`.
+3. Play the existing **Wild Boar preparation SFX**, `boar_prepare`.
+4. Hold the preparation pose for 1 second.
+
+### Attack
+
+1. Switch to `beast_attack_up`.
+2. Play the existing **Wild Boar attack SFX**, `boar_attack`.
+3. The Beast jumps into the air and moves toward Dexios's position.
+4. Create a visible vertical arc, making it clear that the attack is descending toward Dexios's head.
+5. The attack reaches Dexios after 1.6 seconds.
+
+The boss must visibly jump, not merely slide forward on the ground.
+
+The downward motion toward Dexios's head is important because it communicates why W is required.
+
+### Defense
+
+- Correct input: W.
+- Defense sprite: `dexios_arriba`.
+- Failed damage: 10.
+- Normal Block damage: 5.
+- Perfect Parry damage: 0 and 5 counterdamage.
+
+After the attack, return the Beast to its original battlefield position and `beast_base`, unless the action triggered a phase transition or victory.
+
+Use the existing camera and hit-feedback effects.
+
+---
+
+## 8. WILD CLAW — DEFEND WITH A OR D
+
+Attack name:
+
+`WILD CLAW`
+
+Available in both phases.
+
+The Beast performs a powerful lateral claw strike.
+
+It can attack from either side of Dexios.
+
+### Attack from Dexios's left
+
+- Preparation sprite: `beast_preparing_left`.
+- Attack sprite: `beast_attack_left`.
+- Correct defensive key: A.
+- Dexios defense sprite: `dexios_izquierda`.
+
+### Attack from Dexios's right
+
+- Preparation sprite: `beast_preparing_right`.
+- Attack sprite: `beast_attack_right`.
+- Correct defensive key: D.
+- Dexios defense sprite: `dexios_derecha`.
+
+### Physical movement
+
+Before timed anticipation, move the Beast smoothly into an appropriate attack-start position on the selected side.
+
+The flank-positioning movement happens before the attack-local timer begins and must not consume the 1-second preparation or 1.6-second attack duration.
+
+Once positioned:
+
+1. Announce `WILD CLAW`.
+2. Display the corresponding preparation sprite.
+3. Play `wolf_prepare` SFX.
+4. Prepare for 1 second.
+5. Switch to the correct attack sprite.
+6. Play `wolf_attack` SFX.
+7. Move toward Dexios over 1.6 seconds.
+8. Execute the horizontal claw strike from the selected side.
+
+### Sound requirements
+
+For both LEFT and RIGHT Wild Claw:
+
+- Preparation sound: `wolf_prepare`.
+- Attack sound: `wolf_attack`.
+
+Reuse the same audio files already employed by the Wolves in Combats 3, 4, and 6.
+
+Do not create new Wild Claw audio files.
+
+### Defense
+
+- Correct input: A or D, matching the actual attack origin.
+- Failed damage: 10.
+- Normal Block damage: 5.
+- Perfect Parry: 0 damage and 5 counterdamage.
+
+The direction must be evident from the Beast's actual position and movement, not only from the HUD.
+
+After completing the attack, return the Beast to its original position and idle sprite.
+
+---
+
+## 9. BEAST FIRE — JUMP WITH SPACE
+
+Attack name:
+
+`BEAST FIRE`
+
+Available in both phases.
+
+This attack introduces no new defensive control. It reuses the jumping mechanic from Furious Boars.
+
+However, the Beast launches a **purple magical fire projectile** instead of charging physically into Dexios.
+
+### Preparation
+
+1. Announce `BEAST FIRE`.
+2. Display `beast_preparing_fire`.
+3. Hold the preparation for 1 second.
+4. Show the Beast gathering purple magical energy.
+
+### Fire release
+
+1. Switch to `beast_attack_fire`.
+2. Play the existing `flame.mp3` SFX once at release.
+3. Spawn the supplied projectile/effect sprite `fire`.
+4. Launch the fire from the Beast toward Dexios.
+5. The fire projectile travels for 1.6 seconds.
+6. It reaches Dexios at the established visual impact time.
+
+Do not invent a generic flame image.
+
+Use the actual supplied `fire` artwork.
+
+The projectile must be visibly distinct from the Beast's body and travel along a readable path.
+
+### Defense
+
+The player must press **Space** to jump over the incoming fire.
+
+Use `dexios_salto`.
+
+For Beast Fire:
+
+- No NORMAL BLOCK.
+- No PERFECT PARRY.
+- No counterattack.
+- Successful dodge: 0 damage.
+- Failed dodge: 10 damage.
+
+### Jump window
+
+- 0.0–1.0 seconds: preparation; Space ignored.
+- 1.0–1.8 seconds: projectile approaches; Space is too early and does not register a successful dodge.
+- 1.8–2.7 seconds: valid Space dodge window.
+- After 2.7 seconds: attack resolves as failed if no valid jump occurred.
+
+Use the established Chapter 1 jumping animation, with Dexios visibly airborne when the fire passes his position.
+
+Display:
+
+`DODGE`
+
+for a successful jump.
+
+Display:
+
+`FAIL`
+
+for a failed jump.
+
+### Projectile cleanup
+
+Destroy or hide the active `fire` projectile when:
+
+- The attack resolves.
+- The encounter restarts.
+- The player exits the scene.
+- The battle ends.
+
+Do not leave old fire projectiles visible or active after the attack.
+
+---
+
+## 10. RAMPANT EXCAVATION — DEFEND WITH S
+
+Attack name:
+
+`RAMPANT EXCAVATION`
+
+**AVAILABLE ONLY IN PHASE 2.**
+
+This attack teaches the fourth directional defense: S.
+
+The Beast drives its tail underground, and the attack travels beneath the battlefield before emerging from below Dexios.
+
+### Preparation
+
+1. Announce `RAMPANT EXCAVATION`.
+2. Display `beast_preparing_down`.
+3. Play `boar_prepare` SFX.
+4. Show the Beast driving its tail underground.
+5. Hold the preparation for 1 second.
+
+### Attack
+
+1. Switch to `beast_attack_down`.
+2. Play `boar_attack` SFX.
+3. Animate a visible underground disturbance moving toward Dexios.
+4. Use subtle ground cracks, dust, or displaced earth to show the buried tail approaching.
+5. The disturbance travels for 1.6 seconds.
+6. At impact, the tail bursts upward beneath Dexios.
+
+The movement must clearly originate from below.
+
+The Beast's main body does not need to rush across the battlefield; the traveling underground tail or disturbance represents the approaching attack.
+
+Preserve the supplied `beast_attack_down` artwork.
+
+Do not introduce new required image assets for the terrain effects; use simple Phaser-generated visual effects if necessary.
+
+### Defense
+
+- Correct key: S.
+- Dexios sprite: `dexios_abajo`.
+- Failed damage: 10.
+- Normal Block damage: 5.
+- Perfect Parry: 0 damage and 5 counterdamage.
+
+The defensive windows are identical to those of the other directional Beast attacks.
+
+After resolving Rampant Excavation, restore the Beast's idle state and clear all underground effects.
+
+---
+
+## 11. ATTACK SELECTION — PHASE 1
+
+The first phase begins with 80 HP.
+
+Available attacks:
+
+- Savage Jump.
+- Wild Claw, randomly originating from left or right.
+- Beast Fire.
+
+Use random attack selection among these three abilities.
+
+For Wild Claw, choose left or right with equal probability.
+
+Store probabilities in encounter-specific configuration so they can be adjusted later.
+
+Do not use Rampant Excavation in Phase 1.
+
+### Attack behavior
+
+Every Beast turn:
+
+1. Select an available attack.
+2. Present the attack announcement.
+3. Perform its correct preparation pose.
+4. Play the correct SFX.
+5. Execute the full 1.6-second attack or projectile movement.
+6. Process the appropriate defensive input.
+7. Apply damage or counterattack once.
+8. Restore the battlefield.
+9. Continue to Dexios's turn.
+
+Do not allow two boss attacks simultaneously.
+
+---
+
+## 12. PHASE TRANSITION — FIRST HP BAR DEPLETED
+
+When the Beast reaches 0 HP during Phase 1:
+
+**DO NOT TRIGGER VICTORY.**
+
+Instead:
+
+1. Finish the current action safely.
+2. Lock player and enemy inputs.
+3. Stop the current turn progression temporarily.
+4. Play a brief transition using the existing Beast artwork.
+5. Show the Beast recovering and becoming more aggressive.
+6. Fully restore its health to **80/80**.
+7. Update the boss HUD to indicate Phase 2.
+8. Resume the battle with the Beast's first Phase 2 action.
+
+### Visual presentation
+
+Use the existing sprites.
+
+A brief purple energy flash, small camera shake, and a title such as:
+
+`THE BEAST — PHASE 2`
+
+may be displayed to communicate the transition.
+
+Do not require new phase-specific artwork or sounds.
+
+Keep the existing `ch1_battle` music playing continuously.
+
+Do not grant Dexios a free HP or Mana refill during the phase transition.
+
+Dexios retains his current HP and Mana.
+
+### Damage safeguards
+
+Phase transitions must be processed exactly once.
+
+If Triple Lightning depletes the Phase 1 HP bar in the middle of its three-hit animation:
+
+- Complete the remaining visual animation safely.
+- Do not carry excess damage into Phase 2.
+- Do not apply extra damage to a zero-HP Phase 1 target.
+- Begin the phase transition only after the player action finishes.
+
+Use equivalent safeguards for Electric Arc or Perfect Parry counterattacks.
+
+Do not create an accidental victory screen between phases.
+
+---
+
+## 13. PHASE 2 — NEW DEFENSE
+
+Phase 2 begins with the Beast fully healed to 80 HP.
+
+All Phase 1 abilities remain available.
+
+Unlock:
+
+`RAMPANT EXCAVATION`
+
+### First Phase 2 attack
+
+The first attack of Phase 2 must be **Rampant Excavation**.
+
+This guarantees that the new defense is introduced immediately after the transition.
+
+Before that first attack, display the tutorial described below.
+
+After the tutorial and the first Rampant Excavation attack, allow the Beast to select randomly among:
+
+- Savage Jump.
+- Wild Claw.
+- Beast Fire.
+- Rampant Excavation.
+
+Store the probabilities as configurable values.
+
+Do not otherwise increase the boss's damage or reduce the defensive windows in Phase 2.
+
+The new underground attack is the principal gameplay addition.
+
+---
+
+## 14. NEW TUTORIAL — DEFENDING FROM BELOW
+
+Reuse the Chapter 1 tutorial pop-up system.
+
+Display the tutorial once at the beginning of Phase 2, immediately before the first Rampant Excavation attack announcement.
+
+Use:
+
+- Centered dark panel.
+- Approximately 90% opacity.
+- Gold border.
+- Archeologicaps for the title.
+- Readable body text.
+- Enter to continue.
+
+### Tutorial message
+
+**Title: `DEFENDING FROM BELOW`**
+
+Text:
+
+"The Beast can now attack from beneath the ground! Watch the underground movement approaching Dexios and press S to defend. A normal block reduces the damage, while a Perfect Parry prevents all damage and lets Dexios counterattack!"
+
+### Tutorial behavior
+
+- Pause the entire combat while the tutorial is visible.
+- Do not begin the attack announcement until the tutorial closes.
+- Do not advance attack timers during the tutorial.
+- Do not consume an input accidentally when the player presses Enter.
+- After closing, begin the complete Rampant Excavation sequence.
+- Display the tutorial only once per encounter attempt.
+- Reset the tutorial flag on restart.
+
+Do not repeat any previously taught mechanics.
+
+Do not introduce narrative dialogue yet.
+
+---
+
+## 15. DAMAGE FEEDBACK AND BOSS REACTIONS
+
+Whenever the Beast receives damage from:
+
+- Triple Lightning.
+- Electric Arc.
+- Perfect Parry counterattack.
+
+Display:
+
+`beast_hurt`
+
+Each damage event must:
+
+1. Apply its correct damage exactly once.
+2. Update the boss HP bar.
+3. Briefly show the hurt sprite.
+4. Trigger the existing hit feedback.
+5. Return to the appropriate state when safe.
+
+Reuse the current Chapter 1 impact sound conventions for player attacks.
+
+No dedicated Beast hurt audio file has been specified, so do not invent a required `beast_hurt.mp3`.
+
+Keep damage feedback readable without interrupting an unfinished multi-hit sequence.
+
+### Dexios attacks
+
+Triple Lightning must preserve all three separate damaging hits, including the correct Dexios frames, sounds, movement, and camera shakes.
+
+Electric Arc must preserve its existing charging minigame, NORMAL/PERFECT/FAIL calculations, Mana consumption, release sprite, release SFX, movement, and camera behavior.
+
+The Beast is the only enemy in this encounter, so no target-selection menu is necessary.
+
+---
+
+## 16. BOSS HUD AND TURN ORDER
+
+### Boss HUD
+
+Display:
+
+`THE BEAST`
+
+Show the current phase's HP bar.
+
+Phase 1:
+
+`80 / 80`
+
+After the transition, refill the bar to:
+
+`80 / 80`
+
+Clearly indicate that the Beast has entered Phase 2.
+
+Use the established Chapter 1 combat HUD style, adapting the visual theme to the Beast's purple energy.
+
+Do not display two simultaneous independent enemies or two simultaneous HP bars.
+
+The Beast is one boss with two consecutive HP phases.
+
+### Dexios HUD
+
+Preserve:
+
+- Dexios portrait.
+- HP, maximum 65.
+- Mana, maximum 40.
+
+Keep the Mana bar visible throughout both phases.
+
+Chaos remains hidden and unavailable.
+
+### Turn order
+
+Show:
+
+**THE BEAST → DEXIOS → repeat**
+
+Reuse the established top-left turn-order system.
+
+Use `beast_base` for the Beast's turn portrait if no separate boss icon has been supplied.
+
+Do not require a new icon asset.
+
+---
+
+## 17. SOUND EFFECT MAPPING
+
+Use the following sound assignments exactly:
+
+| Attack | Preparation SFX | Attack SFX |
+|---|---|---|
+| Savage Jump | `boar_prepare` | `boar_attack` |
+| Wild Claw Left | `wolf_prepare` | `wolf_attack` |
+| Wild Claw Right | `wolf_prepare` | `wolf_attack` |
+| Rampant Excavation | `boar_prepare` | `boar_attack` |
+| Beast Fire | No new preparation SFX required | `flame.mp3` |
+
+The fire sound plays when the purple fire is launched.
+
+Do not reuse the Wild Boar or Wolf attack sounds for Beast Fire.
+
+Do not invent new boss-specific SFX files.
+
+All sounds must respect the existing Chapter 1 M toggle.
+
+The background music `ch1_battle` must respect the N toggle.
+
+### General audio safeguards
+
+- Play each preparation or attack SFX once per appropriate event.
+- Do not continuously retrigger a sound during movement.
+- Avoid uncontrolled overlapping instances.
+- Stop or clean up sounds when restarting or exiting.
+- Continue the same music track during the Phase 1 to Phase 2 transition.
+- Preserve all existing Chapter 29 audio behavior.
+
+---
+
+## 18. VICTORY AND DEFEAT
+
+### Phase 1 HP reaches zero
+
+Transition to Phase 2.
+
+Do not end combat.
+
+### Phase 2 HP reaches zero
+
+Trigger normal Chapter 1 victory.
+
+1. Finish the last damaging animation or counterattack safely.
+2. Mark the Beast as defeated.
+3. Disable further attacks and combat inputs.
+4. Stop or fade out `ch1_battle`.
+5. Display the existing victory interface.
+6. Offer Retry and Return to Combat Select.
+
+**IMPORTANT: For this implementation, defeating the second 80-HP phase is the final victory condition.**
+
+Do not interrupt the victory at 20 HP or any other threshold.
+
+Do not implement the neck-grab cinematic, scripted final attack, Chaos unlock, or interactive narrative sequence.
+
+Those features will be added in a separate implementation stage.
+
+### Defeat
+
+If Dexios reaches 0 HP:
+
+- Stop the combat.
+- Cancel pending boss actions.
+- Stop or fade out music.
+- Display the existing Chapter 1 defeat interface.
+- Offer Retry and Return to Combat Select.
+
+### Restart
+
+Restore:
+
+- Dexios HP: 65/65.
+- Dexios Mana: 40/40.
+- Beast Phase: 1.
+- Beast HP: 80/80.
+- Rampant Excavation locked.
+- Phase 2 tutorial reset.
+- Initial turn: The Beast.
+- Sprite positions reset.
+- Camera position and zoom reset.
+- No active attack or projectile.
+- All timing states cleared.
+
+Preserve the user's music and SFX preferences.
+
+---
+
+## 19. EXISTING CHAPTER 1 SHORTCUTS
+
+Preserve the current shortcuts:
+
+- R — Restart Combat 7.
+- N — Toggle battle music.
+- M — Toggle sound effects.
+- Escape — Return to `scene_ch1_select`.
+
+These shortcuts must work during:
+
+- Beast preparation.
+- Attack movement.
+- Defensive windows.
+- Beast Fire projectile travel.
+- Phase transition.
+- Tutorial pop-up.
+- Triple Lightning.
+- Electric Arc charging and release.
+- Victory and defeat.
+
+Do not reimplement or replace an already working shared shortcut system.
+
+Clean up event listeners, timers, tweens, projectiles, sounds, and camera effects whenever the scene restarts or shuts down.
+
+---
+
+## 20. IMPLEMENTATION SAFETY
+
+Before modifying the project, inspect:
+
+- Chapter 1 scene registration.
+- The current combat encounter configurations.
+- Existing Wild Boar attacks.
+- Existing Wolf directional attacks.
+- Existing Furious Boar jump defense.
+- Existing Triple Lightning.
+- Existing Electric Arc.
+- Existing tutorial pop-ups.
+- Existing Phase/HP state handling where reusable.
+- Existing music and sound-effect management.
+- Existing victory/defeat flow.
+- Existing keyboard shortcuts.
+
+Extend the current working implementation conservatively.
+
+Prefer configurable definitions for:
+
+- Boss HP and phases.
+- Attack selection.
+- Attack timing.
+- Defense results.
+- Movement paths.
+- Projectile effects.
+- Sprite mappings.
+- Sound mappings.
+- Phase transition.
+- Tutorial display flags.
+
+Keep every boss-specific rule isolated to Combat 7.
+
+Do not change the current attack windows in Combats 1–6.
+
+Do not change Chapter 29.
+
+Do not add exploration, potion crafting, additional characters, narrative dialogues, Chaos resources, or cinematic quick-time events.
+
+---
+
+## 21. ACCEPTANCE TESTS
+
+Verify all of the following:
+
+### Scene and general mechanics
+
+1. Combat 7 is enabled in the Chapter 1 encounter selector.
+2. `scene_ch1_combat7` launches successfully.
+3. The new `ch1_combat7_background` is displayed.
+4. Only Dexios and The Beast appear.
+5. The Beast's supplied sprites display with correct scaling and grounding.
+6. Dexios begins with 65 HP and 40 Mana.
+7. The Beast begins Phase 1 with 80 HP.
+8. The turn order is The Beast → Dexios.
+
+### Boss attacks
+
+9. Savage Jump uses `beast_preparing_up` and `beast_attack_up`.
+10. Savage Jump visibly leaps toward Dexios's head and requires W.
+11. Wild Claw uses the correct left/right preparation and attack sprites.
+12. Left Wild Claw requires A.
+13. Right Wild Claw requires D.
+14. Beast Fire uses `beast_preparing_fire`, `beast_attack_fire`, and the `fire` projectile.
+15. Beast Fire requires Space and cannot be blocked normally.
+16. Rampant Excavation is unavailable in Phase 1.
+17. Rampant Excavation uses `beast_preparing_down` and `beast_attack_down`.
+18. Rampant Excavation visually travels underground and emerges below Dexios.
+19. Rampant Excavation requires S.
+20. The correct sound effects play for each attack.
+
+### Timing and damage
+
+21. Every preparation lasts exactly 1 second.
+22. Every attack movement or projectile travel lasts 1.6 seconds.
+23. Normal Block is available during the first 0.8 seconds of movement.
+24. Perfect Parry begins after 0.8 seconds of movement.
+25. The Perfect Parry window lasts through 0.1 seconds after impact.
+26. Failed directional defense causes 10 damage.
+27. Normal Block causes 5 damage.
+28. Perfect Parry prevents damage and counters for 5.
+29. Successful Beast Fire jumping prevents all damage without counterattacking.
+30. Failed Beast Fire jumping causes 10 damage.
+31. No attack applies damage twice.
+32. Only the first valid directional input determines the defense outcome.
+
+### Phase system
+
+33. Depleting the first 80-HP bar does not trigger victory.
+34. The Beast enters Phase 2 exactly once.
+35. Its HP restores to 80/80.
+36. Dexios retains his current HP and Mana during the transition.
+37. The same background music continues playing.
+38. The Phase 2 tutorial appears once.
+39. The first attack of Phase 2 is Rampant Excavation.
+40. After its first attack, the Beast can use all its available abilities.
+41. The first phase's leftover damage cannot carry into the second phase.
+
+### Player abilities and endings
+
+42. Triple Lightning remains unchanged.
+43. Electric Arc remains unchanged, including Mana cost and timing challenge.
+44. The Beast displays `beast_hurt` when damaged.
+45. Depleting the second 80-HP bar triggers victory.
+46. No cinematic, neck grab, or Chaos event interrupts victory.
+47. Dexios reaching 0 HP triggers defeat.
+48. R fully resets both phases, stats, and tutorial state.
+49. N, M, and Escape work correctly.
+50. Combats 1–6 remain functional and unchanged.
+51. Chapter 29 remains completely unchanged.
+52. The project builds successfully.
+
+After implementation, report the files changed, assets loaded, scenes registered, testing performed, and any remaining issues.
+
+**FINAL OBJECTIVE: Create a complete, polished Chapter 1 final boss encounter featuring The Beast, two 80-HP phases, four named attacks with five defensive directions/actions, the new S underground-defense tutorial, and a standard victory after the second phase. Preserve all previous gameplay and Chapter 29.**
+
+# LA DEXÍADA — CHAPTER 1: THE BEAST FINAL CINEMATIC
+
+Implement the interactive ending cinematic for Chapter 1 Combat 7, immediately after defeating The Beast's second HP phase.
+
+The cinematic uses eight supplied illustrations (`cinematic1` through `cinematic8`), three dialogue moments, camera-shake effects, and a sequence of keyboard quick-time events.
+
+The final result screen must display:
+
+**… Victory?**
+
+instead of the normal victory title.
+
+## CRITICAL REQUIREMENTS
+
+**The existing Chapter 1 Combat 7 is already working. Preserve its gameplay completely.**
+
+Do not modify:
+
+- The Beast's two 80-HP phases.
+- Its existing attack selection and defensive timings.
+- Savage Jump, Wild Claw, Beast Fire, or Rampant Excavation.
+- Triple Lightning or Electric Arc.
+- Dexios's HP, Mana, and abilities.
+- The established battle HUD and tutorials.
+- The current boss phase transition.
+- The existing music and SFX controls.
+- The normal behavior of Chapter 1 Combats 1–6.
+
+**Chapter 29 must remain completely unchanged.**
+
+Do not rebuild Combat 7. Add the cinematic as a new scene-specific ending sequence that replaces only the standard victory transition after Phase 2.
+
+Do not implement Chaotic Lightning as a selectable gameplay ability.
+
+The red Chaos attacks shown in this sequence are cinematic and interactive, not part of the normal combat system.
+
+---
+
+## 1. CINEMATIC TRIGGER
+
+The cinematic must trigger when The Beast's **second HP bar reaches zero**.
+
+### Existing behavior
+
+Currently, defeating Phase 2 immediately activates the standard victory screen.
+
+### New behavior
+
+When Phase 2 reaches 0 HP:
+
+1. Do not display the victory screen yet.
+2. Finish the current player attack or Perfect Parry counterattack safely.
+3. Prevent additional damage or turn progression.
+4. Lock normal combat input.
+5. Mark the boss ending sequence as triggered.
+6. Begin a scripted final Beast movement.
+7. Once The Beast reaches Dexios, start the eight-part cinematic.
+
+The cinematic must activate **exactly once**, even if the finishing action is Triple Lightning, Electric Arc, or a defensive counterattack.
+
+Do not let an unfinished multi-hit attack trigger multiple cinematic events.
+
+### Important phase distinction
+
+Depleting the first 80-HP bar must still trigger the existing transition into Phase 2.
+
+Only depleting the **second** 80-HP bar triggers this cinematic.
+
+Do not change any phase-transition behavior.
+
+---
+
+## 2. THE BEAST'S FINAL SCRIPTED ATTACK
+
+Before `cinematic1`, The Beast performs a special scripted approach resembling Savage Jump.
+
+This is a narrative transition, not an ordinary combat attack.
+
+### Sequence
+
+After the final damaging action ends:
+
+1. Hide or disable the active ability menu.
+2. Temporarily prevent the normal victory screen.
+3. Restore Dexios and The Beast to their appropriate battlefield positions.
+4. Display `beast_preparing_up`.
+5. Play the existing `boar_prepare` SFX.
+6. Hold the preparation pose for **1 second**.
+7. Switch to `beast_attack_up`.
+8. Play the existing `boar_attack` SFX.
+9. The Beast leaps toward Dexios using the established Savage Jump movement.
+10. The approach lasts **1.6 seconds**.
+11. The Beast reaches Dexios.
+12. Immediately replace the battle presentation with `cinematic1`.
+
+The Beast must visibly jump toward Dexios's head, as though launching one last desperate attack.
+
+### Scripted-attack exceptions
+
+This final movement:
+
+- Does not open a defensive timing window.
+- Does not require W.
+- Does not damage Dexios.
+- Cannot trigger Perfect Parry.
+- Cannot activate another turn.
+- Cannot trigger another victory event.
+- Does not restore the Beast's HP.
+
+The purpose is to transition seamlessly into the cinematic illustration of The Beast grabbing Dexios.
+
+At the moment of contact, switch immediately to the first cinematic image.
+
+Avoid a visible black frame or unrelated transition screen between the attack and `cinematic1`.
+
+---
+
+## 3. CINEMATIC ASSET REGISTRATION
+
+The following eight final images are supplied:
+
+- `cinematic1`
+- `cinematic2`
+- `cinematic3`
+- `cinematic4`
+- `cinematic5`
+- `cinematic6`
+- `cinematic7`
+- `cinematic8`
+
+Load them through the existing asset-management system.
+
+Use their exact physical filenames and extensions.
+
+Do not rename them or generate replacement images.
+
+Each illustration is a separate cinematic frame.
+
+### Presentation
+
+The game uses a 1920 × 1080 viewport.
+
+Each cinematic image must:
+
+- Be centered.
+- Preserve its original aspect ratio.
+- Fill the available cinematic area appropriately.
+- Avoid unnecessary cropping of characters, faces, or important action.
+- Remain visible throughout its corresponding sequence.
+- Render behind dialogue panels and key prompts.
+
+Use a black background behind the illustration if aspect-ratio fitting leaves unused space.
+
+The cinematic images replace the normal battlefield visually.
+
+While the cinematic is active, hide the combat HUD, health bars, Mana bar, turn-order icons, ability menus, target-selection markers, and defensive indicators.
+
+Do not permanently destroy the underlying Combat 7 systems. Restore or clean them up correctly when restarting or exiting.
+
+---
+
+## 4. CINEMATIC DIALOGUE UI
+
+Create a reusable cinematic dialogue overlay.
+
+### Visual style
+
+- Horizontal black panel along the bottom of the screen.
+- Background opacity: **90%**.
+- Thin gold border.
+- White dialogue text.
+- Clear and readable font.
+- Comfortable internal padding.
+- Text vertically centered within the panel.
+- Wide enough for longer sentences.
+- Maintain the established La Dexíada aesthetic.
+
+The dialogue panel must remain separate from the images so the illustrations can later be replaced without editing the text.
+
+### Dialogue rules
+
+- Dialogue appears only on cinematic frames with specified text.
+- Cinematic frames without specified dialogue should not display an empty dialogue panel.
+- Do not invent additional narrative lines.
+- Do not automatically advance dialogue-driven input scenes.
+- Do not show an Enter prompt.
+- The relevant QTE key is the only input that advances interactive frames.
+
+### Exact dialogue assignments
+
+**Cinematic 1:**
+
+"Wh-What??? I can´t lose…"
+
+**Cinematic 2:**
+
+"I … should … not… DAAMNNN ITTT!!!"
+
+**Cinematic 3:**
+
+"Why won`t you dieeee!!!!"
+
+Cinematics 4, 5, 6, 7, and 8 have **no dialogue text** for now.
+
+Preserve the supplied dialogue punctuation and capitalization.
+
+---
+
+## 5. CINEMATIC 1 — THE GRAB
+
+Image:
+
+`cinematic1`
+
+### Sequence
+
+As soon as The Beast's scripted Savage Jump reaches Dexios:
+
+1. Hide the normal combat HUD.
+2. Display `cinematic1` across the cinematic viewport.
+3. Display the bottom dialogue panel.
+4. Show the following text:
+
+"Wh-What??? I can´t lose…"
+
+### Duration
+
+**5 seconds.**
+
+The image and text remain visible for the complete five-second duration.
+
+There is no QTE input during this scene.
+
+After exactly five seconds, automatically transition to `cinematic2`.
+
+Do not show victory yet.
+
+Use Phaser-managed timing rather than untracked browser timers.
+
+---
+
+## 6. CINEMATIC 2 — BREAKING FREE
+
+Image:
+
+`cinematic2`
+
+Dialogue:
+
+"I … should … not… DAAMNNN ITTT!!!"
+
+### Presentation
+
+When Cinematic 2 begins:
+
+1. Display `cinematic2`.
+2. Display the dialogue in the bottom black-and-gold panel.
+3. Display a large, clearly visible **W** key prompt.
+4. Begin tracking valid W presses.
+
+### QTE requirement
+
+The player must press:
+
+**W exactly 10 times.**
+
+Each valid W press:
+
+- Counts as one input.
+- Triggers a noticeable camera shake.
+- Produces immediate feedback on the W prompt.
+- Advances the internal counter by one.
+
+Do not change images between W presses.
+
+Keep the cinematic image and dialogue visible throughout this sequence.
+
+### Camera shake
+
+Every valid W press must make the entire cinematic presentation visibly shake, as if Dexios is struggling violently against The Beast's grip.
+
+Use a short, noticeable camera shake.
+
+The intensity and duration should be configurable.
+
+Avoid excessively long shakes that overlap uncontrollably with subsequent transitions.
+
+### Key handling
+
+- Count actual individual W presses, not continuous holding.
+- Holding W must not automatically count as ten presses.
+- Ignore operating-system key-repeat events.
+- Require a genuine new keydown after release.
+- Ignore all unrelated keys except the existing Chapter 1 global hotkeys.
+
+### Completion
+
+After the tenth valid W press:
+
+1. Trigger the final shake for that press.
+2. Complete the feedback.
+3. Remove the W prompt.
+4. Transition to `cinematic3`.
+
+There is **no time limit** and no failure state.
+
+The scene remains active until the player completes all ten W presses.
+
+---
+
+## 7. CINEMATIC 3 — FIRST CHAOTIC ATTACK
+
+Image:
+
+`cinematic3`
+
+Dialogue:
+
+"Why won`t you dieeee!!!!"
+
+### Entry behavior
+
+When Cinematic 3 appears:
+
+1. Replace the previous illustration with `cinematic3`.
+2. Immediately trigger a noticeable camera shake.
+3. Display the dialogue panel.
+4. Display a large **A** key prompt.
+
+### Interaction
+
+Wait for the player to press:
+
+**A**
+
+Upon one valid A press:
+
+1. Mark the input as completed.
+2. Remove the key prompt.
+3. Transition to `cinematic4`.
+
+Do not transition automatically.
+
+Do not impose a time limit.
+
+Other keys must not advance the scene.
+
+---
+
+## 8. CINEMATIC 4 — SECOND CHAOTIC ATTACK
+
+Image:
+
+`cinematic4`
+
+No dialogue.
+
+### Entry behavior
+
+1. Display `cinematic4`.
+2. Shake the camera immediately as the image appears.
+3. Display a large **D** key prompt.
+
+### Interaction
+
+Wait for:
+
+**D**
+
+One valid D press advances to `cinematic5`.
+
+No timer or failure condition.
+
+---
+
+## 9. CINEMATIC 5 — THIRD CHAOTIC ATTACK
+
+Image:
+
+`cinematic5`
+
+No dialogue.
+
+### Entry behavior
+
+1. Display `cinematic5`.
+2. Immediately shake the camera.
+3. Display a large **A** key prompt.
+
+### Interaction
+
+Wait for:
+
+**A**
+
+One valid A press advances to `cinematic6`.
+
+No automatic transition.
+
+---
+
+## 10. CINEMATIC 6 — FOURTH CHAOTIC ATTACK
+
+Image:
+
+`cinematic6`
+
+No dialogue.
+
+### Entry behavior
+
+1. Display `cinematic6`.
+2. Immediately shake the camera.
+3. Display a large **D** key prompt.
+
+### Interaction
+
+Wait for:
+
+**D**
+
+One valid D press advances to `cinematic7`.
+
+---
+
+## 11. CINEMATIC 7 — FIFTH CHAOTIC ATTACK
+
+Image:
+
+`cinematic7`
+
+No dialogue.
+
+### Entry behavior
+
+1. Display `cinematic7`.
+2. Immediately shake the camera.
+3. Display a large **A** key prompt.
+
+### Interaction
+
+Wait for:
+
+**A**
+
+One valid A press advances to `cinematic8`.
+
+---
+
+## 12. CINEMATIC 8 — FINAL CHAOTIC BARRAGE
+
+Image:
+
+`cinematic8`
+
+No dialogue.
+
+This is the final interactive cinematic.
+
+### Entry behavior
+
+When Cinematic 8 begins:
+
+1. Display `cinematic8`.
+2. Immediately shake the camera.
+3. Display a large **A** key prompt.
+4. Begin the final alternating-key sequence.
+
+### Input sequence
+
+The player must alternate:
+
+**A → D → A → D**
+
+Continue until **A has been pressed five times and D has been pressed five times**.
+
+The sequence consists of ten successful inputs in total:
+
+`A, D, A, D, A, D, A, D, A, D`
+
+### Individual input behavior
+
+Each time the player presses the correct prompted key:
+
+1. Trigger a noticeable camera shake.
+2. Briefly emphasize the completed key prompt.
+3. Increment the successful-input counter.
+4. Replace the current prompt with the next required key.
+
+Example:
+
+- Display A.
+- Player presses A.
+- Shake.
+- Display D.
+- Player presses D.
+- Shake.
+- Display A again.
+
+Continue until all ten inputs are completed.
+
+### Visual behavior
+
+Keep `cinematic8` visible throughout the entire alternating sequence.
+
+Do not replay or replace the illustration for every press.
+
+The camera shake represents repeated violent Chaos-powered impacts.
+
+The shake must occur on **every correct press**, not only when the image first appears.
+
+### Input validation
+
+- Only the currently prompted key is accepted.
+- Incorrect keys do not advance the sequence.
+- Holding A or D does not generate repeated valid presses.
+- Require distinct key presses.
+- Debounce input so a single physical press cannot satisfy multiple prompts.
+- Do not accidentally accept a key still held from Cinematic 7.
+- Do not count Chapter 1 hotkeys as QTE inputs.
+
+### Completion
+
+After the fifth successful D press:
+
+1. Trigger the final camera shake.
+2. Remove the key prompt.
+3. Finish the cinematic interaction.
+4. Transition to the altered victory screen.
+
+Do not start another combat turn.
+
+There is no QTE failure state and no time limit.
+
+---
+
+## 13. COMPLETE CINEMATIC SEQUENCE
+
+The exact sequence must be:
+
+| Frame | Dialogue | Input / completion |
+|---|---|---|
+| `cinematic1` | Wh-What??? I can´t lose… | Automatically after 5 seconds |
+| `cinematic2` | I … should … not… DAAMNNN ITTT!!! | W × 10, shake on every press |
+| `cinematic3` | Why won`t you dieeee!!!! | Shake on entry, then A × 1 |
+| `cinematic4` | None | Shake on entry, then D × 1 |
+| `cinematic5` | None | Shake on entry, then A × 1 |
+| `cinematic6` | None | Shake on entry, then D × 1 |
+| `cinematic7` | None | Shake on entry, then A × 1 |
+| `cinematic8` | None | Shake on entry, then alternate A/D five times each |
+
+No cinematic frame may be skipped accidentally.
+
+Only the specified input or timed completion advances the current frame.
+
+Do not insert unrequested dialogue, additional animations, unrelated scenes, or additional required key combinations.
+
+---
+
+## 14. KEY PROMPT PRESENTATION
+
+Create a consistent, readable QTE prompt.
+
+### Visual style
+
+- Large uppercase letter.
+- White text or an established gold-accented key indicator.
+- Dark background or border for readability.
+- Prominent enough to identify immediately.
+- Positioned near the lower central area, above the dialogue panel if dialogue is present.
+- Do not cover Dexios's face or the principal action in the illustration.
+
+The prompts should visually match the existing timing challenges and tutorial UI.
+
+### Feedback
+
+When the correct key is pressed:
+
+- Briefly brighten or scale the prompt.
+- Trigger the specified camera shake.
+- Then transition or display the next key.
+
+For Cinematic 2, optionally display a subtle progress indicator such as `3/10` to communicate the repeated-input objective.
+
+For Cinematic 8, a similar `4/10` counter may be used.
+
+Do not introduce additional numerical controls or different required keys.
+
+---
+
+## 15. CAMERA SHAKE SYSTEM
+
+Reuse Phaser's camera shake functionality or an existing Chapter 1 shake helper.
+
+Use configurable shake duration and intensity.
+
+### Shake triggers
+
+**Cinematic 1**
+
+No required shake on entry.
+
+**Cinematic 2**
+
+Shake on every valid W press.
+
+**Cinematic 3**
+
+Shake when the image first appears.
+
+**Cinematic 4**
+
+Shake when the image first appears.
+
+**Cinematic 5**
+
+Shake when the image first appears.
+
+**Cinematic 6**
+
+Shake when the image first appears.
+
+**Cinematic 7**
+
+Shake when the image first appears.
+
+**Cinematic 8**
+
+Shake when the image first appears and again on every correct A/D press.
+
+### Important safeguards
+
+- Prevent camera offsets from remaining after shaking.
+- Do not leave the camera permanently zoomed or displaced.
+- Avoid shake effects accumulating indefinitely.
+- Ensure the dialogue and key prompts remain readable.
+- Restore the camera to its normal position when exiting the cinematic.
+- Clean up camera effects during restart and scene transitions.
+
+The camera shake should feel intense but must not make the cinematic impossible to read.
+
+---
+
+## 16. MUSIC AND SOUND EFFECTS
+
+For now, reuse the current Chapter 1 battle music:
+
+`ch1_battle`
+
+Do not require new music.
+
+### During the cinematic
+
+- Keep the existing battle music playing through the scripted final approach and cinematic sequence.
+- Do not restart the song when `cinematic1` begins.
+- Do not create overlapping music instances.
+- Preserve the existing N music toggle.
+
+### Scripted Beast approach SFX
+
+Reuse:
+
+- `boar_prepare` when the final Savage Jump preparation begins.
+- `boar_attack` when the scripted jump begins.
+
+No additional cinematic-specific SFX have been supplied or requested.
+
+Do not introduce missing required audio assets.
+
+Preserve the existing M sound-effects toggle.
+
+### When the final victory screen appears
+
+Stop or fade the existing combat music using the current Chapter 1 victory transition conventions.
+
+Do not automatically switch to Chapter 29's music.
+
+---
+
+## 17. FINAL VICTORY SCREEN — SPECIAL TITLE
+
+Once Cinematic 8 is fully completed, show the existing Chapter 1 victory screen.
+
+However, replace the normal victory title with exactly:
+
+**… Victory?**
+
+Preserve the leading ellipsis, capitalization, space, and final question mark.
+
+### Important
+
+The text must NOT be:
+
+- `VICTORY`
+- `VICTORY!`
+- `YOU WIN`
+- `THE BEAST DEFEATED`
+
+For this encounter, the intended wording is:
+
+`… Victory?`
+
+### Victory screen behavior
+
+Keep the existing Chapter 1 victory screen styling and navigation.
+
+Preserve the currently working options, including:
+
+- Retry.
+- Return to Combat Select.
+
+Do not modify the global victory screen title used by Combats 1–6.
+
+Use a scene-specific victory-title override for Combat 7.
+
+The altered wording should communicate that Dexios has technically won, but something disturbing has happened.
+
+Do not add any extra narrative text after the cinematic for now.
+
+---
+
+## 18. CINEMATIC STATE MANAGEMENT
+
+Implement the cinematic as an explicit state-driven sequence rather than a series of loosely connected timers.
+
+Recommended states:
+
+- `BOSS_FINAL_APPROACH`
+- `CINEMATIC_1`
+- `CINEMATIC_2`
+- `CINEMATIC_3`
+- `CINEMATIC_4`
+- `CINEMATIC_5`
+- `CINEMATIC_6`
+- `CINEMATIC_7`
+- `CINEMATIC_8`
+- `SPECIAL_VICTORY`
+
+Track:
+
+- Current cinematic index.
+- Whether the final sequence has begun.
+- Current expected key.
+- Valid input count.
+- Whether input is currently locked during transitions.
+- Active dialogue text.
+- Active camera shake.
+- Any pending timed transition.
+
+### Prevention of duplicate events
+
+- The cinematic must trigger once.
+- Each QTE press counts once.
+- Cinematic transitions happen once.
+- The final victory screen appears once.
+- No combat actions may resume while the cinematic is active.
+- The normal Phase 2 victory handler must not activate independently.
+
+### Handling interrupted attacks
+
+If Phase 2 is defeated during a Triple Lightning multi-hit attack, wait for the current player action to conclude safely before beginning the final approach.
+
+If a Perfect Parry counterattack defeats Phase 2, finish the counterattack feedback first.
+
+Do not apply damage to the already defeated Phase 2 boss while transitioning.
+
+Do not show the normal victory screen even momentarily before the final approach begins.
+
+---
+
+## 19. KEYBOARD SHORTCUTS
+
+Preserve the existing Chapter 1 controls:
+
+- R — Restart Combat 7.
+- N — Toggle music.
+- M — Toggle SFX.
+- Escape — Return to `scene_ch1_select`.
+
+These must remain functional during every cinematic frame, including Cinematic 2 and Cinematic 8.
+
+### Restart
+
+Pressing R during the cinematic restarts the entire boss encounter from Phase 1.
+
+Reset:
+
+- Dexios HP and Mana.
+- Beast HP and phase.
+- Boss attacks and turn sequence.
+- Tutorial state.
+- Cinematic state.
+- QTE counters.
+- Current dialogue.
+- Camera position and zoom.
+- Image overlays.
+- Sound and timer state.
+
+Do not restart directly from Cinematic 1.
+
+### Escape
+
+Pressing Escape during the cinematic exits to `scene_ch1_select`.
+
+Clean up all cinematic images, dialogue overlays, QTE input handlers, music, camera shake, and pending timers.
+
+### Input conflicts
+
+While the cinematic is active:
+
+- W, A, and D must control only the cinematic QTE.
+- Do not execute normal defense animations.
+- Do not activate player attacks.
+- Do not open target selection.
+- Do not start Electric Arc.
+- Do not advance combat turns.
+- Do not let Enter skip cinematic frames.
+
+Global shortcuts R, N, M, and Escape must be processed independently and safely.
+
+Use keydown-edge detection and ignore keyboard auto-repeat.
+
+When changing cinematic frames, clear or synchronize held-key state so an input from the previous frame cannot automatically complete the next frame.
+
+---
+
+## 20. IMPLEMENTATION SAFETY
+
+Before editing, inspect the current Combat 7 implementation to locate:
+
+- Boss Phase 2 defeat detection.
+- Existing victory transition.
+- The Beast's Savage Jump animation.
+- Beast preparation and attack SFX.
+- Battle audio management.
+- Existing cinematic or dialogue overlays from Chapter 29 that can be reused without changing their behavior.
+- Chapter 1 hotkeys and scene cleanup.
+- Camera shake and animation helpers.
+
+Prefer implementing a separate, reusable Chapter 1 cinematic controller or scene-specific sequence.
+
+Do not duplicate or rewrite the entire boss battle.
+
+Only intercept Phase 2 victory and replace its final transition.
+
+Do not edit the existing Chapter 29 narrative cinematic code unless absolutely necessary for a shared helper, and preserve its existing behavior exactly.
+
+Do not implement the overworld, healing system, potion crafting, or other Chapter 1 narrative dialogue as part of this change.
+
+Do not add Chaos as a normal selectable ability.
+
+---
+
+## 21. ACCEPTANCE TESTS
+
+Verify the following:
+
+1. Combat 7 still starts normally with The Beast at 80 HP in Phase 1.
+2. Defeating Phase 1 still restores the Beast to 80 HP and begins Phase 2.
+3. The existing Rampant Excavation tutorial still works.
+4. All Beast attacks and defensive timings remain unchanged.
+5. Triple Lightning and Electric Arc remain unchanged.
+6. Reaching 0 HP in Phase 2 no longer immediately displays normal victory.
+7. The Beast performs its final scripted Savage Jump preparation.
+8. The Beast approaches Dexios using `beast_attack_up`.
+9. The final approach causes no damage and requires no defensive input.
+10. At contact, `cinematic1` appears.
+11. `cinematic1` displays the exact first dialogue for five seconds.
+12. It automatically transitions to `cinematic2`.
+13. `cinematic2` displays the exact second dialogue.
+14. The W prompt appears and requires exactly ten separate presses.
+15. Each valid W press shakes the camera.
+16. Holding W does not count as repeated presses.
+17. `cinematic3` appears with the exact third dialogue and camera shake.
+18. A advances Cinematic 3 to Cinematic 4.
+19. Cinematic 4 requires D.
+20. Cinematic 5 requires A.
+21. Cinematic 6 requires D.
+22. Cinematic 7 requires A.
+23. Each of Cinematics 3–7 shakes the camera on entry.
+24. Cinematic 8 shakes the camera on entry.
+25. Cinematic 8 alternates A and D five times each, starting with A.
+26. Every correct input in Cinematic 8 triggers a camera shake.
+27. Incorrect inputs never advance the cinematic.
+28. No QTE has a time limit or failure state.
+29. The final cinematic completes only after the tenth valid A/D input.
+30. The existing victory interface appears with the title `… Victory?`.
+31. Combats 1–6 continue to display their ordinary victory title.
+32. R restarts the complete boss encounter from Phase 1.
+33. Escape returns safely to the Chapter 1 combat selector.
+34. N and M preserve their music/SFX functionality.
+35. No duplicated events, stale timers, lingering overlays, stuck input states, or overlapping music remain.
+36. Chapter 29 is unaffected.
+37. The project builds successfully.
+
+After implementing, report the modified files, cinematic assets registered, changes to the boss victory transition, testing performed, and any remaining issues.
+
+**FINAL OBJECTIVE:** After defeating The Beast's second HP phase, replace the immediate victory with a scripted Savage Jump approach, followed by eight cinematic illustrations, the exact supplied dialogue, interactive W/A/D commands, camera shakes, and a final result reading `… Victory?`, without altering any established gameplay or Chapter 29.

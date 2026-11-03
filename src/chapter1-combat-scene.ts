@@ -28,6 +28,7 @@ import wolfAttackSfxUrl from '../assets/sfx/wolf_attack.mp3';
 import wolfHurtSfxUrl from '../assets/sfx/wolf_hurt.mp3';
 import wolfPrepareSfxUrl from '../assets/sfx/wolf_prepare.mp3';
 import victoryMusicUrl from '../assets/music/nike.mp3';
+import loseMusicUrl from '../assets/music/lose.mp3';
 import boarAttackSfxUrl from '../assets/sfx/boar_attack.mp3';
 import boarHurtSfxUrl from '../assets/sfx/boar_hurt.mp3';
 import boarPrepareSfxUrl from '../assets/sfx/boar_prepare.mp3';
@@ -48,6 +49,29 @@ import arcChargingSfxUrl from '../assets/sfx/electric_arc_charging.mp3';
 import arcReleasingSfxUrl from '../assets/sfx/electric_arc_releasing.mp3';
 import dexiosSoundUrl from '../assets/sfx/dexios.mp3';
 import perfectParrySoundUrl from '../assets/sfx/perfect_block.mp3';
+import flameSfxUrl from '../assets/sfx/flame.mp3';
+import combat7BackgroundUrl from '../assets/backgrounds/ch1_combat7_background.png';
+import beastBaseUrl from '../assets/beast/beast_base.png';
+import beastHurtUrl from '../assets/beast/beast_hurt.png';
+import beastPreparingUpUrl from '../assets/beast/beast_preparing_up.png';
+import beastAttackUpUrl from '../assets/beast/beast_attack_up.png';
+import beastPreparingLeftUrl from '../assets/beast/beast_preparing_left.png';
+import beastAttackLeftUrl from '../assets/beast/beast_attack_left.png';
+import beastPreparingRightUrl from '../assets/beast/beast_preparing_right.png';
+import beastAttackRightUrl from '../assets/beast/beast_attack_right.png';
+import beastPreparingDownUrl from '../assets/beast/beast_preparing_down.png';
+import beastAttackDownUrl from '../assets/beast/beast_attack_down.png';
+import beastPreparingFireUrl from '../assets/beast/beast_preparing_fire.png';
+import beastAttackFireUrl from '../assets/beast/beast_attack_fire.png';
+import beastFireUrl from '../assets/beast/fire.png';
+import cinematic1Url from '../assets/cutscenes/cinematic1.png';
+import cinematic2Url from '../assets/cutscenes/cinematic2.png';
+import cinematic3Url from '../assets/cutscenes/cinematic3.png';
+import cinematic4Url from '../assets/cutscenes/cinematic4.png';
+import cinematic5Url from '../assets/cutscenes/cinematic5.png';
+import cinematic6Url from '../assets/cutscenes/cinematic6.png';
+import cinematic7Url from '../assets/cutscenes/cinematic7.png';
+import cinematic8Url from '../assets/cutscenes/cinematic8.png';
 
 const WIDTH = GAME_CONFIG.canvas.width;
 const HEIGHT = GAME_CONFIG.canvas.height;
@@ -73,6 +97,89 @@ const PARRY_GRACE_MS = 200;
 const WILD_BITE_TOTAL_MS = PREPARATION_MS + LUNGE_MS + PARRY_GRACE_MS;
 const TRIPLE_HIT_MS = 500;
 
+// Every value is in milliseconds from the start of the attack timeline.
+interface AttackTiming {
+  preparationMs: number;
+  lungeMs: number;
+  graceMs: number;
+  // How long into the lunge a correct directional defence still counts as a normal block.
+  blockMs: number;
+  // First moment a jump dodge is accepted.
+  jumpFromMs: number;
+}
+
+const DEFAULT_TIMING: AttackTiming = {
+  preparationMs: PREPARATION_MS,
+  lungeMs: LUNGE_MS,
+  graceMs: PARRY_GRACE_MS,
+  blockMs: 1000,
+  jumpFromMs: PREPARATION_MS + LUNGE_MS - 1000,
+};
+
+type BossAttackKind = 'leap' | 'claw' | 'fire' | 'dig';
+
+interface BossAttack {
+  id: string;
+  name: string;
+  kind: BossAttackKind;
+  side: DefenseSide;
+  defense: 'directional' | 'jump';
+  prepareSprite: string;
+  attackSprite: string;
+  prepareSfx?: string;
+  attackSfx: string;
+  prepareText: string;
+  minPhase: 1 | 2;
+  weight: number;
+}
+
+interface BossConfig {
+  backgroundKey: string;
+  timing: AttackTiming;
+  attacks: BossAttack[];
+  // The first attack of phase 2 is always this one, preceded by its tutorial.
+  firstPhaseTwoAttack: string;
+  // Replaces the normal victory title and plays the final cinematic before it.
+  victoryTitle?: string;
+}
+
+interface CinematicFrame {
+  dialogue?: string;
+  // Frames with a duration advance on their own and take no input.
+  autoMs?: number;
+  sequence?: string[];
+  shakeOnEntry?: boolean;
+  shakeOnPress?: boolean;
+}
+
+const TARGET_LABELS = ['I', 'II', 'III', 'IV'];
+
+const CINEMATIC = {
+  shakeMs: 220,
+  shakeIntensity: 0.008,
+  finalApproachMs: 1600,
+  advanceDelayMs: 200,
+};
+
+const CINEMATIC_FRAMES: CinematicFrame[] = [
+  { dialogue: 'Wh-What??? I can´t lose…', autoMs: 5000 },
+  {
+    dialogue: 'I … should … not… DAAMNNN ITTT!!!',
+    sequence: Array.from({ length: 10 }, () => 'w'),
+    shakeOnPress: true,
+  },
+  { dialogue: 'Why won`t you dieeee!!!!', sequence: ['a'], shakeOnEntry: true },
+  { sequence: ['d'], shakeOnEntry: true },
+  { sequence: ['a'], shakeOnEntry: true },
+  { sequence: ['d'], shakeOnEntry: true },
+  { sequence: ['a'], shakeOnEntry: true },
+  {
+    sequence: Array.from({ length: 10 }, (_, index) => (index % 2 === 0 ? 'a' : 'd')),
+    shakeOnEntry: true,
+    shakeOnPress: true,
+  },
+];
+
 export interface BoarSpawn {
   id: string;
   name: string;
@@ -87,6 +194,7 @@ export interface BoarSpawn {
 }
 
 type AttackSide = 'up' | 'left' | 'right';
+type DefenseSide = AttackSide | 'down';
 
 // Describes one enemy type: sprites, sounds, damage and how its attack is defended.
 export interface EnemyKit {
@@ -168,10 +276,122 @@ const WOLF_KIT: EnemyKit = {
   },
 };
 
-const SIDE_KEYS: Record<AttackSide, { key: string; arrow: string; sprite: string; label: string }> = {
+const BEAST_TIMING: AttackTiming = {
+  preparationMs: 1000,
+  lungeMs: 1600,
+  graceMs: 100,
+  blockMs: 800,
+  jumpFromMs: 1800,
+};
+
+const BEAST_KIT: EnemyKit = {
+  maxHp: 100,
+  base: 'beast_base',
+  hurt: 'beast_hurt',
+  prepare: { up: 'beast_preparing_up', left: 'beast_preparing_left', right: 'beast_preparing_right' },
+  attack: { up: 'beast_attack_up', left: 'beast_attack_left', right: 'beast_attack_right' },
+  sfx: { prepare: 'boar_prepare_sfx', attack: 'boar_attack_sfx', hurt: 'boar_hurt_sfx' },
+  damage: { failed: 10, blocked: 5 },
+  counter: 5,
+  attackName: 'SAVAGE JUMP',
+  prepareText: 'THE BEAST PREPARES TO ATTACK',
+  // Flank positions for Wild Claw; the other attacks ignore them.
+  lateral: {
+    flankX: { left: 70, right: 1250 },
+    lungeOffset: 330,
+    flankMs: 700,
+    firstSides: [],
+  },
+};
+
+const BEAST_ATTACKS: BossAttack[] = [
+  {
+    id: 'savage_jump',
+    name: 'SAVAGE JUMP',
+    kind: 'leap',
+    side: 'up',
+    defense: 'directional',
+    prepareSprite: 'beast_preparing_up',
+    attackSprite: 'beast_attack_up',
+    prepareSfx: 'boar_prepare_sfx',
+    attackSfx: 'boar_attack_sfx',
+    prepareText: 'THE BEAST CROUCHES TO POUNCE',
+    minPhase: 1,
+    weight: 1,
+  },
+  {
+    id: 'wild_claw_left',
+    name: 'WILD CLAW',
+    kind: 'claw',
+    side: 'left',
+    defense: 'directional',
+    prepareSprite: 'beast_preparing_left',
+    attackSprite: 'beast_attack_left',
+    prepareSfx: 'wolf_prepare_sfx',
+    attackSfx: 'wolf_attack_sfx',
+    prepareText: 'THE BEAST PREPARES TO CLAW',
+    minPhase: 1,
+    weight: 0.5,
+  },
+  {
+    id: 'wild_claw_right',
+    name: 'WILD CLAW',
+    kind: 'claw',
+    side: 'right',
+    defense: 'directional',
+    prepareSprite: 'beast_preparing_right',
+    attackSprite: 'beast_attack_right',
+    prepareSfx: 'wolf_prepare_sfx',
+    attackSfx: 'wolf_attack_sfx',
+    prepareText: 'THE BEAST PREPARES TO CLAW',
+    minPhase: 1,
+    weight: 0.5,
+  },
+  {
+    id: 'beast_fire',
+    name: 'BEAST FIRE',
+    kind: 'fire',
+    side: 'up',
+    defense: 'jump',
+    prepareSprite: 'beast_preparing_fire',
+    attackSprite: 'beast_attack_fire',
+    attackSfx: 'flame_sfx',
+    prepareText: 'THE BEAST GATHERS PURPLE FIRE',
+    minPhase: 1,
+    weight: 1,
+  },
+  {
+    id: 'rampant_excavation',
+    name: 'RAMPANT EXCAVATION',
+    kind: 'dig',
+    side: 'down',
+    defense: 'directional',
+    prepareSprite: 'beast_preparing_down',
+    attackSprite: 'beast_attack_down',
+    prepareSfx: 'boar_prepare_sfx',
+    attackSfx: 'boar_attack_sfx',
+    prepareText: 'THE BEAST DRIVES ITS TAIL UNDERGROUND',
+    minPhase: 2,
+    weight: 1,
+  },
+];
+
+const BEAST_MOTION = {
+  leapApex: 200,
+  leapEndOffsetX: 380,
+  leapEndOffsetY: 240,
+  fireHeight: 170,
+  fireOriginX: 0.33,
+  fireOriginY: 0.17,
+  fireTargetOffsetY: 110,
+  digOffsetX: 220,
+};
+
+const SIDE_KEYS: Record<DefenseSide, { key: string; arrow: string; sprite: string; label: string }> = {
   up: { key: 'w', arrow: 'arrowup', sprite: 'dexios_arriba', label: 'W' },
   left: { key: 'a', arrow: 'arrowleft', sprite: 'dexios_izquierda', label: 'A' },
   right: { key: 'd', arrow: 'arrowright', sprite: 'dexios_derecha', label: 'D' },
+  down: { key: 's', arrow: 'arrowdown', sprite: 'dexios_abajo', label: 'S' },
 };
 
 export interface Chapter1CombatConfig {
@@ -186,6 +406,7 @@ export interface Chapter1CombatConfig {
   skipTargetTutorial?: boolean;
   skipArcTutorials?: boolean;
   jumpTutorial?: boolean;
+  boss?: BossConfig;
   boars: BoarSpawn[];
 }
 
@@ -286,6 +507,7 @@ export const CHAPTER1_COMBAT5: Chapter1CombatConfig = {
 
 export const CHAPTER1_COMBAT6: Chapter1CombatConfig = {
   sceneKey: 'scene_ch1_combat6',
+  nextSceneKey: 'scene_ch1_combat7',
   turnSlots: 4,
   introTutorials: false,
   electricArc: true,
@@ -315,6 +537,26 @@ export const CHAPTER1_COMBAT6: Chapter1CombatConfig = {
   ],
 };
 
+export const CHAPTER1_COMBAT7: Chapter1CombatConfig = {
+  sceneKey: 'scene_ch1_combat7',
+  turnSlots: 4,
+  introTutorials: false,
+  kit: BEAST_KIT,
+  electricArc: true,
+  skipArcTutorials: true,
+  skipTargetTutorial: true,
+  boss: {
+    backgroundKey: 'ch1_combat7_background',
+    timing: BEAST_TIMING,
+    attacks: BEAST_ATTACKS,
+    firstPhaseTwoAttack: 'rampant_excavation',
+    victoryTitle: '… Victory?',
+  },
+  boars: [
+    { id: 'beast_1', name: 'THE BEAST', turnLabel: 'BEAST', x: 1300, y: 830, height: 600, lungeY: 0 },
+  ],
+};
+
 interface BoarState {
   spawn: BoarSpawn;
   health: number;
@@ -335,6 +577,8 @@ interface BoarHud {
 type ChapterCombatPhase =
   | 'tutorial'
   | 'combat-start'
+  | 'phase-transition'
+  | 'cinematic'
   | 'player'
   | 'target-select'
   | 'enemy-announcement'
@@ -418,6 +662,13 @@ const JUMP_TUTORIAL: TutorialMessage[] = [
   },
 ];
 
+const DIG_TUTORIAL: TutorialMessage[] = [
+  {
+    title: 'DEFENDING FROM BELOW',
+    text: 'The Beast can now attack from beneath the ground! Watch the underground movement approaching Dexios and press S to defend. A normal block reduces the damage, while a Perfect Parry prevents all damage and lets Dexios counterattack!',
+  },
+];
+
 const TARGET_TUTORIAL: TutorialMessage[] = [
   {
     title: 'CHOOSING A TARGET',
@@ -459,7 +710,23 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   private combatStartShown = false;
   private playerTutorialShown = false;
   private wildBiteStartedAt = 0;
-  private attackSide: AttackSide = 'up';
+  private attackSide: DefenseSide = 'up';
+  private currentAttack?: BossAttack;
+  private bossPhase: 1 | 2 = 1;
+  private phaseDepleted = false;
+  private digTutorialShown = false;
+  private digUsed = false;
+  private phaseText?: Phaser.GameObjects.Text;
+  private fireProjectile?: Phaser.GameObjects.Image;
+  private digGraphics?: Phaser.GameObjects.Graphics;
+  private finalTriggered = false;
+  private cineIndex = 0;
+  private cineCount = 0;
+  private cineLocked = false;
+  private cineObjects: Phaser.GameObjects.GameObject[] = [];
+  private cinePrompt?: Phaser.GameObjects.Container;
+  private cinePromptLetter?: Phaser.GameObjects.Text;
+  private cinePromptCounter?: Phaser.GameObjects.Text;
   private attackCount = 0;
   private sideTutorialShown = false;
   private jumpTutorialShown = false;
@@ -504,6 +771,10 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       this.scene.pause(this.scene.key);
       this.scene.launch(PAUSE_SCENE_KEY, { parentSceneKey: this.scene.key });
       this.scene.bringToTop(PAUSE_SCENE_KEY);
+      return;
+    }
+    if (this.phase === 'cinematic') {
+      this.onCinematicKey(lower);
       return;
     }
     if (lower === 'a' || lower === 'd') {
@@ -559,6 +830,17 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     return spawn.kit ?? this.kit;
   }
 
+  private get timing(): AttackTiming {
+    return this.config.boss?.timing ?? DEFAULT_TIMING;
+  }
+
+  private isJumpAttack(): boolean {
+    if (this.currentAttack) {
+      return this.currentAttack.defense === 'jump';
+    }
+    return !!this.activeBoar && this.kitOf(this.activeBoar).defense === 'jump';
+  }
+
   preload(): void {
     const images: Array<[string, string]> = [
       ['ch1_combat1_background', backgroundUrl],
@@ -590,6 +872,32 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       ['dexios_arc_charging', dexiosArcChargingUrl],
       ['dexios_arc_releasing', dexiosArcReleasingUrl],
     ];
+    if (this.config.boss) {
+      images.push(
+        [this.config.boss.backgroundKey, combat7BackgroundUrl],
+        ['beast_base', beastBaseUrl],
+        ['beast_hurt', beastHurtUrl],
+        ['beast_preparing_up', beastPreparingUpUrl],
+        ['beast_attack_up', beastAttackUpUrl],
+        ['beast_preparing_left', beastPreparingLeftUrl],
+        ['beast_attack_left', beastAttackLeftUrl],
+        ['beast_preparing_right', beastPreparingRightUrl],
+        ['beast_attack_right', beastAttackRightUrl],
+        ['beast_preparing_down', beastPreparingDownUrl],
+        ['beast_attack_down', beastAttackDownUrl],
+        ['beast_preparing_fire', beastPreparingFireUrl],
+        ['beast_attack_fire', beastAttackFireUrl],
+        ['beast_fire', beastFireUrl],
+        ['ch1_cine_1', cinematic1Url],
+        ['ch1_cine_2', cinematic2Url],
+        ['ch1_cine_3', cinematic3Url],
+        ['ch1_cine_4', cinematic4Url],
+        ['ch1_cine_5', cinematic5Url],
+        ['ch1_cine_6', cinematic6Url],
+        ['ch1_cine_7', cinematic7Url],
+        ['ch1_cine_8', cinematic8Url],
+      );
+    }
     images.forEach(([key, url]) => {
       if (!this.textures.exists(key)) {
         this.load.image(key, url);
@@ -597,7 +905,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     });
     const audio: Array<[string, string]> = [
       ['ch1_battle_music', battleMusicUrl],
-      ['ch1_victory_music', victoryMusicUrl],
+      ['ch1_victory_music', this.config.boss?.victoryTitle ? loseMusicUrl : victoryMusicUrl],
       ['boar_prepare_sfx', boarPrepareSfxUrl],
       ['boar_attack_sfx', boarAttackSfxUrl],
       ['boar_hurt_sfx', boarHurtSfxUrl],
@@ -608,6 +916,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       ['electric_arc_releasing', arcReleasingSfxUrl],
       ['dexios_sfx', dexiosSoundUrl],
       ['perfect_parry_sfx', perfectParrySoundUrl],
+      ['flame_sfx', flameSfxUrl],
     ];
     audio.forEach(([key, url]) => {
       if (!this.cache.audio.exists(key)) {
@@ -643,6 +952,22 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.sideTutorialShown = !this.config.sideTutorial;
     this.attackCount = 0;
     this.attackSide = 'up';
+    this.currentAttack = undefined;
+    this.bossPhase = 1;
+    this.phaseDepleted = false;
+    this.digTutorialShown = false;
+    this.digUsed = false;
+    this.phaseText = undefined;
+    this.fireProjectile = undefined;
+    this.digGraphics = undefined;
+    this.finalTriggered = false;
+    this.cineIndex = 0;
+    this.cineCount = 0;
+    this.cineLocked = false;
+    this.cineObjects = [];
+    this.cinePrompt = undefined;
+    this.cinePromptLetter = undefined;
+    this.cinePromptCounter = undefined;
     this.activeBoar = undefined;
     this.selectedBoar = undefined;
     this.hoveredBoar = undefined;
@@ -681,6 +1006,22 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       'wolf_hurt',
       'dexios_arc_charging',
       'dexios_arc_releasing',
+      ...(this.config.boss
+        ? [
+          'beast_base',
+          'beast_hurt',
+          'beast_preparing_up',
+          'beast_attack_up',
+          'beast_preparing_left',
+          'beast_attack_left',
+          'beast_preparing_right',
+          'beast_attack_right',
+          'beast_preparing_down',
+          'beast_attack_down',
+          'beast_preparing_fire',
+          'beast_attack_fire',
+        ]
+        : []),
     ]);
     this.createBattlefield();
     this.createCombatants();
@@ -723,14 +1064,15 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     if (this.jumpHint?.visible) {
       this.jumpHint.setPosition(this.dexiosOriginalX, GROUND_Y - DEXIOS_HEIGHT - 40);
     }
-    if (elapsed < PREPARATION_MS || elapsed > WILD_BITE_TOTAL_MS) {
+    const { preparationMs, lungeMs, graceMs } = this.timing;
+    if (elapsed < preparationMs || elapsed > preparationMs + lungeMs + graceMs) {
       this.timingRing.clear();
       return;
     }
-    const activeElapsed = elapsed - PREPARATION_MS;
-    const progress = Phaser.Math.Clamp(activeElapsed / (LUNGE_MS + PARRY_GRACE_MS), 0, 1);
+    const activeElapsed = elapsed - preparationMs;
+    const progress = Phaser.Math.Clamp(activeElapsed / (lungeMs + graceMs), 0, 1);
     const color = this.defenseResult === 'perfect'
-      || (this.defenseResult === null && elapsed >= PREPARATION_MS + LUNGE_MS)
+      || (this.defenseResult === null && elapsed >= preparationMs + lungeMs)
       ? 0xffffff
       : COLORS.yellow;
     const centerX = this.dexios.x;
@@ -751,7 +1093,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   }
 
   private createBattlefield(): void {
-    this.background = this.add.image(WIDTH / 2, HEIGHT / 2, 'ch1_combat1_background');
+    this.background = this.add.image(WIDTH / 2, HEIGHT / 2, this.config.boss?.backgroundKey ?? 'ch1_combat1_background');
     const source = this.background.texture.getSourceImage() as HTMLImageElement;
     const scale = Math.max(WIDTH / source.width, HEIGHT / source.height);
     this.background.setScale(scale).setDepth(-20);
@@ -776,8 +1118,8 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
         .setDepth(4);
       this.setSpriteFrame(sprite, kit.base, spawn.height);
       const marker = this.add.graphics().setDepth(6);
-      const keyLabel = this.add.text(spawn.x, spawn.y - spawn.height - 78, String(index + 1), {
-        fontFamily: EB_GARAMOND_FONT_FAMILY,
+      const keyLabel = this.add.text(spawn.x, spawn.y - spawn.height - 78, TARGET_LABELS[index] ?? String(index + 1), {
+        fontFamily: GAME_FONT_FAMILY,
         fontSize: '64px',
         fontStyle: 'bold',
         color: '#fff2c6',
@@ -874,10 +1216,13 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
         color: COLORS.cream,
       }).setDepth(51);
       const hpBar = this.add.graphics().setDepth(51);
-      const hpText = this.add.text(1800, top + (multiple ? 14 : 20), '20 / 20', {
+      const hpText = this.add.text(1800, top + (multiple ? 12 : 18), '20 / 20', {
         fontFamily: EB_GARAMOND_FONT_FAMILY,
-        fontSize: '22px',
+        fontSize: '26px',
+        fontStyle: 'bold',
         color: COLORS.cream,
+        stroke: '#17121b',
+        strokeThickness: 3,
         align: 'right',
       }).setOrigin(1, 0).setDepth(51);
       const hit = this.add.zone(1555, top + panelHeight / 2, 650, panelHeight)
@@ -910,8 +1255,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.dexiosHpBar = this.add.graphics().setDepth(51);
     this.add.text(1848, 891, '65 / 65', {
       fontFamily: EB_GARAMOND_FONT_FAMILY,
-      fontSize: '20px',
+      fontSize: '24px',
+      fontStyle: 'bold',
       color: COLORS.cream,
+      stroke: '#17121b',
+      strokeThickness: 3,
       align: 'right',
     }).setOrigin(1, 0).setName('dexios-hp-text').setDepth(51);
     if (this.config.electricArc) {
@@ -1009,8 +1357,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.dexiosManaBar = this.add.graphics().setDepth(51);
     this.add.text(1848, 952, '40 / 40', {
       fontFamily: EB_GARAMOND_FONT_FAMILY,
-      fontSize: '20px',
+      fontSize: '24px',
+      fontStyle: 'bold',
       color: COLORS.cream,
+      stroke: '#17121b',
+      strokeThickness: 3,
       align: 'right',
     }).setOrigin(1, 0).setName('dexios-mana-text').setDepth(51);
   }
@@ -1107,14 +1458,55 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       this.showCombatStart(() => this.startEnemyTurn(fromIndex));
       return;
     }
-    if (kit.lateral) {
+    if (this.config.boss && !this.currentAttack) {
+      this.currentAttack = this.chooseBossAttack();
+    }
+    const attack = this.currentAttack;
+    if (attack) {
+      this.attackSide = attack.side;
+      if (attack.kind === 'dig' && !this.digTutorialShown) {
+        this.showTutorial(DIG_TUTORIAL, () => {
+          this.digTutorialShown = true;
+          this.startEnemyTurn(fromIndex);
+        });
+        return;
+      }
+    }
+    if (kit.lateral && (!attack || attack.kind === 'claw')) {
       this.beginFlank(boar);
       return;
     }
-    this.announce(kit.attackName, () => this.beginWildBite());
+    this.announce(attack?.name ?? kit.attackName, () => this.beginWildBite());
+  }
+
+  private chooseBossAttack(): BossAttack {
+    const boss = this.config.boss;
+    if (!boss) {
+      throw new Error('Boss attack requested outside a boss encounter.');
+    }
+    const available = boss.attacks.filter((attack) => attack.minPhase <= this.bossPhase);
+    if (this.bossPhase === 2 && !this.digUsed) {
+      const first = available.find((attack) => attack.id === boss.firstPhaseTwoAttack);
+      if (first) {
+        this.digUsed = true;
+        return first;
+      }
+    }
+    const total = available.reduce((sum, attack) => sum + attack.weight, 0);
+    let roll = Math.random() * total;
+    for (const attack of available) {
+      roll -= attack.weight;
+      if (roll < 0) {
+        return attack;
+      }
+    }
+    return available[available.length - 1];
   }
 
   private chooseAttackSide(boar: BoarState): AttackSide {
+    if (this.currentAttack) {
+      return this.currentAttack.side as AttackSide;
+    }
     const lateral = this.kitOf(boar).lateral;
     if (!lateral) {
       return 'up';
@@ -1148,7 +1540,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       ease: 'Sine.easeInOut',
       onComplete: () => {
         if (this.phase === 'enemy-announcement') {
-          this.announce(this.kitOf(boar).attackName, () => this.beginWildBite());
+          this.announce(this.currentAttack?.name ?? this.kitOf(boar).attackName, () => this.beginWildBite());
         }
       },
     });
@@ -1164,17 +1556,32 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.defenseResult = null;
     this.wildBiteStartedAt = this.time.now;
     boar.sprite.setDepth(8);
-    this.setSpriteFrame(boar.sprite, kit.prepare[this.attackSide], boar.spawn.height);
-    this.playEffect(kit.sfx.prepare);
-    this.setStatus(this.boars.length > 1
-      ? `${boar.spawn.name} PREPARES TO CHARGE`
-      : kit.prepareText);
+    const attack = this.currentAttack;
+    if (attack) {
+      this.setSpriteFrame(boar.sprite, attack.prepareSprite, boar.spawn.height);
+      if (attack.prepareSfx) {
+        this.playEffect(attack.prepareSfx);
+      }
+      this.setStatus(attack.prepareText);
+    } else {
+      this.setSpriteFrame(boar.sprite, kit.prepare[this.attackSide as AttackSide], boar.spawn.height);
+      this.playEffect(kit.sfx.prepare);
+      this.setStatus(this.boars.length > 1
+        ? `${boar.spawn.name} PREPARES TO CHARGE`
+        : kit.prepareText);
+    }
     const lateral = kit.lateral;
     const nudge = this.attackSide === 'left' ? 40 : -40;
+    let prepX = lateral ? boar.sprite.x + nudge : boar.spawn.x - 40;
+    if (attack) {
+      prepX = attack.kind === 'leap'
+        ? boar.spawn.x - 40
+        : attack.kind === 'claw' ? boar.sprite.x + nudge : boar.sprite.x;
+    }
     this.tweens.add({
       targets: boar.sprite,
-      x: lateral ? boar.sprite.x + nudge : boar.spawn.x - 40,
-      duration: PREPARATION_MS,
+      x: prepX,
+      duration: this.timing.preparationMs,
       ease: 'Sine.easeOut',
       onComplete: () => this.beginBoarLunge(),
     });
@@ -1186,9 +1593,14 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     const kit = this.kitOf(boar);
-    const jump = kit.defense === 'jump';
+    const jump = this.isJumpAttack();
+    const timing = this.timing;
     this.phase = 'enemy-lunge';
-    this.setSpriteFrame(boar.sprite, kit.attack[this.attackSide], boar.spawn.height);
+    if (this.currentAttack) {
+      this.beginBossMotion(boar, this.currentAttack);
+      return;
+    }
+    this.setSpriteFrame(boar.sprite, kit.attack[this.attackSide as AttackSide], boar.spawn.height);
     this.playEffect(kit.sfx.attack);
     const lateral = kit.lateral;
     const targetX = jump
@@ -1206,17 +1618,371 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       targets: boar.sprite,
       x: targetX,
       y: boar.spawn.y + boar.spawn.lungeY - (leapsAtFace ? BOAR_LEAP_HEIGHT : 0),
-      duration: LUNGE_MS,
+      duration: timing.lungeMs,
       ease: leapsAtFace ? 'Sine.easeOut' : 'Linear',
     });
-    this.time.delayedCall(LUNGE_MS, () => {
+    this.scheduleImpact(jump);
+  }
+
+  private scheduleImpact(jump: boolean, onImpact?: () => void): void {
+    const { lungeMs, graceMs } = this.timing;
+    this.time.delayedCall(lungeMs, () => {
       if (this.phase !== 'enemy-lunge') {
         return;
       }
       this.cameras.main.shake(100, 0.0012);
+      onImpact?.();
       this.setStatus(jump ? 'IMPACT · JUMP NOW!' : 'IMPACT · PERFECT PARRY STILL AVAILABLE');
     });
-    this.time.delayedCall(LUNGE_MS + PARRY_GRACE_MS, () => this.resolveWildBite());
+    this.time.delayedCall(lungeMs + graceMs, () => this.resolveWildBite());
+  }
+
+  private beginBossMotion(boar: BoarState, attack: BossAttack): void {
+    const { lungeMs } = this.timing;
+    const jump = attack.defense === 'jump';
+    const lateral = this.kitOf(boar).lateral;
+    this.setSpriteFrame(
+      boar.sprite,
+      attack.attackSprite,
+      attack.kind === 'dig' ? boar.spawn.height * 0.5 : boar.spawn.height,
+    );
+    this.playEffect(attack.attackSfx);
+    this.setStatus(jump
+      ? `${attack.name} · PRESS SPACE TO JUMP`
+      : `${attack.name} · BLOCK WITH ${SIDE_KEYS[this.attackSide].label}, THEN PARRY`);
+    this.showJumpHint(jump);
+    const dexiosX = this.dexiosOriginalX;
+    let onImpact: (() => void) | undefined;
+    if (attack.kind === 'leap') {
+      const startX = boar.sprite.x;
+      const startY = boar.sprite.y;
+      const endX = dexiosX + BEAST_MOTION.leapEndOffsetX;
+      const endY = boar.spawn.y - BEAST_MOTION.leapEndOffsetY;
+      boar.sprite.setDepth(14);
+      this.tweens.addCounter({
+        from: 0,
+        to: 1,
+        duration: lungeMs,
+        onUpdate: (tween) => {
+          const t = tween.getValue() ?? 0;
+          boar.sprite.setPosition(
+            Phaser.Math.Linear(startX, endX, t),
+            Phaser.Math.Linear(startY, endY, t) - 4 * BEAST_MOTION.leapApex * t * (1 - t),
+          );
+        },
+      });
+    } else if (attack.kind === 'claw' && lateral) {
+      boar.sprite.setDepth(8);
+      this.tweens.add({
+        targets: boar.sprite,
+        x: dexiosX + (this.attackSide === 'left' ? -lateral.lungeOffset : lateral.lungeOffset),
+        duration: lungeMs,
+        ease: 'Linear',
+      });
+    } else if (attack.kind === 'fire') {
+      this.launchFire(boar);
+    } else if (attack.kind === 'dig') {
+      onImpact = this.startDig(boar);
+    }
+    this.scheduleImpact(jump, onImpact);
+  }
+
+  private launchFire(boar: BoarState): void {
+    const sprite = boar.sprite;
+    const mouthX = sprite.x - sprite.displayWidth * (sprite.originX - BEAST_MOTION.fireOriginX);
+    const mouthY = sprite.y - sprite.displayHeight * (sprite.originY - BEAST_MOTION.fireOriginY);
+    const fire = this.add.image(mouthX, mouthY, 'beast_fire').setBlendMode(Phaser.BlendModes.ADD).setDepth(15);
+    fire.setScale(BEAST_MOTION.fireHeight / fire.height);
+    this.fireProjectile = fire;
+    const targetX = this.dexiosOriginalX;
+    const targetY = GROUND_Y - BEAST_MOTION.fireTargetOffsetY;
+    const travel = this.timing.lungeMs;
+    this.tweens.add({
+      targets: fire,
+      x: mouthX + (targetX - mouthX) * 1.25,
+      y: mouthY + (targetY - mouthY) * 1.25,
+      duration: travel * 1.25,
+      ease: 'Linear',
+    });
+  }
+
+  // Returns the impact callback that makes the spikes erupt under Dexios.
+  private startDig(boar: BoarState): () => void {
+    const gfx = this.add.graphics().setDepth(5);
+    this.digGraphics = gfx;
+    boar.sprite.setDepth(8);
+    this.tweens.add({
+      targets: boar.sprite,
+      x: this.dexiosOriginalX + 330,
+      duration: this.timing.lungeMs,
+      ease: 'Linear',
+    });
+    const startX = boar.sprite.x;
+    const endX = this.dexiosOriginalX + BEAST_MOTION.digOffsetX;
+    const y = GROUND_Y - 10;
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: this.timing.lungeMs,
+      onUpdate: (tween) => {
+        const t = tween.getValue() ?? 0;
+        const x = Phaser.Math.Linear(startX, endX, t);
+        gfx.clear();
+        gfx.lineStyle(4, 0x2a1038, 0.9);
+        gfx.beginPath();
+        gfx.moveTo(startX, y);
+        gfx.lineTo(x, y);
+        gfx.strokePath();
+        gfx.fillStyle(0x6b3a86, 0.9).fillEllipse(x, y - 14, 120, 40);
+        gfx.fillStyle(0x3a2048, 0.9).fillEllipse(x, y - 4, 150, 24);
+      },
+    });
+    return () => {
+      gfx.clear();
+      const dx = this.dexios.x;
+      for (let i = -2; i <= 2; i += 1) {
+        const h = 150 - Math.abs(i) * 28;
+        gfx.fillStyle(0xb04cff, 0.95).fillTriangle(
+          dx + i * 46 - 22, GROUND_Y, dx + i * 46 + 22, GROUND_Y, dx + i * 46, GROUND_Y - h,
+        );
+      }
+      gfx.setDepth(11);
+    };
+  }
+
+  private endInVictory(): void {
+    if (this.config.boss?.victoryTitle) {
+      this.beginFinalSequence();
+      return;
+    }
+    this.finishBattle('victory');
+  }
+
+  private beginFinalSequence(): void {
+    const boar = this.boars[0];
+    if (this.finalTriggered || !boar) {
+      return;
+    }
+    this.finalTriggered = true;
+    this.phase = 'cinematic';
+    this.heldKeys.clear();
+    this.abilityMenu?.setVisible(false);
+    this.timingRing.clear();
+    this.clearBossEffects();
+    this.jumpHint?.setVisible(false);
+    this.jumpShadow?.setVisible(false);
+    this.dexios.setPosition(this.dexiosOriginalX, GROUND_Y);
+    this.setSpriteFrame(this.dexios, 'dexios_base', DEXIOS_HEIGHT);
+    boar.sprite.setAlpha(1).setDepth(8);
+    this.setSpriteFrame(boar.sprite, this.kitOf(boar).base, boar.spawn.height);
+    this.tweens.add({
+      targets: boar.sprite,
+      x: boar.spawn.x,
+      y: boar.spawn.y,
+      duration: 360,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        this.setSpriteFrame(boar.sprite, 'beast_preparing_up', boar.spawn.height);
+        this.playEffect('boar_prepare_sfx');
+        this.setStatus('');
+        this.tweens.add({
+          targets: boar.sprite,
+          x: boar.spawn.x - 40,
+          duration: this.timing.preparationMs,
+          ease: 'Sine.easeOut',
+          onComplete: () => this.finalLeap(boar),
+        });
+      },
+    });
+  }
+
+  private finalLeap(boar: BoarState): void {
+    this.setSpriteFrame(boar.sprite, 'beast_attack_up', boar.spawn.height);
+    this.playEffect('boar_attack_sfx');
+    boar.sprite.setDepth(14);
+    const startX = boar.sprite.x;
+    const startY = boar.sprite.y;
+    const endX = this.dexiosOriginalX + BEAST_MOTION.leapEndOffsetX;
+    const endY = boar.spawn.y - BEAST_MOTION.leapEndOffsetY;
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: CINEMATIC.finalApproachMs,
+      onUpdate: (tween) => {
+        const t = tween.getValue() ?? 0;
+        boar.sprite.setPosition(
+          Phaser.Math.Linear(startX, endX, t),
+          Phaser.Math.Linear(startY, endY, t) - 4 * BEAST_MOTION.leapApex * t * (1 - t),
+        );
+      },
+      onComplete: () => this.showCinematicFrame(0),
+    });
+  }
+
+  private showCinematicFrame(index: number): void {
+    if (this.phase !== 'cinematic') {
+      return;
+    }
+    const frame = CINEMATIC_FRAMES[index];
+    this.cineIndex = index;
+    this.cineCount = 0;
+    this.cineLocked = false;
+    this.clearCinematicFrame();
+    const key = `ch1_cine_${index + 1}`;
+    const bg = this.add.rectangle(WIDTH / 2, HEIGHT / 2, WIDTH * 1.2, HEIGHT * 1.2, 0x000000, 1).setDepth(1000);
+    const image = this.add.image(WIDTH / 2, HEIGHT / 2, key).setDepth(1001);
+    const source = image.texture.getSourceImage() as HTMLImageElement;
+    image.setScale(Math.min(WIDTH / source.width, HEIGHT / source.height));
+    const legend = this.add.text(WIDTH / 2, HEIGHT - 14, 'P: Pause    N: Music    M: SFX    R: Restart    Esc: Back', {
+      fontFamily: GAME_FONT_FAMILY,
+      fontSize: '20px',
+      color: '#e1d4e7',
+      stroke: '#171326',
+      strokeThickness: 4,
+    }).setOrigin(0.5, 1).setDepth(1004);
+    this.cineObjects.push(bg, image, legend);
+    if (frame.dialogue) {
+      const panel = this.add.graphics().setDepth(1002);
+      panel.fillStyle(0x000000, 0.9).fillRoundedRect(120, 880, WIDTH - 240, 140, 10);
+      panel.lineStyle(3, COLORS.gold, 1).strokeRoundedRect(120, 880, WIDTH - 240, 140, 10);
+      const text = this.add.text(WIDTH / 2, 950, frame.dialogue, {
+        fontFamily: EB_GARAMOND_FONT_FAMILY,
+        fontSize: '48px',
+        color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: WIDTH - 340 },
+      }).setOrigin(0.5).setDepth(1003);
+      this.cineObjects.push(panel, text);
+    }
+    if (frame.shakeOnEntry) {
+      this.shakeCinematic();
+    }
+    if (frame.autoMs) {
+      this.cineLocked = true;
+      this.time.delayedCall(frame.autoMs, () => this.advanceCinematic());
+      return;
+    }
+    if (frame.sequence) {
+      this.createCinematicPrompt(frame);
+    }
+  }
+
+  private createCinematicPrompt(frame: CinematicFrame): void {
+    const sequence = frame.sequence ?? [];
+    const y = frame.dialogue ? 760 : 900;
+    const box = this.add.graphics();
+    box.fillStyle(0x17121b, 0.92).fillRoundedRect(-75, -75, 150, 150, 16);
+    box.lineStyle(5, COLORS.gold, 1).strokeRoundedRect(-75, -75, 150, 150, 16);
+    const letter = this.add.text(0, -4, sequence[0].toUpperCase(), {
+      fontFamily: GAME_FONT_FAMILY,
+      fontSize: '104px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+    }).setOrigin(0.5);
+    const items: Phaser.GameObjects.GameObject[] = [box, letter];
+    if (sequence.length > 1) {
+      const counter = this.add.text(0, 112, `0/${sequence.length}`, {
+        fontFamily: GAME_FONT_FAMILY,
+        fontSize: '32px',
+        color: '#ffffff',
+        stroke: '#17121b',
+        strokeThickness: 6,
+      }).setOrigin(0.5);
+      this.cinePromptCounter = counter;
+      items.push(counter);
+    }
+    this.cinePrompt = this.add.container(WIDTH / 2, y, items).setDepth(1005);
+    this.cinePromptLetter = letter;
+  }
+
+  private onCinematicKey(key: string): void {
+    const frame = CINEMATIC_FRAMES[this.cineIndex];
+    const sequence = frame?.sequence;
+    if (!sequence || this.cineLocked || key !== sequence[this.cineCount]) {
+      return;
+    }
+    this.cineCount += 1;
+    if (frame.shakeOnPress) {
+      this.shakeCinematic();
+    }
+    if (this.cinePrompt) {
+      this.tweens.add({
+        targets: this.cinePrompt,
+        scale: 1.25,
+        duration: 90,
+        yoyo: true,
+      });
+    }
+    this.cinePromptCounter?.setText(`${this.cineCount}/${sequence.length}`);
+    if (this.cineCount < sequence.length) {
+      this.cinePromptLetter?.setText(sequence[this.cineCount].toUpperCase());
+      return;
+    }
+    this.cineLocked = true;
+    this.time.delayedCall(CINEMATIC.advanceDelayMs, () => {
+      this.cinePrompt?.setVisible(false);
+      this.advanceCinematic();
+    });
+  }
+
+  private advanceCinematic(): void {
+    if (this.phase !== 'cinematic') {
+      return;
+    }
+    if (this.cineIndex + 1 < CINEMATIC_FRAMES.length) {
+      this.showCinematicFrame(this.cineIndex + 1);
+      return;
+    }
+    this.clearCinematicFrame();
+    this.cameras.main.resetFX();
+    this.setSpriteFrame(this.dexios, 'dexios_base', DEXIOS_HEIGHT);
+    this.finishBattle('victory');
+  }
+
+  private shakeCinematic(): void {
+    this.cameras.main.shake(CINEMATIC.shakeMs, CINEMATIC.shakeIntensity);
+  }
+
+  private clearCinematicFrame(): void {
+    this.cineObjects.forEach((object) => object.destroy());
+    this.cineObjects = [];
+    if (this.cinePrompt) {
+      this.tweens.killTweensOf(this.cinePrompt);
+      this.cinePrompt.destroy();
+    }
+    this.cinePrompt = undefined;
+    this.cinePromptLetter = undefined;
+    this.cinePromptCounter = undefined;
+  }
+
+  private clearBossEffects(): void {
+    this.fireProjectile?.destroy();
+    this.fireProjectile = undefined;
+    this.digGraphics?.destroy();
+    this.digGraphics = undefined;
+  }
+
+  private beginPhaseTransition(): void {
+    const boar = this.boars[0];
+    this.phase = 'phase-transition';
+    this.phaseDepleted = false;
+    this.clearBossEffects();
+    this.cameras.main.flash(500, 176, 76, 255);
+    this.cameras.main.shake(400, 0.004);
+    this.setStatus('THE BEAST ENRAGES');
+    this.time.delayedCall(1500, () => {
+      if (this.phase !== 'phase-transition') {
+        return;
+      }
+      this.bossPhase = 2;
+      boar.health = this.kitOf(boar).maxHp;
+      boar.alive = true;
+      boar.sprite.setAlpha(1);
+      this.setSpriteFrame(boar.sprite, this.kitOf(boar).base, boar.spawn.height);
+      this.phaseText?.setText('PHASE 2');
+      this.updateHealthBars();
+      this.startEnemyTurn(0);
+    });
   }
 
   private showJumpHint(visible: boolean): void {
@@ -1239,13 +2005,13 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     const elapsed = this.time.now - this.wildBiteStartedAt;
-    if (elapsed < JUMP_DODGE.windowFromMs || elapsed > JUMP_DODGE.windowUntilMs) {
+    if (elapsed < this.timing.jumpFromMs || elapsed > this.timing.preparationMs + this.timing.lungeMs + this.timing.graceMs) {
       return;
     }
     this.defenseResult = 'dodged';
     this.setStatus('DODGE');
     // Time the take-off so Dexios is at the top of the jump when the charge passes under him.
-    const peakAt = JUMP_DODGE.impactMs;
+    const peakAt = this.timing.preparationMs + this.timing.lungeMs;
     const startAt = Math.max(elapsed, peakAt - JUMP_DODGE.airMs / 2);
     this.jumpTimer = this.time.delayedCall(startAt - elapsed, () => this.performJump());
   }
@@ -1273,7 +2039,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     if (this.defenseResult !== null) {
       return;
     }
-    if (this.activeBoar && this.kitOf(this.activeBoar).defense === 'jump') {
+    if (this.isJumpAttack()) {
       this.registerJumpInput(key);
       return;
     }
@@ -1282,7 +2048,8 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     const elapsed = this.time.now - this.wildBiteStartedAt;
-    if (elapsed < PREPARATION_MS || elapsed > WILD_BITE_TOTAL_MS) {
+    const { preparationMs, lungeMs, graceMs, blockMs } = this.timing;
+    if (elapsed < preparationMs || elapsed > preparationMs + lungeMs + graceMs) {
       return;
     }
     const pressedSprites: Record<string, string> = {
@@ -1298,7 +2065,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.setSpriteFrame(this.dexios, pressedSprites[direction], DEXIOS_HEIGHT);
     const correct = SIDE_KEYS[this.attackSide];
     this.defenseResult = direction === correct.key || direction === correct.arrow
-      ? elapsed < PREPARATION_MS + 1000 ? 'blocked' : 'perfect'
+      ? elapsed < preparationMs + blockMs ? 'blocked' : 'perfect'
       : 'failed';
     if (this.defenseResult === 'blocked') {
       this.setStatus('BLOCK');
@@ -1353,7 +2120,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       }
       if (!this.boars.some((boar) => boar.alive)) {
         this.setSpriteFrame(this.dexios, 'dexios_base', DEXIOS_HEIGHT);
-        this.finishBattle('victory');
+        this.endInVictory();
         return;
       }
       this.tweens.add({
@@ -1384,6 +2151,12 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.jumpShadow?.setVisible(false);
     this.dexios.setY(GROUND_Y);
     this.setSpriteFrame(this.dexios, 'dexios_base', DEXIOS_HEIGHT);
+    this.clearBossEffects();
+    this.currentAttack = undefined;
+    if (this.phaseDepleted) {
+      this.beginPhaseTransition();
+      return;
+    }
     this.startEnemyTurn(this.boars.indexOf(attacker) + 1);
   }
 
@@ -1749,8 +2522,12 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       onComplete: () => {
         this.setSpriteFrame(this.dexios, 'dexios_base', DEXIOS_HEIGHT);
         this.selectedBoar = undefined;
+        if (this.phaseDepleted) {
+          this.beginPhaseTransition();
+          return;
+        }
         if (!this.boars.some((boar) => boar.alive)) {
-          this.finishBattle('victory');
+          this.endInVictory();
           return;
         }
         this.boars.forEach((boar) => {
@@ -1766,11 +2543,15 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   }
 
   private damageBoar(boar: BoarState, damage: number): void {
-    if (!boar.alive) {
+    if (!boar.alive || this.phaseDepleted) {
       return;
     }
     boar.health = Math.max(0, boar.health - damage);
     boar.alive = boar.health > 0;
+    if (!boar.alive && this.config.boss && this.bossPhase === 1) {
+      boar.alive = true;
+      this.phaseDepleted = true;
+    }
     this.updateHealthBars();
     this.setSpriteFrame(boar.sprite, this.kitOf(boar).hurt, boar.spawn.height);
   }
@@ -1869,7 +2650,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       if (!hud) {
         return;
       }
-      this.drawHealthBar(hud.hpBar, 1350, hud.top + (hud.height < 110 ? 66 : 63), 500, boar.health, this.kitOf(boar).maxHp);
+      this.drawHealthBar(hud.hpBar, 1350, hud.top + (hud.height < 110 ? 66 : 63), 500, boar.health, this.kitOf(boar).maxHp, this.config.boss ? 0xb04cff : undefined);
       hud.hpText.setText(`${boar.health} / ${this.kitOf(boar).maxHp}`);
       hud.hpText.setAlpha(boar.alive ? 1 : 0.55);
       const selected = this.selectedBoar === boar;
@@ -1904,12 +2685,13 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     width: number,
     current: number,
     maximum: number,
+    fill?: number,
   ): void {
     graphics.clear();
     graphics.fillStyle(0x383242, 1).fillRoundedRect(x, y, width, 18, 8);
     const ratio = Phaser.Math.Clamp(current / maximum, 0, 1);
     if (current > 0) {
-      graphics.fillStyle(ratio > 0.25 ? COLORS.green : COLORS.red, 1)
+      graphics.fillStyle(fill ?? (ratio > 0.25 ? COLORS.green : COLORS.red), 1)
         .fillRoundedRect(x, y, width * ratio, 18, 8);
     }
     graphics.lineStyle(1, 0xffffff, 0.25).strokeRoundedRect(x, y, width, 18, 8);
@@ -1942,6 +2724,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.tutorialOverlay?.destroy(true);
     this.announcement?.setVisible(false);
     this.timingRing.clear();
+    this.clearBossEffects();
     this.stopArcChargeSound();
     this.arcUiVisible(false);
     this.battleMusic?.stop();
@@ -1954,24 +2737,34 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
         // A music failure must never block the victory popup.
       }
     }
-    const overlay = this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, 0.72)
+    const finalTitle = result === 'victory' ? this.config.boss?.victoryTitle : undefined;
+    if (finalTitle) {
+      const backdrop = this.add.image(WIDTH / 2, HEIGHT / 2, 'ch1_cine_8').setDepth(149);
+      const source = backdrop.texture.getSourceImage() as HTMLImageElement;
+      backdrop.setScale(Math.max(WIDTH / source.width, HEIGHT / source.height));
+    }
+    const overlay = this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, finalTitle ? 0.2 : 0.72)
       .setOrigin(0)
       .setDepth(150)
       .setInteractive();
     const panel = this.add.graphics().setDepth(151);
     panel.fillStyle(COLORS.panel, 0.98).fillRoundedRect(500, 300, 920, 480, 14);
     panel.lineStyle(4, COLORS.gold, 1).strokeRoundedRect(500, 300, 920, 480, 14);
-    this.add.text(WIDTH / 2, 400, result === 'victory' ? 'VICTORY' : 'DEFEAT', {
-      fontFamily: GAME_FONT_FAMILY,
-      fontSize: '68px',
+    this.add.text(WIDTH / 2, 400, result === 'victory' ? finalTitle ?? 'VICTORY' : 'DEFEAT', {
+      fontFamily: finalTitle ? EB_GARAMOND_FONT_FAMILY : GAME_FONT_FAMILY,
+      fontSize: finalTitle ? '96px' : '68px',
       fontStyle: 'bold',
-      letterSpacing: 6,
+      letterSpacing: finalTitle ? 2 : 6,
       color: result === 'victory' ? '#f5d47d' : '#ff8585',
+      stroke: '#17121b',
+      strokeThickness: finalTitle ? 8 : 0,
       align: 'center',
     }).setOrigin(0.5).setDepth(152);
     const next = result === 'victory' ? this.config.nextSceneKey : undefined;
     const primary = result === 'victory'
-      ? next ? { label: 'NEXT COMBAT', action: () => this.goToScene(next) } : undefined
+      ? next
+        ? { label: 'NEXT COMBAT', action: () => this.goToScene(next) }
+        : this.config.boss ? { label: 'RETRY', action: () => this.restart() } : undefined
       : { label: 'RETRY', action: () => this.restart() };
     this.resultEnter = primary?.action;
     this.createResultButton(primary ? 780 : 960, 565, 'COMBAT SELECT', 'ESCAPE', () => this.returnToSelector());
@@ -2048,6 +2841,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.input.keyboard?.off('keydown', this.onKeyDown, this);
     this.input.keyboard?.off('keyup', this.onKeyUp, this);
     this.stopArcChargeSound();
+    this.clearBossEffects();
     this.jumpTimer?.remove(false);
     this.jumpTimer = undefined;
     this.unbindMusic?.();

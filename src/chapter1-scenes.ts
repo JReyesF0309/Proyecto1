@@ -272,13 +272,13 @@ const ENCOUNTERS: EncounterOption[] = [
   { title: 'COMBAT IV — TWO WOLVES', subtitle: 'AVAILABLE', enabled: true, sceneKey: 'scene_ch1_combat4' },
   { title: 'COMBAT V — TWO FURIOUS BOARS', subtitle: 'AVAILABLE', enabled: true, sceneKey: 'scene_ch1_combat5' },
   { title: 'COMBAT VI — MIXED ENCOUNTER', subtitle: 'AVAILABLE', enabled: true, sceneKey: 'scene_ch1_combat6' },
-  { title: 'COMBAT VII — CHAPTER BOSS', subtitle: 'LOCKED', enabled: false },
+  { title: 'COMBAT VII — THE BEAST', subtitle: 'AVAILABLE', enabled: true, sceneKey: 'scene_ch1_combat7' },
 ];
 
 export class ChapterOneSelectScene extends Phaser.Scene {
   private starting = false;
   private readonly onKeyDown = (event: KeyboardEvent): void => {
-    if (!event.repeat && ['1', '2', '3', '4', '5', '6'].includes(event.key)) {
+    if (!event.repeat && ['1', '2', '3', '4', '5', '6', '7'].includes(event.key)) {
       this.startCombat(ENCOUNTERS[Number(event.key) - 1]);
     }
   };

@@ -19,6 +19,7 @@ import ChapterOneCombatScene, {
   CHAPTER1_COMBAT4,
   CHAPTER1_COMBAT5,
   CHAPTER1_COMBAT6,
+  CHAPTER1_COMBAT7,
 } from './chapter1-combat-scene';
 import {
   ChapterOneSelectScene,
@@ -51,6 +52,7 @@ const config: Phaser.Types.Core.GameConfig = {
     new ChapterOneCombatScene(CHAPTER1_COMBAT4),
     new ChapterOneCombatScene(CHAPTER1_COMBAT5),
     new ChapterOneCombatScene(CHAPTER1_COMBAT6),
+    new ChapterOneCombatScene(CHAPTER1_COMBAT7),
     WelcomeScene,
     SelectScene,
     CombatScene,
