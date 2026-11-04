@@ -13707,3 +13707,1083 @@ Verify the following:
 After implementing, report the modified files, cinematic assets registered, changes to the boss victory transition, testing performed, and any remaining issues.
 
 **FINAL OBJECTIVE:** After defeating The Beast's second HP phase, replace the immediate victory with a scripted Savage Jump approach, followed by eight cinematic illustrations, the exact supplied dialogue, interactive W/A/D commands, camera shakes, and a final result reading `… Victory?`, without altering any established gameplay or Chapter 29.
+
+# LA DEXÍADA — CHAPTER 1 ELECTRIC ARC REWORK
+
+Modify Electric Arc **only in Chapter 1**, replacing its existing NORMAL/PERFECT/FAIL damage windows with a continuously increasing charge-power system.
+
+The current project is already working correctly. Inspect the latest code and `design.md` before making changes.
+
+**DO NOT MODIFY CHAPTER 29 OR ANY OTHER COMBAT MECHANIC.**
+
+Chapter 1 Combats 4, 5, 6, and 7 should all use the new Electric Arc system. Combats 1–3 must remain unchanged.
+
+## 1. CORE CHANGE
+
+Electric Arc no longer deals fixed damage based on NORMAL or PERFECT timing windows.
+
+Instead, **the amount of damage depends on how far the diagonal charging bars have progressed when the player releases A or D**.
+
+The longer the player charges, the greater the damage.
+
+However, the charging bars do not move at a constant speed. They accelerate exponentially toward the central circle.
+
+Preserve the existing visual design with two diagonal bars converging toward a shared central circle.
+
+## 2. EXISTING MECHANICS TO PRESERVE
+
+Keep:
+
+- Ability name: `ELECTRIC ARC`.
+- Mana cost: 10.
+- Maximum Mana: 40.
+- Target: one selected living enemy.
+- Hold A + D to begin charging.
+- Release one of the held keys to execute the attack.
+- The existing charging sprite: `dexios_arc_charging`.
+- The existing release sprite: `dexios_arc_releasing`.
+- Charging SFX: `electric_arc_charging`.
+- Release SFX: `electric_arc_releasing`.
+- The existing camera zoom toward Dexios.
+- The existing physical approach to the target.
+- The existing one-second release animation.
+- The existing enemy hit reactions, camera shake, and movement recovery.
+- The existing Chapter 1 music and sound effects management.
+
+Electric Arc still consumes 10 Mana when committed, regardless of the final charge result.
+
+Do not change Triple Lightning.
+
+## 3. NONLINEAR DAMAGE PROGRESSION
+
+Use **35 damage as the 100% reference value**.
+
+The charging bars must use a nonlinear power curve with these exact reference points:
+
+| Bar progress | Damage multiplier |
+|---|---|
+| 0% | 10% |
+| 50% | 30% |
+| 80% | 80% |
+| 90% | 90% |
+| 97% | 100% |
+| 100% — central circle | 110% |
+
+These percentages represent the damage multiplier, not elapsed time.
+
+### Calculation
+
+`damage = Math.round(35 * powerPercentage / 100)`
+
+Expected reference values:
+
+- 10% power = 4 damage.
+- 30% power = 11 damage.
+- 80% power = 28 damage.
+- 90% power = 32 damage.
+- 100% power = 35 damage.
+- 110% power = 39 damage.
+
+### Interpolation
+
+Damage must increase continuously between the reference points.
+
+Do not restrict damage to six discrete values.
+
+For example, releasing at 70% bar progress should produce a power level between the 50%-progress and 80%-progress reference points.
+
+Use a monotonic piecewise interpolation or monotonic smooth curve through the configured points.
+
+The curve must:
+
+- Always increase or remain constant.
+- Never decrease while charging.
+- Never exceed 110%.
+- Match all specified reference points exactly.
+- Never produce negative, NaN, or infinite damage.
+
+Store the reference points in editable Chapter 1 configuration.
+
+## 4. EXPONENTIALLY ACCELERATING BAR MOVEMENT
+
+The diagonal bars must accelerate as charging progresses.
+
+At the beginning, they move slowly.
+
+Around the middle of the charging animation, their movement becomes noticeably faster.
+
+Near the central circle, the bars accelerate rapidly.
+
+The movement must feel as though the electrical energy is becoming increasingly unstable and powerful.
+
+### Duration
+
+Preserve the existing reference time:
+
+**T = 2 seconds**
+
+The two bars reach the central circle at T.
+
+### Suggested mathematical implementation
+
+Use a normalized exponential ease-in curve:
+
+`progress = (Math.exp(k * normalizedTime) - 1) / (Math.exp(k) - 1)`
+
+Where:
+
+- `normalizedTime = clamp(elapsedTime / 2000, 0, 1)`
+- `k = 2.5` initially, adjustable.
+- `progress` ranges from 0 to 1.
+
+This ensures:
+
+- The bars begin at 0% progress.
+- Their speed continuously increases.
+- The bars reach 100% progress at exactly 2 seconds.
+
+Do not use linear interpolation or an ease-out curve.
+
+Both diagonal bars must remain synchronized.
+
+Do not increase progress by a fixed amount every frame. Calculate progress from elapsed time so the system remains consistent across different frame rates.
+
+### Important distinction
+
+**Visual bar progress and damage percentage are separate values.**
+
+For example:
+
+- At 50% bar progress, damage power is only 30%.
+- At 80% bar progress, damage power is 80%.
+- At 100% bar progress, damage power is 110%.
+
+Do not confuse the two percentages.
+
+## 5. THE CENTRAL CIRCLE
+
+The shared central circle represents maximum charge.
+
+When both diagonal indicators reach the circle:
+
+- Bar progress is 100%.
+- Damage power is 110%.
+- Final damage is 39 after rounding.
+- Display a strong white electrical glow around the circle.
+- Make it visually clear that the charge has reached maximum power.
+
+### Post-arrival grace period
+
+Keep the existing 0.5-second grace period after the bars reach the circle.
+
+From 2.0 to 2.5 seconds:
+
+- The bars remain at the circle.
+- Power remains at 110%.
+- Releasing produces maximum damage.
+- Do not increase power beyond 110%.
+
+If the player continues holding both keys after 2.5 seconds:
+
+- Trigger an overload/failed charge.
+- Apply 0 damage.
+- Do not perform the physical attack.
+- Consume the already committed 10 Mana.
+- Finish Dexios's turn.
+- Restore his idle sprite and normal camera state.
+- Stop the charging SFX.
+
+Do not allow indefinite charging.
+
+## 6. INPUT BEHAVIOR
+
+Preserve the current A+D charging controls.
+
+1. The player selects Electric Arc.
+2. The player selects a target, if necessary.
+3. The cinematic ability announcement finishes.
+4. Dexios changes to `dexios_arc_charging`.
+5. The charging sound begins.
+6. The player holds A and D.
+7. Both diagonal indicators begin progressing.
+8. The player releases A or D.
+9. Capture the current bar progress.
+10. Calculate the current damage percentage.
+11. Calculate final damage.
+12. Execute the physical release against the selected enemy.
+
+### Early release
+
+Unlike the previous system, releasing early does not automatically mean FAIL.
+
+Any valid release before the 2.5-second overload deadline produces the damage corresponding to the current charge.
+
+Even a very early release can cause a small amount of damage.
+
+### Input safeguards
+
+- Both A and D must be pressed to start the charge.
+- The first release determines the result.
+- Releasing the second key afterward must not trigger another attack.
+- Ignore keyboard auto-repeat.
+- Do not allow multiple damage applications.
+- Do not let A or D activate defensive animations during the action command.
+- Do not transfer held-key input to the next enemy defense.
+- Keep R, N, M, and Escape fully functional.
+
+## 7. UI CHANGES
+
+Preserve the current diagonal bar appearance and camera composition.
+
+However, display the current charge percentage as it increases.
+
+Example:
+
+`CHARGE: 63%`
+
+This should display the **damage-power percentage**, not merely the linear distance traveled by the indicators.
+
+The number should smoothly increase throughout charging.
+
+### Visual feedback
+
+As the percentage rises:
+
+- 10–30%: relatively weak electrical glow.
+- 30–80%: stronger charging effects.
+- 80–100%: noticeably intensified electricity.
+- 100–110%: bright electrical energy.
+- 110%: prominent central-circle glow.
+
+Use the existing white electrical visual identity of Electric Arc.
+
+Avoid introducing new required artwork.
+
+### Result feedback
+
+Replace the old NORMAL and PERFECT classifications for Chapter 1 Electric Arc.
+
+Instead, display the achieved power percentage when the player releases.
+
+For example:
+
+`ARC POWER: 87%`
+
+Then execute the attack using the calculated damage.
+
+At the central circle, display:
+
+`MAX CHARGE — 110%`
+
+For an overload after 2.5 seconds, display:
+
+`OVERLOAD — FAIL`
+
+Do not alter the NORMAL/PERFECT/FAIL feedback for defensive actions or other abilities.
+
+## 8. ATTACK RELEASE
+
+Any valid charge release executes Electric Arc using the existing physical attack sequence.
+
+- Stop or fade the charging sound.
+- Change to `dexios_arc_releasing`.
+- Approach the selected target.
+- Play `electric_arc_releasing`.
+- Hold the attack sprite for the existing one-second duration.
+- Apply the calculated damage exactly once.
+- Display the target's existing hurt animation.
+- Play the target's existing hurt SFX.
+- Apply the existing electrical impact and camera feedback.
+- Return Dexios to his original position.
+- Restore his idle sprite and normal camera.
+
+The attack must work against:
+
+- Wolves.
+- Furious Boars.
+- Wild Boars.
+- The Beast in both phases.
+
+For The Beast, preserve the existing phase-transition and final cinematic behavior.
+
+If Electric Arc defeats Phase 1, transition into Phase 2 normally.
+
+If it defeats Phase 2, trigger the existing scripted final approach and eight-part cinematic exactly as currently implemented.
+
+Do not let excess damage carry over between the Beast's phases.
+
+## 9. UPDATE THE EXISTING ELECTRIC ARC TUTORIAL
+
+Only update the Chapter 1 Electric Arc action-command tutorial text.
+
+Replace its explanation of NORMAL/PERFECT timing with:
+
+**Title: `ACTION COMMANDS`**
+
+Text:
+
+"Hold A and D to charge Electric Arc. The longer you hold, the more damage it deals! The bars accelerate as they approach the center. Release near the circle to unleash maximum power, but don't hold too long!"
+
+Preserve the existing tutorial trigger, styling, Enter behavior, pause handling, and once-per-attempt rules.
+
+Do not modify unrelated tutorials.
+
+## 10. CHAPTER 29 ISOLATION
+
+This change applies exclusively to Chapter 1 Electric Arc.
+
+Do not modify the original Chapter 29 Electric Arc implementation.
+
+Its existing damage, Mana cost, timing thresholds, action-command UI, sounds, and NORMAL/PERFECT/FAIL behavior must remain identical.
+
+If Chapter 1 and Chapter 29 currently share code, introduce an explicitly isolated Chapter 1 charging mode or configuration rather than globally modifying the original implementation.
+
+Do not change any other Chapter 1 attack or defensive timing.
+
+## 11. ACCEPTANCE TESTS
+
+Verify:
+
+1. Electric Arc works with the new charge-based damage system in Chapter 1 Combats 4–7.
+2. Combats 1–3 remain unchanged.
+3. The Mana cost remains 10.
+4. The existing A+D controls work.
+5. The charging bars accelerate exponentially.
+6. Both bars remain synchronized.
+7. They reach the central circle at 2 seconds.
+8. Bar progress and damage-power percentage are calculated separately.
+9. At 0% progress, power is 10%.
+10. At 50% progress, power is 30%.
+11. At 80% progress, power is 80%.
+12. At 90% progress, power is 90%.
+13. At 97% progress, power is 100%.
+14. At 100% progress, power is 110%.
+15. Damage is interpolated continuously between those points.
+16. A valid early release inflicts some damage instead of automatically failing.
+17. The central circle produces 39 damage.
+18. Holding beyond 2.5 seconds causes overload and zero damage.
+19. The correct power percentage is displayed.
+20. Existing charging/release sprites and sound effects work.
+21. The existing camera zoom and physical attack animations remain intact.
+22. No duplicate damage or sound events occur.
+23. Chapter 1 Electric Arc remains compatible with all available enemies.
+24. The Beast's Phase 1 and Phase 2 transitions still work.
+25. Defeating The Beast still triggers the existing final cinematic.
+26. All other Chapter 1 mechanics remain unchanged.
+27. Chapter 29 Electric Arc is completely unchanged.
+28. The project builds successfully.
+
+After implementation, report the files modified, the curve configuration, and the test results.
+
+**FINAL OBJECTIVE:** Transform Chapter 1 Electric Arc into an exponentially accelerating charge attack where damage depends continuously on the player's release timing, reaching 110% power at the central circle, while preserving all existing animations, combat systems, and Chapter 29.
+
+# LA DEXÍADA — CHAPTER 1: NARRATIVE DIALOGUE IMPLEMENTATION
+
+Implement narrative dialogue sequences at specific moments during Chapter 1 in the existing Phaser project.
+
+All seven Chapter 1 encounters and The Beast's interactive ending cinematic are already implemented and working.
+
+**CRITICAL: Preserve the current working implementation.**
+
+Do not rebuild or alter combat mechanics, enemy behavior, damage, timing windows, action commands, existing tutorials, music, or existing cinematics.
+
+**CHAPTER 29 MUST REMAIN COMPLETELY UNCHANGED.**
+
+This task adds only the narrative dialogue sequences specified below.
+
+## 1. DIALOGUE SYSTEM — VISUAL DESIGN
+
+Create a reusable Chapter 1 narrative dialogue system, or extend an existing one if appropriate.
+
+### Dialogue panel
+
+Each dialogue must appear inside a rectangular panel positioned along the **bottom of the screen**.
+
+Visual requirements:
+
+- Black background.
+- **80% opacity** (`alpha = 0.8`).
+- Thin, clearly visible gold border.
+- White dialogue text.
+- Readable text size.
+- Comfortable padding.
+- Consistent with La Dexíada's existing Greek-inspired black-and-gold UI.
+- Proper text wrapping for longer dialogue lines.
+- The panel must not cover the entire screen.
+
+Use the established readable dialogue font rather than forcing all body text into Archeologicaps if that would reduce readability.
+
+### Character portraits
+
+Each dialogue entry specifies an exact character portrait sprite in parentheses.
+
+Display that sprite prominently on the **left side of the dialogue presentation**, positioned so that the character remains clearly visible and the dialogue text stays unobstructed.
+
+The portrait may extend above the dialogue panel, matching the established La Dexíada narrative presentation.
+
+Preserve:
+
+- The original artwork.
+- Sprite proportions.
+- Transparency.
+- Facial expressions.
+- Character orientation.
+
+Do not use Dexios's combat sprites in place of the requested dialogue portraits.
+
+### Continue indicator
+
+At the **bottom-right corner of the dialogue box**, display:
+
+`ENTER to continue`
+
+The word **ENTER** must appear:
+
+- In gold.
+- Inside a small rectangular key-shaped frame.
+- With a gold border.
+- Styled like a keyboard keycap.
+
+The words `to continue` must appear in white beside the framed ENTER key.
+
+The indicator must be readable and should not overlap the dialogue text.
+
+Keep it visible while waiting for the player to continue.
+
+### Dialogue interaction
+
+- Press **Enter** to advance to the next dialogue entry.
+- If the current entry is the last one, Enter closes the dialogue and resumes the appropriate game sequence.
+- Each Enter press advances only one entry.
+- Ignore keyboard auto-repeat.
+- Holding Enter must not skip multiple messages.
+- The Enter press used to close a dialogue must not accidentally trigger a gameplay action.
+- Do not allow clicks or unrelated keys to advance dialogue unless already required by the current project's established dialogue controls.
+
+There is no automatic dialogue timeout.
+
+The player must be able to read at their own pace.
+
+## 2. FULL GAMEPLAY PAUSE DURING DIALOGUE
+
+Whenever narrative dialogue is visible:
+
+- Pause combat turn progression.
+- Pause attack animations and combat timers.
+- Disable ability selection.
+- Disable target selection.
+- Disable defensive inputs.
+- Disable action-command inputs.
+- Prevent enemy AI from starting another action.
+- Do not apply combat damage.
+- Do not advance boss phase logic.
+
+The current battle music may continue normally.
+
+When the dialogue finishes, resume the correct pending game action exactly once.
+
+Do not restart an enemy's turn, skip a turn, or duplicate events.
+
+### Existing global shortcuts
+
+Keep the Chapter 1 shortcuts functional:
+
+- **R:** Restart the current encounter.
+- **N:** Toggle music.
+- **M:** Toggle SFX.
+- **Escape:** Return to the Chapter 1 encounter selector.
+
+These shortcuts must also work while a dialogue window is open.
+
+Ensure proper cleanup of dialogue UI, timers, keyboard listeners, and camera effects when restarting or leaving the scene.
+
+## 3. REQUIRED PORTRAIT ASSETS
+
+Use these exact supplied asset names:
+
+- `dexios_dialogue_dreaming`
+- `dexios_dialogue_confident`
+- `dexios_dialogue_sad`
+- `dexios_dialogue_ready`
+
+Inspect the existing asset directories to resolve actual paths and extensions.
+
+Do not rename assets.
+
+Do not generate placeholder artwork.
+
+Register each asset through the project's current asset-loading system.
+
+If these sprites are already registered, reuse them rather than loading duplicate textures.
+
+## 4. COMBAT 1 — OPENING DIALOGUE
+
+Scene:
+
+`scene_ch1_combat1`
+
+Trigger the dialogue **immediately after the battle scene loads and before the first enemy turn or combat tutorial**.
+
+### Dialogue 1
+
+Portrait:
+
+`dexios_dialogue_dreaming`
+
+Text:
+
+"There are only 17 days left until the Xanthan Games. I need to grow stronger by fighting beasts beyond Xantharchía's regulated borders."
+
+Wait for Enter.
+
+### Dialogue 2
+
+Portrait:
+
+`dexios_dialogue_confident`
+
+Text:
+
+"Alright, let's do this!"
+
+Wait for Enter.
+
+### After dialogue
+
+When the second dialogue is dismissed:
+
+1. Close the narrative dialogue overlay.
+2. Resume the original Combat 1 opening sequence.
+3. Show the existing beginner combat tutorials at their current trigger points.
+4. Begin the Wild Boar's first turn normally.
+
+Do not display combat tutorials simultaneously with narrative dialogue.
+
+Do not skip or modify the existing introductory tutorials.
+
+The dialogue must appear once per encounter attempt and reset when Combat 1 restarts.
+
+## 5. COMBAT 2 — OPENING DIALOGUE
+
+Scene:
+
+`scene_ch1_combat2`
+
+Trigger immediately after the scene loads, before the first Wild Boar attacks.
+
+### Dialogue
+
+Portrait:
+
+`dexios_dialogue_confident`
+
+Text:
+
+"I just have to make sure I don't give in to anger."
+
+Wait for Enter.
+
+### After dialogue
+
+Close the dialogue panel and continue the normal fixed turn order:
+
+Wild Boar 1 → Wild Boar 2 → Dexios.
+
+Preserve the existing target-selection tutorial and all other Combat 2 behavior.
+
+This dialogue appears once per encounter attempt.
+
+## 6. COMBAT 6 — ENDING DIALOGUE
+
+Scene:
+
+`scene_ch1_combat6`
+
+This dialogue sequence occurs **after all three enemies have been defeated**.
+
+The three enemies are:
+
+- Wild Boar.
+- Furious Boar.
+- Wolf.
+
+### Trigger timing
+
+When the final enemy reaches 0 HP:
+
+1. Let the current attack or counterattack animation finish safely.
+2. Prevent further combat turns.
+3. Do not immediately display the normal victory screen.
+4. Start the narrative ending dialogue instead.
+
+Do not interrupt Triple Lightning or Electric Arc halfway through an animation.
+
+### Dialogue 1
+
+Portrait:
+
+`dexios_dialogue_sad`
+
+Text:
+
+"Well, these fights have been way too easy. I should probably head back."
+
+Wait for Enter.
+
+### Screen shake event
+
+After the player presses Enter to dismiss the first dialogue:
+
+1. Temporarily close or hide the dialogue panel.
+2. Trigger a noticeable **screen shake**, representing a powerful tremor in the surrounding environment.
+3. Keep the battlefield visible during the tremor.
+4. Use a short, controlled shake, approximately 500–700 milliseconds.
+5. Do not damage Dexios or the environment.
+6. Do not start any enemy attack.
+
+The camera must return to its original position after shaking.
+
+The shake must happen exactly once.
+
+### Dialogue 2
+
+After the screen shake finishes:
+
+Portrait:
+
+`dexios_dialogue_dreaming`
+
+Text:
+
+"That sounds like a powerful beast!"
+
+Wait for Enter.
+
+### After dialogue
+
+When the player dismisses the second dialogue:
+
+1. Close the dialogue overlay.
+2. Trigger Combat 6's existing normal victory screen.
+3. Preserve the existing Retry and Return to Combat Select options.
+
+Do not automatically start Combat 7.
+
+Do not modify the existing victory music behavior.
+
+Do not display the victory screen before the ending dialogue has completed.
+
+This entire ending sequence must trigger only once per victory.
+
+Restarting Combat 6 resets the sequence.
+
+## 7. COMBAT 7 — OPENING DIALOGUE
+
+Scene:
+
+`scene_ch1_combat7`
+
+Trigger immediately after the boss scene loads, before The Beast performs its first attack.
+
+### Dialogue
+
+Portrait:
+
+`dexios_dialogue_confident`
+
+Text:
+
+"Now you look like a glorious battle waiting to happen!"
+
+Wait for Enter.
+
+### After dialogue
+
+Close the narrative panel.
+
+Then begin the existing boss turn sequence:
+
+The Beast → Dexios → repeat.
+
+Preserve all current boss attacks, timings, phases, and combat HUD behavior.
+
+The dialogue must not cause The Beast to attack twice or skip its first turn.
+
+## 8. COMBAT 7 — PHASE 2 DIALOGUE
+
+Scene:
+
+`scene_ch1_combat7`
+
+This dialogue triggers during The Beast's existing Phase 1 → Phase 2 transition.
+
+### Required timing
+
+The Beast begins with 80 HP in Phase 1.
+
+When its first HP bar reaches zero, the game already:
+
+- Finishes the current action.
+- Starts the phase transition.
+- Restores The Beast to 80 HP.
+- Unlocks Rampant Excavation.
+- Prepares the existing Phase 2 defense tutorial.
+
+**Insert the new narrative dialogue after The Beast has restored its health and entered Phase 2, but before the Rampant Excavation tutorial.**
+
+### Dialogue
+
+Portrait:
+
+`dexios_dialogue_ready`
+
+Text:
+
+"Hmm, you're not messing around."
+
+Wait for Enter.
+
+### After dialogue
+
+When Enter is pressed:
+
+1. Close the narrative dialogue.
+2. Continue to the existing `DEFENDING FROM BELOW` tutorial.
+3. After the tutorial, proceed with the already-implemented first Rampant Excavation attack.
+
+The correct order is:
+
+**Phase 1 defeated → Phase 2 transition → Beast restores 80 HP → Dexios dialogue → Defending From Below tutorial → Rampant Excavation.**
+
+### Safeguards
+
+- The phase transition must happen exactly once.
+- Do not restore HP twice.
+- Do not reset Dexios's HP or Mana.
+- Do not skip the underground-defense tutorial.
+- Do not start Rampant Excavation before both the narrative dialogue and tutorial have finished.
+- Do not change the attack timing or damage.
+- The dialogue appears once per Phase 2 transition.
+- Restarting Combat 7 resets its trigger flag.
+
+## 9. DO NOT ALTER THE EXISTING FINAL CINEMATIC
+
+Combat 7 already has an interactive eight-image ending sequence:
+
+- `cinematic1`
+- `cinematic2`
+- `cinematic3`
+- `cinematic4`
+- `cinematic5`
+- `cinematic6`
+- `cinematic7`
+- `cinematic8`
+
+It begins after the Beast's second HP bar reaches zero and includes its scripted final attack, W/A/D quick-time events, screen shakes, and special victory title:
+
+`… Victory?`
+
+**Leave this existing cinematic completely unchanged.**
+
+The new narrative dialogue system must not interfere with:
+
+- The Beast's final scripted Savage Jump.
+- Existing cinematic dialogue.
+- Existing cinematic key prompts.
+- W/A/D input sequences.
+- Camera shakes.
+- The special victory title.
+
+Do not replace the current cinematic dialogue overlay with the new narrative dialogue panel unless doing so is necessary and preserves the cinematic's existing appearance and behavior exactly.
+
+Do not introduce extra dialogue during the ending cinematic.
+
+## 10. IMPLEMENTATION STRUCTURE
+
+Prefer a reusable, data-driven dialogue system.
+
+Each dialogue entry should contain:
+
+- Portrait asset key.
+- English dialogue text.
+- Optional event or callback after dismissal.
+
+A dialogue sequence should support:
+
+- Multiple entries.
+- Enter-controlled advancement.
+- Optional intermediate events, such as the screen shake in Combat 6.
+- A callback that resumes the correct combat or victory flow once the sequence finishes.
+
+Avoid writing separate, duplicated dialogue implementations in every scene.
+
+However, do not perform a large refactor of the existing combat code.
+
+Make the smallest safe changes needed to integrate the new dialogue system.
+
+### Scene-specific triggers
+
+Use explicit narrative trigger flags, for example:
+
+- Combat 1 opening dialogue shown.
+- Combat 2 opening dialogue shown.
+- Combat 6 ending dialogue started/completed.
+- Combat 7 opening dialogue shown.
+- Combat 7 Phase 2 dialogue shown.
+
+Reset these flags on encounter restart.
+
+Every dialogue must start and finish exactly once per intended event.
+
+## 11. AUDIO AND CAMERA BEHAVIOR
+
+Do not add new music or SFX assets.
+
+Reuse the existing Chapter 1 battle music.
+
+During dialogue:
+
+- Music continues normally.
+- Combat audio is not retriggered.
+- No attack sounds play unless an existing attack actually starts after dialogue completion.
+
+For Combat 6's earthquake:
+
+- Use a camera shake only.
+- Do not invent or require an earthquake audio file.
+- Keep the shake duration and intensity configurable.
+
+Do not let the shake persist into the victory screen.
+
+Preserve the N/M audio controls.
+
+## 12. ACCEPTANCE TESTS
+
+Verify all of the following:
+
+1. The dialogue panel has a black background at 80% opacity.
+2. The panel has a visible gold border.
+3. All dialogue text is white and readable.
+4. The correct portrait sprite appears for each entry.
+5. `ENTER to continue` appears at the bottom-right.
+6. ENTER is gold inside a key-shaped gold frame.
+7. Enter advances exactly one dialogue at a time.
+8. Holding Enter does not skip multiple messages.
+9. Combat progression is paused while dialogue is visible.
+10. Combat 1 opens with the two specified Dexios dialogues.
+11. Combat 1 tutorials still appear afterward.
+12. Combat 2 opens with the specified anger-control dialogue.
+13. Combat 6 does not immediately show victory after its final enemy dies.
+14. Combat 6 shows the sad Dexios dialogue.
+15. The screen shakes once after dismissing that line.
+16. Combat 6 then shows the dreaming Dexios dialogue.
+17. Combat 6 shows its normal victory screen only after the final Enter.
+18. Combat 7 opens with its specified confident Dexios dialogue.
+19. Combat 7's first boss turn begins correctly afterward.
+20. Defeating The Beast's first HP phase still restores its second 80-HP bar.
+21. The Phase 2 Dexios dialogue appears immediately after the transition.
+22. The existing underground-defense tutorial follows the dialogue.
+23. The Beast's first Phase 2 attack remains Rampant Excavation.
+24. The final eight-part cinematic remains unchanged.
+25. The final victory title remains `… Victory?`.
+26. All dialogue sequences reset correctly on R/retry.
+27. N, M, and Escape still work while dialogue is open.
+28. No duplicate dialogue triggers, repeated attacks, overlapping overlays, or stale listeners occur.
+29. Combats 3, 4, and 5 remain unchanged.
+30. Chapter 29 remains completely unchanged.
+31. The existing project build succeeds.
+
+After implementation, report the files modified, dialogue assets registered, triggers added, test results, and any unresolved issues.
+
+**FINAL OBJECTIVE:** Introduce the specified English Dexios narrative dialogues into Chapter 1 Combats 1, 2, 6, and 7, using a black 80%-opacity dialogue box with gold borders, white text, character portraits, and a gold-framed ENTER continuation prompt, without changing any working combat mechanics or the existing Chapter 29 content.
+
+LA DEXÍADA — CHAPTER 1 COVER, CHAPTER SELECT, AND UI VISUAL UPDATE
+Implement a visual update for the Chapter 1 presentation and chapter navigation in the existing Phaser project.
+
+The project is already working. Preserve all existing gameplay and combat logic unless explicitly stated below.
+
+CRITICAL REQUIREMENTS
+- Do not break or alter the current functionality of Chapter 1 combats.
+- Do not break or alter the current functionality of Chapter 29 combats, tutorials, dialogue events, or cinematics.
+- Keep the current game flow intact, but improve the presentation and navigation as described below.
+- Reuse existing systems where possible.
+- The uploaded image provided for this task must be used as the visual base for Chapter 1 cover/presentation and its Chapter 1 identity.
+1. USE THE PROVIDED IMAGE AS THE CHAPTER 1 COVER ART
+Use the provided uploaded image as the main artwork for Chapter 1.
+
+Register it as a reusable UI/background asset for Chapter 1-related menu scenes.
+
+It must be used in:
+1. The Chapter 1 welcome/introduction scene.
+2. The Chapter Select screen, as the Chapter 1 visual card/panel.
+3. The Chapter 1 combat selection scene as the visual/color reference.
+Preserve the image proportions and quality.
+
+Do not redraw it. Do not replace it with placeholder art.
+2. CHAPTER 1 WELCOME / INTRO SCENE
+Create or update the Chapter 1 welcome scene so it works similarly to the existing Chapter 29 welcome scene.
+
+It must use the provided Chapter 1 image as the main background/presentation art.
+Text layout
+The scene must display the following text:
+Top title
+CHAPTER I: TRAINING BEYOND THE WALLS
+
+Place it near the top, centered horizontally.
+Middle body text
+Join Dexios as he ventures beyond the borders of his homeland, Xantharchía. With 17 days left until the Xanthan Games, he faces a trial he considers necessary to become a Myrmidon.
+
+Place it in the middle area, centered and nicely wrapped.
+Bottom line
+MAY THE AETHER GUIDE YOU
+
+Place it near the bottom, centered horizontally.
+Continue instruction
+PRESS ENTER OR CLICK TO CONTINUE
+
+Place it below the bottom line, also centered.
+Visual style
+Use a presentation style very similar to the Chapter 29 welcome scene:
+- Elegant Greek-fantasy UI styling.
+- Gold decorative framing or lines if appropriate.
+- Readable typography.
+- Good spacing and hierarchy.
+- Clear contrast against the background image.
+- Keep the layout clean and polished.
+Do not overcrowd the image.
+Interaction
+- Pressing Enter continues.
+- Clicking also continues.
+- Escape from this scene must return to the Chapter Select scene.
+After continuing, go to the Chapter 1 combat-selection scene.
+3. CHAPTER SELECT SCENE
+Update the Chapter Select screen so the player chooses between:
+- Chapter 1
+- Chapter 29
+Keep the existing functionality for Chapter 29.
+Chapter 1 visual presentation
+The Chapter 1 option must use the same uploaded Chapter 1 image as its visual card/panel.
+
+Write the Chapter 1 title on or near the Chapter 1 card in a style matching the existing menu design.
+
+Suggested displayed title:
+
+CHAPTER I
+TRAINING BEYOND THE WALLS
+
+This does not need to show the full descriptive paragraph on the Chapter Select screen. It just needs to clearly identify the chapter.
+Chapter 29
+Keep Chapter 29 visually functional as it already is.
+
+Do not remove its card/button.
+Navigation
+Selecting Chapter 1 opens the Chapter 1 welcome/introduction scene.
+
+Selecting Chapter 29 opens the Chapter 29 welcome/introduction scene as it already does.
+
+Preserve existing keyboard and mouse interaction patterns.
+4. CHAPTER 1 COMBAT SELECT VISUAL UPDATE
+Update the Chapter 1 combat selection scene so it visually matches the color identity of the uploaded Chapter 1 image.
+
+Do not change the combat list logic or unlock structure unless already required elsewhere.
+Visual direction
+Use the same color family and atmosphere from the provided image:
+- Blue-to-green gradient feeling.
+- Gold decorative lines and accents.
+- Refined fantasy-Greek presentation.
+- A polished menu look matching the Chapter 1 cover art.
+Apply this style to:
+- Background or overlay styling.
+- Frames/panels.
+- Borders.
+- Buttons.
+- Headers.
+- Highlighted selection states.
+- Any ornamental horizontal lines or separators.
+Do not make it look like the Chapter 29 palette if that scene currently has a different identity.
+Functional requirement
+This is a visual update only.
+
+Preserve:
+- Existing Chapter 1 combat entries.
+- Existing scene navigation.
+- Existing controls.
+- Existing hover/selection behavior.
+- Existing transitions into combats.
+5. CHAPTER 29 WELCOME SCENE — ESCAPE BEHAVIOR
+Update the Chapter 29 welcome/introduction scene so that pressing Escape returns the player to the Chapter Select scene.
+
+This should mirror the intended behavior for the Chapter 1 welcome scene.
+Important
+Do not change any other Chapter 29 behavior.
+
+Do not alter:
+- Chapter 29 text.
+- Chapter 29 presentation flow.
+- Chapter 29 combat content.
+- Chapter 29 cinematics or tutorials.
+Only add the Escape-to-Chapter-Select navigation.
+6. INPUT AND NAVIGATION RULES
+Ensure the following navigation behavior:
+Chapter Select
+- Choose Chapter 1 → open Chapter 1 welcome scene.
+- Choose Chapter 29 → open Chapter 29 welcome scene.
+Chapter 1 welcome scene
+- Enter → continue to Chapter 1 combat select.
+- Click → continue to Chapter 1 combat select.
+- Escape → return to Chapter Select.
+Chapter 29 welcome scene
+- Existing continue behavior stays unchanged.
+- Escape → return to Chapter Select.
+Chapter 1 combat select
+- Preserve existing navigation behavior.
+- Escape should continue doing whatever it already does unless there is an established better return path.
+Do not create duplicated listeners or broken transitions.
+
+Clean up all scene input handlers properly.
+7. UI QUALITY REQUIREMENTS
+Make the new scenes feel polished and intentional.
+Requirements
+- Proper text wrapping.
+- No overlapping text.
+- Good margins and spacing.
+- Text readable at 1920×1080.
+- Gold accents should feel elegant, not excessive.
+- The uploaded image must remain clearly visible and not be blocked by oversized panels.
+- The design should feel consistent with the rest of La Dexíada.
+8. IMPLEMENTATION SAFETY
+Before editing, inspect the current project structure and locate:
+- The existing Chapter Select scene.
+- The existing Chapter 29 welcome scene.
+- The existing Chapter 1 combat-select scene.
+- Current navigation flow between scenes.
+- Current keyboard and mouse input handling.
+- Any reusable title-card or welcome-scene helpers.
+Prefer extending the current structure instead of rewriting it.
+
+Use reusable helpers if appropriate, but do not do a large refactor unless needed.
+9. ACCEPTANCE TESTS
+Verify all of the following:
+1. The uploaded Chapter 1 image is used in the Chapter 1 welcome scene.
+2. The Chapter 1 welcome scene displays:
+   - CHAPTER I: TRAINING BEYOND THE WALLS
+   - Join Dexios as he ventures beyond the borders of his homeland, Xantharchía. With 17 days left until the Xanthan Games, he faces a trial he considers necessary to become a Myrmidon.
+   - MAY THE AETHER GUIDE YOU
+   - PRESS ENTER OR CLICK TO CONTINUE
+3. The Chapter 1 welcome scene continues on Enter.
+4. The Chapter 1 welcome scene continues on click.
+5. Escape from the Chapter 1 welcome scene returns to Chapter Select.
+6. The Chapter Select scene shows both Chapter 1 and Chapter 29.
+7. The Chapter 1 option uses the uploaded image as its visual card/presentation.
+8. Selecting Chapter 1 opens the Chapter 1 welcome scene.
+9. Selecting Chapter 29 opens the Chapter 29 welcome scene.
+10. The Chapter 1 combat-select scene uses a visual palette matching the uploaded image.
+11. Chapter 1 combat-select functionality still works.
+12. Escape from the Chapter 29 welcome scene returns to Chapter Select.
+13. No Chapter 29 content is altered beyond this navigation change.
+14. No Chapter 1 combat logic is broken.
+15. No duplicate input listeners or broken scene transitions appear.
+16. The project builds successfully.
+After implementing, report the files modified, scenes updated, new assets registered, and any remaining issues.
+
+FINAL OBJECTIVE: Use the provided image as the visual identity of Chapter 1 by creating a polished Chapter 1 welcome screen, using the same image in the Chapter Select screen, updating the Chapter 1 combat-select palette to match it, and making Escape from the Chapter 29 welcome screen return to Chapter Select, without breaking existing gameplay.

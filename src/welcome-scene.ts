@@ -22,6 +22,11 @@ export default class WelcomeScene extends Phaser.Scene {
   private readonly onEnter = (): void => {
     this.openSelect();
   };
+  private readonly onEscape = (event: KeyboardEvent): void => {
+    if (!event.repeat && event.code === 'Escape') {
+      this.scene.start('scene_chapter_select');
+    }
+  };
   private welcomeMusic?: Phaser.Sound.BaseSound;
 
   constructor() {
@@ -49,9 +54,11 @@ export default class WelcomeScene extends Phaser.Scene {
     this.createContinuePrompt();
 
     this.input.keyboard?.on('keydown-ENTER', this.onEnter, this);
+    this.input.keyboard?.on('keydown', this.onEscape, this);
     this.input.on('pointerdown', this.onEnter, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.input.keyboard?.off('keydown-ENTER', this.onEnter, this);
+      this.input.keyboard?.off('keydown', this.onEscape, this);
       this.input.off('pointerdown', this.onEnter, this);
       unbindMusic();
       this.welcomeMusic?.stop();

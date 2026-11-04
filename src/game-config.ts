@@ -1,4 +1,5 @@
 import arena from '../assets/backgrounds/escenario.png';
+import chapterOneCover from '../assets/backgrounds/ch1_background.png';
 import hippoMark from '../assets/effects/hippo-mark.png';
 import tigerMark from '../assets/effects/tiger-mark.png';
 import cosmicEffect from '../assets/effects/cosmico.png';
@@ -286,6 +287,7 @@ export const ICON_ASSETS = {
 } as const;
 
 export const COVER_ASSETS = {
+  chapter1: chapterOneCover,
   iobrontes: iobrontesCover,
   kosmelys: kosmelysCover,
 } as const;

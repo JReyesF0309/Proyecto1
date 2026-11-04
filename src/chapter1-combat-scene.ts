@@ -8,6 +8,10 @@ import { audioSettings, bindPhaserMusic } from './audio-settings';
 import stripBlackMattes from './strip-black-matte';
 import { PAUSE_SCENE_KEY } from './pause-scene';
 import { installChapterOneHotkeys } from './chapter1-hotkeys';
+import {
+  NARRATIVE_PRESENTATION_SCENE_KEY,
+  NarrativeDialogueLine,
+} from './narrative-presentation';
 import backgroundUrl from '../assets/backgrounds/ch1_combat1_background.png';
 import boarAttackUrl from '../assets/Boar/boar_attack.png';
 import boarBaseUrl from '../assets/Boar/boar_base.png';
@@ -33,6 +37,8 @@ import boarAttackSfxUrl from '../assets/sfx/boar_attack.mp3';
 import boarHurtSfxUrl from '../assets/sfx/boar_hurt.mp3';
 import boarPrepareSfxUrl from '../assets/sfx/boar_prepare.mp3';
 import battleMusicUrl from '../assets/music/ch1_battle.mp3';
+import bossMusicUrl from '../assets/music/bossbattle.mp3';
+import chaoticMusicUrl from '../assets/music/chaotic.mp3';
 import dexiosDownUrl from '../assets/dexios/dexios_abajo.png';
 import dexiosUpUrl from '../assets/dexios/dexios_arriba.png';
 import dexiosBaseUrl from '../assets/dexios/dexios_base.png';
@@ -45,11 +51,19 @@ import dexiosTripleTwoUrl from '../assets/dexios/dexios_triple2.png';
 import dexiosTripleThreeUrl from '../assets/dexios/dexios_triple3.png';
 import dexiosArcChargingUrl from '../assets/dexios/dexios_arc_charging.png';
 import dexiosArcReleasingUrl from '../assets/dexios/dexios_arc_releasing.png';
+import dexiosDialogueDreamingUrl from '../assets/dexios/dexios_dialogue_dreaming.png';
+import dexiosDialogueConfidentUrl from '../assets/dexios/dexios_dialogue_confident.png';
+import dexiosDialogueSadUrl from '../assets/dexios/dexios_dialogue_sad.png';
+import dexiosDialogueReadyUrl from '../assets/dexios/dexios_dialogue_ready.png';
 import arcChargingSfxUrl from '../assets/sfx/electric_arc_charging.mp3';
 import arcReleasingSfxUrl from '../assets/sfx/electric_arc_releasing.mp3';
 import dexiosSoundUrl from '../assets/sfx/dexios.mp3';
 import perfectParrySoundUrl from '../assets/sfx/perfect_block.mp3';
 import flameSfxUrl from '../assets/sfx/flame.mp3';
+import beastHurtSfxUrl from '../assets/sfx/beast_hurt.mp3';
+import beastPrepareDownSfxUrl from '../assets/sfx/beast_prepare_down.mp3';
+import beastAttackDownSfxUrl from '../assets/sfx/beat_attack_down.mp3';
+import beastPrepareFireSfxUrl from '../assets/sfx/beast_prepare_fire.mp3';
 import combat7BackgroundUrl from '../assets/backgrounds/ch1_combat7_background.png';
 import beastBaseUrl from '../assets/beast/beast_base.png';
 import beastHurtUrl from '../assets/beast/beast_hurt.png';
@@ -290,7 +304,7 @@ const BEAST_KIT: EnemyKit = {
   hurt: 'beast_hurt',
   prepare: { up: 'beast_preparing_up', left: 'beast_preparing_left', right: 'beast_preparing_right' },
   attack: { up: 'beast_attack_up', left: 'beast_attack_left', right: 'beast_attack_right' },
-  sfx: { prepare: 'boar_prepare_sfx', attack: 'boar_attack_sfx', hurt: 'boar_hurt_sfx' },
+  sfx: { prepare: 'boar_prepare_sfx', attack: 'boar_attack_sfx', hurt: 'beast_hurt_sfx' },
   damage: { failed: 10, blocked: 5 },
   counter: 5,
   attackName: 'SAVAGE JUMP',
@@ -355,6 +369,7 @@ const BEAST_ATTACKS: BossAttack[] = [
     defense: 'jump',
     prepareSprite: 'beast_preparing_fire',
     attackSprite: 'beast_attack_fire',
+    prepareSfx: 'beast_prepare_fire_sfx',
     attackSfx: 'flame_sfx',
     prepareText: 'THE BEAST GATHERS PURPLE FIRE',
     minPhase: 1,
@@ -368,9 +383,9 @@ const BEAST_ATTACKS: BossAttack[] = [
     defense: 'directional',
     prepareSprite: 'beast_preparing_down',
     attackSprite: 'beast_attack_down',
-    prepareSfx: 'boar_prepare_sfx',
-    attackSfx: 'boar_attack_sfx',
-    prepareText: 'THE BEAST DRIVES ITS TAIL UNDERGROUND',
+    prepareSfx: 'beast_prepare_down_sfx',
+    attackSfx: 'beast_attack_down_sfx',
+    prepareText: 'THE BEAST PREPARES TO CHARGE DIAGONALLY',
     minPhase: 2,
     weight: 1,
   },
@@ -384,7 +399,8 @@ const BEAST_MOTION = {
   fireOriginX: 0.33,
   fireOriginY: 0.17,
   fireTargetOffsetY: 110,
-  digOffsetX: 220,
+  digOffsetX: 330,
+  digDropY: 70,
 };
 
 const SIDE_KEYS: Record<DefenseSide, { key: string; arrow: string; sprite: string; label: string }> = {
@@ -410,16 +426,22 @@ export interface Chapter1CombatConfig {
   boars: BoarSpawn[];
 }
 
-// Electric Arc (Chapter 1 only): every timing value is measured from the moment both keys are held.
+// Electric Arc (Chapter 1 only): timing is measured from the moment both keys are held.
 const ELECTRIC_ARC = {
   manaCost: 10,
   maxMana: 40,
-  normalDamage: 35,
-  perfectDamage: 40,
+  referenceDamage: 35,
   chargeMs: 2000,
-  normalFromMs: 500,
-  perfectFromMs: 1500,
-  perfectUntilMs: 2500,
+  exponentialK: 2.5,
+  overloadMs: 2500,
+  powerCurve: [
+    { progress: 0, power: 10 },
+    { progress: 0.5, power: 30 },
+    { progress: 0.8, power: 80 },
+    { progress: 0.9, power: 90 },
+    { progress: 0.97, power: 100 },
+    { progress: 1, power: 110 },
+  ],
   releaseHoldMs: 1000,
   approachMs: 400,
   approachGap: 520,
@@ -433,6 +455,37 @@ const ELECTRIC_ARC = {
   apex: { x: 960, y: 450 },
   halfSpan: 190,
 };
+
+function arcProgressAtElapsed(elapsedMs: number): number {
+  if (!Number.isFinite(elapsedMs)) {
+    return 0;
+  }
+  const normalizedTime = Math.min(1, Math.max(0, elapsedMs / ELECTRIC_ARC.chargeMs));
+  const { exponentialK } = ELECTRIC_ARC;
+  const progress = (Math.exp(exponentialK * normalizedTime) - 1) / (Math.exp(exponentialK) - 1);
+  return Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0;
+}
+
+function arcPowerAtProgress(progress: number): number {
+  const boundedProgress = Number.isFinite(progress) ? Math.min(1, Math.max(0, progress)) : 0;
+  const curve = ELECTRIC_ARC.powerCurve;
+  for (let index = 1; index < curve.length; index += 1) {
+    const upper = curve[index];
+    if (boundedProgress <= upper.progress) {
+      const lower = curve[index - 1];
+      const segmentProgress = (boundedProgress - lower.progress) / (upper.progress - lower.progress);
+      return Phaser.Math.Linear(lower.power, upper.power, segmentProgress);
+    }
+  }
+  return curve[curve.length - 1].power;
+}
+
+function arcDamageAtPower(power: number): number {
+  const maxPower = ELECTRIC_ARC.powerCurve[ELECTRIC_ARC.powerCurve.length - 1].power;
+  const boundedPower = Number.isFinite(power) ? Math.min(maxPower, Math.max(0, power)) : 0;
+  const damage = Math.round(ELECTRIC_ARC.referenceDamage * boundedPower / 100);
+  return Number.isFinite(damage) ? Math.max(0, damage) : 0;
+}
 
 export const CHAPTER1_COMBAT1: Chapter1CombatConfig = {
   sceneKey: 'scene_ch1_combat1',
@@ -592,6 +645,7 @@ type ChapterCombatPhase =
   | 'arc-wait'
   | 'arc-charge'
   | 'arc-release'
+  | 'narrative'
   | 'result';
 type DefenseResult = 'failed' | 'blocked' | 'perfect' | 'dodged';
 
@@ -647,7 +701,7 @@ const MANA_TUTORIAL: TutorialMessage[] = [
 const ACTION_COMMAND_TUTORIAL: TutorialMessage[] = [
   {
     title: 'ACTION COMMANDS',
-    text: 'Some abilities require precise timing to succeed. For Electric Arc, hold A and D to charge both sides of the attack, then release as the two bars meet. Better timing means greater damage!',
+    text: "Hold A and D to charge Electric Arc. The longer you hold, the more damage it deals! The bars accelerate as they approach the center. Release near the circle to unleash maximum power, but don't hold too long!",
   },
 ];
 
@@ -664,8 +718,8 @@ const JUMP_TUTORIAL: TutorialMessage[] = [
 
 const DIG_TUTORIAL: TutorialMessage[] = [
   {
-    title: 'DEFENDING FROM BELOW',
-    text: 'The Beast can now attack from beneath the ground! Watch the underground movement approaching Dexios and press S to defend. A normal block reduces the damage, while a Perfect Parry prevents all damage and lets Dexios counterattack!',
+    title: 'DIAGONAL CHARGE',
+    text: 'The Beast can now charge diagonally at Dexios! Watch it approach and press S to defend. A normal block reduces the damage, while a Perfect Parry prevents all damage and lets Dexios counterattack!',
   },
 ];
 
@@ -718,8 +772,11 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   private digUsed = false;
   private phaseText?: Phaser.GameObjects.Text;
   private fireProjectile?: Phaser.GameObjects.Image;
-  private digGraphics?: Phaser.GameObjects.Graphics;
   private finalTriggered = false;
+  private chapter1OpeningDialogueShown = false;
+  private chapter3VictoryDialogueShown = false;
+  private chapter6EndingDialogueStarted = false;
+  private chapter7PhaseTwoDialogueShown = false;
   private cineIndex = 0;
   private cineCount = 0;
   private cineLocked = false;
@@ -872,6 +929,20 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       ['dexios_arc_charging', dexiosArcChargingUrl],
       ['dexios_arc_releasing', dexiosArcReleasingUrl],
     ];
+    if ([
+      'scene_ch1_combat1',
+      'scene_ch1_combat2',
+      'scene_ch1_combat3',
+      'scene_ch1_combat6',
+      'scene_ch1_combat7',
+    ].includes(this.config.sceneKey)) {
+      images.push(
+        ['dexios_dialogue_dreaming', dexiosDialogueDreamingUrl],
+        ['dexios_dialogue_confident', dexiosDialogueConfidentUrl],
+        ['dexios_dialogue_sad', dexiosDialogueSadUrl],
+        ['dexios_dialogue_ready', dexiosDialogueReadyUrl],
+      );
+    }
     if (this.config.boss) {
       images.push(
         [this.config.boss.backgroundKey, combat7BackgroundUrl],
@@ -904,7 +975,8 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       }
     });
     const audio: Array<[string, string]> = [
-      ['ch1_battle_music', battleMusicUrl],
+      ['ch1_battle_music', this.config.boss ? bossMusicUrl : battleMusicUrl],
+      ['ch1_chaotic_music', chaoticMusicUrl],
       ['ch1_victory_music', this.config.boss?.victoryTitle ? loseMusicUrl : victoryMusicUrl],
       ['boar_prepare_sfx', boarPrepareSfxUrl],
       ['boar_attack_sfx', boarAttackSfxUrl],
@@ -917,6 +989,10 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       ['dexios_sfx', dexiosSoundUrl],
       ['perfect_parry_sfx', perfectParrySoundUrl],
       ['flame_sfx', flameSfxUrl],
+      ['beast_hurt_sfx', beastHurtSfxUrl],
+      ['beast_prepare_down_sfx', beastPrepareDownSfxUrl],
+      ['beast_attack_down_sfx', beastAttackDownSfxUrl],
+      ['beast_prepare_fire_sfx', beastPrepareFireSfxUrl],
     ];
     audio.forEach(([key, url]) => {
       if (!this.cache.audio.exists(key)) {
@@ -959,7 +1035,6 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.digUsed = false;
     this.phaseText = undefined;
     this.fireProjectile = undefined;
-    this.digGraphics = undefined;
     this.finalTriggered = false;
     this.cineIndex = 0;
     this.cineCount = 0;
@@ -968,6 +1043,10 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.cinePrompt = undefined;
     this.cinePromptLetter = undefined;
     this.cinePromptCounter = undefined;
+    this.chapter1OpeningDialogueShown = false;
+    this.chapter3VictoryDialogueShown = false;
+    this.chapter6EndingDialogueStarted = false;
+    this.chapter7PhaseTwoDialogueShown = false;
     this.activeBoar = undefined;
     this.selectedBoar = undefined;
     this.hoveredBoar = undefined;
@@ -1006,6 +1085,20 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       'wolf_hurt',
       'dexios_arc_charging',
       'dexios_arc_releasing',
+      ...([
+        'scene_ch1_combat1',
+        'scene_ch1_combat2',
+        'scene_ch1_combat3',
+        'scene_ch1_combat6',
+        'scene_ch1_combat7',
+      ].includes(this.config.sceneKey)
+        ? [
+          'dexios_dialogue_dreaming',
+          'dexios_dialogue_confident',
+          'dexios_dialogue_sad',
+          'dexios_dialogue_ready',
+        ]
+        : []),
       ...(this.config.boss
         ? [
           'beast_base',
@@ -1049,7 +1142,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', this.onKeyDown, this);
     this.input.keyboard?.on('keyup', this.onKeyUp, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.onShutdown, this);
-    this.startEnemyTurn(0);
+    this.startEncounterOpening();
   }
 
   update(): void {
@@ -1162,7 +1255,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       this.turnSlots.push(this.add.graphics().setDepth(51));
       this.turnPortraits.push(this.add.image(x + 32, 99, 'dexios_icono').setDepth(52));
       this.turnLabels.push(this.add.text(x + 32, 136, '', {
-        fontFamily: GAME_FONT_FAMILY,
+        fontFamily: EB_GARAMOND_FONT_FAMILY,
         fontSize: '17px',
         fontStyle: 'bold',
         color: COLORS.cream,
@@ -1209,20 +1302,22 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       const boarImage = portrait.texture.getSourceImage() as HTMLImageElement;
       portrait.setDisplaySize(portraitSize * boarImage.width / boarImage.height, portraitSize);
       this.add.text(1350, top + (multiple ? 10 : 15), boar.spawn.name, {
-        fontFamily: GAME_FONT_FAMILY,
-        fontSize: '28px',
+        fontFamily: EB_GARAMOND_FONT_FAMILY,
+        fontSize: '30px',
         fontStyle: 'bold',
         letterSpacing: 2,
-        color: COLORS.cream,
+        color: '#ffffff',
+        stroke: '#17121b',
+        strokeThickness: 3,
       }).setDepth(51);
       const hpBar = this.add.graphics().setDepth(51);
       const hpText = this.add.text(1800, top + (multiple ? 12 : 18), '20 / 20', {
         fontFamily: EB_GARAMOND_FONT_FAMILY,
-        fontSize: '26px',
+        fontSize: '30px',
         fontStyle: 'bold',
-        color: COLORS.cream,
-        stroke: '#17121b',
-        strokeThickness: 3,
+        color: '#ffffff',
+        stroke: '#000000',
+        strokeThickness: 5,
         align: 'right',
       }).setOrigin(1, 0).setDepth(51);
       const hit = this.add.zone(1555, top + panelHeight / 2, 650, panelHeight)
@@ -1285,7 +1380,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       this.addAbilityButton(container, 946, 92, 'TRIPLE LIGHTNING', '3 hits  ·  5 damage each  ·  No Mana cost', 31, 24, '', () => this.chooseAbility('triple'));
     } else {
       this.addAbilityButton(container, 915, 66, 'TRIPLE LIGHTNING', '3 hits  ·  5 damage each  ·  No Mana cost', 25, 20, '1', () => this.chooseAbility('triple'));
-      this.arcButton = this.addAbilityButton(container, 990, 66, 'ELECTRIC ARC', 'Timing attack  ·  35 / 40 damage  ·  10 Mana', 25, 20, '2', () => this.chooseAbility('arc'));
+      this.arcButton = this.addAbilityButton(container, 990, 66, 'ELECTRIC ARC', 'Charge attack  ·  up to 39 damage  ·  10 Mana', 25, 20, '2', () => this.chooseAbility('arc'));
     }
     this.abilityMenu = container;
   }
@@ -1411,6 +1506,67 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     }).setOrigin(0.5).setName('announcement-text');
     container.add([panel, text]);
     this.announcement = container;
+  }
+
+  private startEncounterOpening(): void {
+    if (this.chapter1OpeningDialogueShown) {
+      this.startEnemyTurn(0);
+      return;
+    }
+
+    let lines: NarrativeDialogueLine[] | undefined;
+    if (this.config.sceneKey === 'scene_ch1_combat1') {
+      lines = [
+        {
+          speaker: 'Dexios',
+          portrait: 'dexios_dialogue_dreaming',
+          text: "There are only 17 days left until the Xanthan Games. I need to grow stronger by fighting beasts beyond Xantharchía's regulated borders.",
+        },
+        {
+          speaker: 'Dexios',
+          portrait: 'dexios_dialogue_confident',
+          text: "Alright, let's do this!",
+        },
+      ];
+    } else if (this.config.sceneKey === 'scene_ch1_combat2') {
+      lines = [{
+        speaker: 'Dexios',
+        portrait: 'dexios_dialogue_confident',
+        text: "I just have to make sure I don't give in to anger.",
+      }];
+    } else if (this.config.sceneKey === 'scene_ch1_combat7') {
+      lines = [{
+        speaker: 'Dexios',
+        portrait: 'dexios_dialogue_confident',
+        text: 'Now you look like a glorious battle waiting to happen!',
+      }];
+    }
+
+    if (!lines) {
+      this.startEnemyTurn(0);
+      return;
+    }
+
+    this.chapter1OpeningDialogueShown = true;
+    this.phase = 'narrative';
+    this.showChapter1Dialogue(lines, () => this.startEnemyTurn(0));
+  }
+
+  private showChapter1Dialogue(lines: NarrativeDialogueLine[], onComplete: () => void): void {
+    this.events.once(Phaser.Scenes.Events.RESUME, () => {
+      this.input.enabled = true;
+      onComplete();
+    });
+    this.input.enabled = false;
+    this.scene.pause(this.scene.key);
+    this.scene.launch(NARRATIVE_PRESENTATION_SCENE_KEY, {
+      parentSceneKey: this.scene.key,
+      type: 'dialogue',
+      style: 'chapter1',
+      lines,
+      onRestart: () => this.restart(),
+      onBack: () => this.returnToSelector(),
+    });
   }
 
   private startEnemyTurn(fromIndex: number): void {
@@ -1644,7 +1800,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.setSpriteFrame(
       boar.sprite,
       attack.attackSprite,
-      attack.kind === 'dig' ? boar.spawn.height * 0.5 : boar.spawn.height,
+      boar.spawn.height,
     );
     this.playEffect(attack.attackSfx);
     this.setStatus(jump
@@ -1682,7 +1838,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     } else if (attack.kind === 'fire') {
       this.launchFire(boar);
     } else if (attack.kind === 'dig') {
-      onImpact = this.startDig(boar);
+      this.startDig(boar);
     }
     this.scheduleImpact(jump, onImpact);
   }
@@ -1706,53 +1862,52 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     });
   }
 
-  // Returns the impact callback that makes the spikes erupt under Dexios.
-  private startDig(boar: BoarState): () => void {
-    const gfx = this.add.graphics().setDepth(5);
-    this.digGraphics = gfx;
-    boar.sprite.setDepth(8);
+  // Rampant Excavation: the Beast charges diagonally at Dexios.
+  private startDig(boar: BoarState): void {
+    boar.sprite.setDepth(14);
     this.tweens.add({
       targets: boar.sprite,
-      x: this.dexiosOriginalX + 330,
+      x: this.dexiosOriginalX + BEAST_MOTION.digOffsetX,
+      y: boar.spawn.y + BEAST_MOTION.digDropY,
       duration: this.timing.lungeMs,
       ease: 'Linear',
     });
-    const startX = boar.sprite.x;
-    const endX = this.dexiosOriginalX + BEAST_MOTION.digOffsetX;
-    const y = GROUND_Y - 10;
-    this.tweens.addCounter({
-      from: 0,
-      to: 1,
-      duration: this.timing.lungeMs,
-      onUpdate: (tween) => {
-        const t = tween.getValue() ?? 0;
-        const x = Phaser.Math.Linear(startX, endX, t);
-        gfx.clear();
-        gfx.lineStyle(4, 0x2a1038, 0.9);
-        gfx.beginPath();
-        gfx.moveTo(startX, y);
-        gfx.lineTo(x, y);
-        gfx.strokePath();
-        gfx.fillStyle(0x6b3a86, 0.9).fillEllipse(x, y - 14, 120, 40);
-        gfx.fillStyle(0x3a2048, 0.9).fillEllipse(x, y - 4, 150, 24);
-      },
-    });
-    return () => {
-      gfx.clear();
-      const dx = this.dexios.x;
-      for (let i = -2; i <= 2; i += 1) {
-        const h = 150 - Math.abs(i) * 28;
-        gfx.fillStyle(0xb04cff, 0.95).fillTriangle(
-          dx + i * 46 - 22, GROUND_Y, dx + i * 46 + 22, GROUND_Y, dx + i * 46, GROUND_Y - h,
-        );
-      }
-      gfx.setDepth(11);
-    };
   }
-
   private endInVictory(): void {
     if (this.config.boss?.victoryTitle) {
       this.beginFinalSequence();
+      return;
+    }
+    if (this.config.sceneKey === 'scene_ch1_combat3' && !this.chapter3VictoryDialogueShown) {
+      this.chapter3VictoryDialogueShown = true;
+      this.phase = 'narrative';
+      this.showChapter1Dialogue([{
+        speaker: 'Dexios',
+        portrait: 'dexios_dialogue_sad',
+        text: 'Man, with these combat I will never be a Mirmidon',
+      }], () => this.finishBattle('victory'));
+      return;
+    }
+    if (this.config.sceneKey === 'scene_ch1_combat6' && !this.chapter6EndingDialogueStarted) {
+      this.chapter6EndingDialogueStarted = true;
+      this.phase = 'narrative';
+      this.showChapter1Dialogue([
+        {
+          speaker: 'Dexios',
+          portrait: 'dexios_dialogue_sad',
+          text: 'Well, these fights have been way too easy. I should probably head back.',
+          afterDismiss: {
+            type: 'camera-shake',
+            durationMs: 620,
+            amplitude: 18,
+          },
+        },
+        {
+          speaker: 'Dexios',
+          portrait: 'dexios_dialogue_dreaming',
+          text: 'That sounds like a powerful beast!',
+        },
+      ], () => this.finishBattle('victory'));
       return;
     }
     this.finishBattle('victory');
@@ -1815,8 +1970,20 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
           Phaser.Math.Linear(startY, endY, t) - 4 * BEAST_MOTION.leapApex * t * (1 - t),
         );
       },
-      onComplete: () => this.showCinematicFrame(0),
+      onComplete: () => {
+        this.playChaoticMusic();
+        this.showCinematicFrame(0);
+      },
     });
+  }
+
+  private playChaoticMusic(): void {
+    this.unbindMusic?.();
+    this.battleMusic?.stop();
+    this.battleMusic?.destroy();
+    this.battleMusic = this.sound.add('ch1_chaotic_music', { loop: true, volume: GAME_CONFIG.audio.music });
+    this.unbindMusic = bindPhaserMusic(this.battleMusic);
+    this.battleMusic.play();
   }
 
   private showCinematicFrame(index: number): void {
@@ -1958,8 +2125,6 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   private clearBossEffects(): void {
     this.fireProjectile?.destroy();
     this.fireProjectile = undefined;
-    this.digGraphics?.destroy();
-    this.digGraphics = undefined;
   }
 
   private beginPhaseTransition(): void {
@@ -1981,6 +2146,16 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       this.setSpriteFrame(boar.sprite, this.kitOf(boar).base, boar.spawn.height);
       this.phaseText?.setText('PHASE 2');
       this.updateHealthBars();
+      if (this.config.sceneKey === 'scene_ch1_combat7' && !this.chapter7PhaseTwoDialogueShown) {
+        this.chapter7PhaseTwoDialogueShown = true;
+        this.phase = 'narrative';
+        this.showChapter1Dialogue([{
+          speaker: 'Dexios',
+          portrait: 'dexios_dialogue_ready',
+          text: "Hmm, you're not messing around.",
+        }], () => this.startEnemyTurn(0));
+        return;
+      }
       this.startEnemyTurn(0);
     });
   }
@@ -2325,26 +2500,40 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     const elapsed = this.time.now - this.arcStartedAt;
+    if (elapsed > ELECTRIC_ARC.overloadMs) {
+      this.overloadArc();
+      return;
+    }
     const target = this.arcTarget;
     this.phase = 'arc-release';
     this.stopArcChargeSound();
     this.arcUiVisible(false);
     this.resetCamera(true);
-    let damage = 0;
-    let label = 'FAIL';
-    if (elapsed >= ELECTRIC_ARC.perfectFromMs && elapsed <= ELECTRIC_ARC.perfectUntilMs) {
-      damage = ELECTRIC_ARC.perfectDamage;
-      label = 'PERFECT';
-    } else if (elapsed >= ELECTRIC_ARC.normalFromMs && elapsed < ELECTRIC_ARC.perfectFromMs) {
-      damage = ELECTRIC_ARC.normalDamage;
-      label = 'NORMAL';
-    }
+    const progress = arcProgressAtElapsed(elapsed);
+    const power = arcPowerAtProgress(progress);
+    const damage = arcDamageAtPower(power);
+    const label = progress >= 1
+      ? 'MAX CHARGE — 110%'
+      : `ARC POWER: ${Math.round(power)}%`;
     this.setStatus(label);
-    if (!target || damage === 0) {
+    if (!target) {
       this.announce('FAIL', () => this.finishArcFail());
       return;
     }
     this.announce(label, () => this.performArcRelease(target, damage));
+  }
+
+  private overloadArc(): void {
+    if (this.phase !== 'arc-charge') {
+      return;
+    }
+    this.phase = 'arc-release';
+    this.heldKeys.clear();
+    this.stopArcChargeSound();
+    this.arcUiVisible(false);
+    this.resetCamera(true);
+    this.setStatus('OVERLOAD — FAIL');
+    this.announce('OVERLOAD — FAIL', () => this.finishArcFail());
   }
 
   private finishArcFail(): void {
@@ -2419,12 +2608,12 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     if (!this.arcGraphics) {
       this.arcGraphics = this.add.graphics().setDepth(70);
       const style = {
-        fontFamily: GAME_FONT_FAMILY,
-        fontSize: '40px',
+        fontFamily: EB_GARAMOND_FONT_FAMILY,
+        fontSize: '44px',
         fontStyle: 'bold',
-        color: '#f5d47d',
+        color: '#ffffff',
         stroke: '#000000',
-        strokeThickness: 5,
+        strokeThickness: 6,
       };
       const { origin, apex } = ELECTRIC_ARC;
       this.arcTexts = [
@@ -2444,28 +2633,36 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     }
     const charging = this.phase === 'arc-charge';
     const elapsed = charging ? this.time.now - this.arcStartedAt : 0;
-    if (charging && elapsed > ELECTRIC_ARC.perfectUntilMs) {
-      this.releaseArc();
+    if (charging && elapsed > ELECTRIC_ARC.overloadMs) {
+      this.overloadArc();
       return;
     }
     const { origin, apex } = ELECTRIC_ARC;
-    const progress = Math.min(1, elapsed / ELECTRIC_ARC.chargeMs);
-    const hot = charging && elapsed >= ELECTRIC_ARC.perfectFromMs;
-    const color = hot ? 0xffffff : 0xf5d47d;
+    const progress = charging ? arcProgressAtElapsed(elapsed) : 0;
+    const power = arcPowerAtProgress(progress);
+    const powerRatio = Math.min(1, power / ELECTRIC_ARC.powerCurve[ELECTRIC_ARC.powerCurve.length - 1].power);
+    const maximumCharge = charging && elapsed >= ELECTRIC_ARC.chargeMs;
+    const color = maximumCharge ? 0xffffff : 0xe8e8ff;
     graphics.clear();
-    this.arcTexts[0]?.setText(charging ? 'RELEASE AT THE INTERSECTION!' : 'HOLD A + D');
+    this.arcTexts[0]
+      ?.setText(maximumCharge ? 'MAX CHARGE — 110%' : charging ? `CHARGE: ${Math.round(power)}%` : 'HOLD A + D')
+      .setColor('#ffffff');
     [-380, 380].forEach((offset) => {
       const startX = origin.x + offset;
       graphics.lineStyle(6, 0x5a4d7a, 0.7).lineBetween(startX, origin.y, apex.x, apex.y);
       if (charging) {
         const x = startX + (apex.x - startX) * progress;
         const y = origin.y + (apex.y - origin.y) * progress;
-        graphics.lineStyle(10, color, 1).lineBetween(startX, origin.y, x, y);
+        graphics.lineStyle(14, color, 0.06 + powerRatio * 0.16).lineBetween(startX, origin.y, x, y);
+        graphics.lineStyle(7 + powerRatio * 4, color, 0.65 + powerRatio * 0.35).lineBetween(startX, origin.y, x, y);
       }
     });
     graphics.lineStyle(5, color, 1).strokeCircle(apex.x, apex.y, 26);
-    if (charging && elapsed >= ELECTRIC_ARC.chargeMs) {
-      graphics.fillStyle(0xffffff, 0.5).fillCircle(apex.x, apex.y, 40);
+    if (maximumCharge) {
+      const pulse = 0.8 + Math.sin(this.time.now / 70) * 0.2;
+      graphics.fillStyle(0xffffff, 0.12 * pulse).fillCircle(apex.x, apex.y, 66);
+      graphics.lineStyle(12, 0xffffff, 0.75 * pulse).strokeCircle(apex.x, apex.y, 42);
+      graphics.fillStyle(0xffffff, 0.72 * pulse).fillCircle(apex.x, apex.y, 28);
     }
   }
 
@@ -2630,7 +2827,10 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     const label = this.announcement.getByName('announcement-text') as Phaser.GameObjects.Text;
+    const isArcResult = text.startsWith('ARC POWER:') || text.startsWith('MAX CHARGE') || text.startsWith('OVERLOAD');
     label.setText(text);
+    label.setFontFamily(isArcResult ? EB_GARAMOND_FONT_FAMILY : GAME_FONT_FAMILY);
+    label.setLetterSpacing(isArcResult ? 2 : 5);
     this.announcement.setVisible(true);
     this.time.delayedCall(1000, () => {
       this.announcement?.setVisible(false);
