@@ -188,7 +188,7 @@ const CINEMATIC_FRAMES: CinematicFrame[] = [
   { sequence: ['d'], shakeOnEntry: true },
   { sequence: ['a'], shakeOnEntry: true },
   {
-    sequence: Array.from({ length: 10 }, (_, index) => (index % 2 === 0 ? 'a' : 'd')),
+    sequence: Array.from({ length: 10 }, (_, index) => (index % 2 === 0 ? 'd' : 'a')),
     shakeOnEntry: true,
     shakeOnPress: true,
   },
@@ -783,7 +783,6 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   private cineObjects: Phaser.GameObjects.GameObject[] = [];
   private cinePrompt?: Phaser.GameObjects.Container;
   private cinePromptLetter?: Phaser.GameObjects.Text;
-  private cinePromptCounter?: Phaser.GameObjects.Text;
   private attackCount = 0;
   private sideTutorialShown = false;
   private jumpTutorialShown = false;
@@ -1042,7 +1041,6 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     this.cineObjects = [];
     this.cinePrompt = undefined;
     this.cinePromptLetter = undefined;
-    this.cinePromptCounter = undefined;
     this.chapter1OpeningDialogueShown = false;
     this.chapter3VictoryDialogueShown = false;
     this.chapter6EndingDialogueStarted = false;
@@ -2046,19 +2044,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       fontStyle: 'bold',
       color: '#ffffff',
     }).setOrigin(0.5);
-    const items: Phaser.GameObjects.GameObject[] = [box, letter];
-    if (sequence.length > 1) {
-      const counter = this.add.text(0, 112, `0/${sequence.length}`, {
-        fontFamily: GAME_FONT_FAMILY,
-        fontSize: '32px',
-        color: '#ffffff',
-        stroke: '#17121b',
-        strokeThickness: 6,
-      }).setOrigin(0.5);
-      this.cinePromptCounter = counter;
-      items.push(counter);
-    }
-    this.cinePrompt = this.add.container(WIDTH / 2, y, items).setDepth(1005);
+    this.cinePrompt = this.add.container(WIDTH / 2, y, [box, letter]).setDepth(1005);
     this.cinePromptLetter = letter;
   }
 
@@ -2069,6 +2055,7 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     this.cineCount += 1;
+    this.playEffect('dexios_sfx');
     if (frame.shakeOnPress) {
       this.shakeCinematic();
     }
@@ -2080,7 +2067,6 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
         yoyo: true,
       });
     }
-    this.cinePromptCounter?.setText(`${this.cineCount}/${sequence.length}`);
     if (this.cineCount < sequence.length) {
       this.cinePromptLetter?.setText(sequence[this.cineCount].toUpperCase());
       return;
@@ -2119,7 +2105,6 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
     }
     this.cinePrompt = undefined;
     this.cinePromptLetter = undefined;
-    this.cinePromptCounter = undefined;
   }
 
   private clearBossEffects(): void {
