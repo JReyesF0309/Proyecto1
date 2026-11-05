@@ -9,6 +9,12 @@ import stripBlackMattes from './strip-black-matte';
 import { PAUSE_SCENE_KEY } from './pause-scene';
 import { installChapterOneHotkeys } from './chapter1-hotkeys';
 import {
+  completeActiveExploreEncounter,
+  markBossPending,
+  markChapterCompleted,
+  type Chapter1LaunchOrigin,
+} from './chapter1-overworld-state';
+import {
   NARRATIVE_PRESENTATION_SCENE_KEY,
   NarrativeDialogueLine,
 } from './narrative-presentation';
@@ -732,6 +738,7 @@ const TARGET_TUTORIAL: TutorialMessage[] = [
 
 export default class ChapterOneCombatScene extends Phaser.Scene {
   private readonly config: Chapter1CombatConfig;
+  private launchOrigin: Chapter1LaunchOrigin = 'combat_select';
   private phase: ChapterCombatPhase = 'tutorial';
   private dexiosHealth = DEXIOS_MAX_HP;
   private dexiosMana = 40;
@@ -875,6 +882,10 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
   constructor(config: Chapter1CombatConfig = CHAPTER1_COMBAT1) {
     super({ key: config.sceneKey });
     this.config = config;
+  }
+
+  init(data?: { origin?: Chapter1LaunchOrigin }): void {
+    this.launchOrigin = data?.origin === 'explore' ? 'explore' : 'combat_select';
   }
 
   private get kit(): EnemyKit {
@@ -1905,7 +1916,15 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
           portrait: 'dexios_dialogue_dreaming',
           text: 'That sounds like a powerful beast!',
         },
-      ], () => this.finishBattle('victory'));
+      ], () => {
+        if (this.launchOrigin === 'explore') {
+          completeActiveExploreEncounter();
+          markBossPending();
+          this.goToScene('scene_ch1_combat7', { origin: 'explore' });
+          return;
+        }
+        this.finishBattle('victory');
+      });
       return;
     }
     this.finishBattle('victory');
@@ -2946,10 +2965,25 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5).setDepth(152);
     const next = result === 'victory' ? this.config.nextSceneKey : undefined;
-    const primary = result === 'victory'
-      ? next
-        ? { label: 'NEXT COMBAT', action: () => this.goToScene(next) }
-        : this.config.boss ? { label: 'RETRY', action: () => this.restart() } : undefined
+    const exploreVictory = result === 'victory'
+      && this.launchOrigin === 'explore'
+      && ['scene_ch1_combat1', 'scene_ch1_combat2', 'scene_ch1_combat3', 'scene_ch1_combat4', 'scene_ch1_combat5']
+        .includes(this.config.sceneKey);
+    if (exploreVictory) {
+      completeActiveExploreEncounter();
+    }
+    if (result === 'victory' && this.launchOrigin === 'explore' && this.config.boss?.victoryTitle) {
+      markChapterCompleted();
+    }
+    const primary = exploreVictory
+      ? {
+        label: 'CONTINUE EXPLORING',
+        action: () => this.goToScene('scene_ch1_overworld'),
+      }
+      : result === 'victory'
+        ? next
+          ? { label: 'NEXT COMBAT', action: () => this.goToScene(next) }
+          : this.config.boss ? { label: 'RETRY', action: () => this.restart() } : undefined
       : { label: 'RETRY', action: () => this.restart() };
     this.resultEnter = primary?.action;
     this.createResultButton(primary ? 780 : 960, 565, 'COMBAT SELECT', 'ESCAPE', () => this.returnToSelector());
@@ -3007,19 +3041,19 @@ export default class ChapterOneCombatScene extends Phaser.Scene {
       return;
     }
     this.starting = true;
-    this.scene.restart();
+    this.scene.restart({ origin: this.launchOrigin });
   }
 
   private returnToSelector(): void {
     this.goToScene('scene_ch1_select');
   }
 
-  private goToScene(sceneKey: string): void {
+  private goToScene(sceneKey: string, data?: object): void {
     if (this.starting) {
       return;
     }
     this.starting = true;
-    this.scene.start(sceneKey);
+    this.scene.start(sceneKey, data);
   }
 
   private onShutdown(): void {

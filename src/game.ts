@@ -26,6 +26,7 @@ import {
   ChapterOneWelcomeScene,
   ChapterSelectScene,
 } from './chapter1-scenes';
+import ChapterOneOverworldScene from './chapter1-overworld-scene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -46,6 +47,7 @@ const config: Phaser.Types.Core.GameConfig = {
     ChapterSelectScene,
     ChapterOneWelcomeScene,
     ChapterOneSelectScene,
+    ChapterOneOverworldScene,
     new ChapterOneCombatScene(CHAPTER1_COMBAT1),
     new ChapterOneCombatScene(CHAPTER1_COMBAT2),
     new ChapterOneCombatScene(CHAPTER1_COMBAT3),

@@ -14787,3 +14787,1800 @@ Verify all of the following:
 After implementing, report the files modified, scenes updated, new assets registered, and any remaining issues.
 
 FINAL OBJECTIVE: Use the provided image as the visual identity of Chapter 1 by creating a polished Chapter 1 welcome screen, using the same image in the Chapter Select screen, updating the Chapter 1 combat-select palette to match it, and making Escape from the Chapter 29 welcome screen return to Chapter Select, without breaking existing gameplay.
+
+# LA DEXÍADA — CHAPTER 1: COMPLETE EXPLORE MODE IMPLEMENTATION
+
+Implement the first playable Chapter 1 overworld in the existing Phaser project, using the Tiled orthogonal map, Dexios's overworld sprites and animations, enemy overworld sprites, collision objects, water hazards, jumping platforms, and existing seven Chapter 1 encounters.
+
+The overworld is inspired by the exploration perspective of The Legend of Zelda: Four Swords Adventures, but preserves La Dexíada's hand-drawn, high-resolution 2D anime artwork. **NO PIXEL ART.**
+
+## CRITICAL REQUIREMENTS
+
+The project already contains seven fully functional Chapter 1 encounters, narrative dialogues, and the interactive ending cinematic for The Beast.
+
+**Preserve all existing working combat mechanics and cinematic sequences.**
+
+Chapter 29 must remain completely unchanged.
+
+Do not rebuild the combat engine, recreate existing encounters, or replace the current navigation structure.
+
+The new Explore Mode must be an additional way to play Chapter 1, not a replacement for the encounter-selection menu.
+
+**IMPORTANT NARRATIVE REQUIREMENT: When Combat 6 is completed through Explore Mode, transition directly into Combat 7 after Combat 6's existing final dialogue and earthquake sequence. Do not return to the overworld between these two battles.**
+
+---
+
+## 1. ADD EXPLORE MODE TO THE CHAPTER 1 SELECTOR
+
+Update the existing scene:
+
+`scene_ch1_select`
+
+Add a new selectable entry **above Combat 1**:
+
+`EXPLORE MODE`
+
+Keep the existing Chapter 1 blue-green-and-gold menu design.
+
+The menu order must be:
+
+1. EXPLORE MODE
+2. COMBAT 1 — WILD BOAR
+3. COMBAT 2 — TWO WILD BOARS
+4. COMBAT 3 — WOLF
+5. COMBAT 4 — TWO WOLVES
+6. COMBAT 5 — TWO FURIOUS BOARS
+7. COMBAT 6 — MIXED ENCOUNTER
+8. COMBAT 7 — THE BEAST
+
+All eight entries remain selectable.
+
+Selecting EXPLORE MODE opens:
+
+`scene_ch1_overworld`
+
+Selecting an individual combat must continue to launch its corresponding existing combat scene normally.
+
+Do not change the chapter-selection screen or Chapter 1 welcome scene.
+
+Do not remove direct combat testing.
+
+### Input
+
+Preserve the existing menu's keyboard and mouse navigation.
+
+The new Explore Mode entry must support both.
+
+---
+
+## 2. CREATE THE OVERWORLD SCENE
+
+Create:
+
+`scene_ch1_overworld`
+
+This scene is responsible for:
+
+- Loading and displaying the Tiled map.
+- Creating Dexios at the map's spawn marker.
+- Playing Dexios's directional animations.
+- WASD movement in eight directions.
+- Camera following Dexios.
+- Jumping with Space.
+- Interactions with water hazards.
+- Safe landings on platforms.
+- Collision with trees and other obstacles.
+- Creating the enemy groups visible in the overworld.
+- Launching existing combat encounters.
+- Returning from successful encounters.
+- Tracking completed overworld encounters.
+
+The scene must reuse existing game infrastructure when appropriate, but it must not contain a copy of the battle engine.
+
+Keep overworld logic separate from combat logic.
+
+---
+
+## 3. LOAD THE ACTUAL TILED MAP
+
+The source Tiled map is:
+
+`ch1_overworld_orthogonal.tmx`
+
+Use its exported Phaser-compatible JSON version:
+
+`ch1_overworld_orthogonal.json`
+
+### Map configuration
+
+The supplied map uses:
+
+- Orientation: ORTHOGONAL.
+- Map size: 30 columns × 20 rows.
+- Tile size: 64 × 64 pixels.
+- World size: 1920 × 1280 pixels.
+- Finite map.
+- CSV tile-layer encoding in the TMX source.
+
+Use these actual map dimensions to configure the Phaser world and camera bounds.
+
+Do not create a different map or procedurally regenerate the terrain.
+
+### Files
+
+The Tiled project uses:
+
+- `ch1_overworld_orthogonal.json`
+- `ch1_terrain_orthogonal.png`
+- `ch1_terrain_orthogonal.tsx`
+- `ch1_trees.tsx`
+- `olive_tree.png`
+
+Inspect the actual available project files, their directories, and the exported JSON before registering assets.
+
+If the final JSON has not yet been added to the project, report that missing input rather than inventing its contents.
+
+### Important: external Tiled tilesets
+
+The original TMX references two external TSX tilesets.
+
+Phaser must receive a valid Tiled JSON map with all necessary tileset metadata.
+
+Check whether the exported JSON contains embedded tileset definitions or references to external TSX files.
+
+If necessary, use Tiled's embedded-tileset export workflow or a small preprocessing step to resolve the external TSX metadata into the JSON.
+
+Do not assume Phaser can automatically resolve external TSX references at runtime.
+
+Preserve tile IDs, first GIDs, object IDs, tile dimensions, and placed objects.
+
+### Existing tilesets
+
+Terrain tileset:
+
+`ch1_terrain_orthogonal`
+
+- First GID: 1.
+- Tile size: 64 × 64.
+- Eight terrain tiles.
+- Image: `ch1_terrain_orthogonal.png`.
+
+Tree tileset:
+
+`ch1_trees`
+
+- First GID: 9.
+- Contains the olive tree image.
+- Image: `olive_tree.png`.
+
+Use the real tileset names from the JSON when calling Phaser's tilemap methods.
+
+---
+
+## 4. MAP LAYERS
+
+The current map includes these layers:
+
+- `Ground`
+- `Collision`
+- `Hazards`
+- `Platforms`
+- `Events`
+- `Decoration`
+- `Foreground`
+
+Read these layers by their actual names.
+
+Do not hardcode a different layer structure.
+
+### Ground
+
+Render the terrain as a Phaser tilemap layer.
+
+The existing ground contains grass, paths, water, and stone.
+
+The terrain does not automatically determine collisions or hazards.
+
+**Do not treat every water-colored tile as a physics collision.**
+
+Use the existing object layers as the authoritative source for movement restrictions and hazards.
+
+### Collision
+
+This object layer currently contains four rectangular obstacle zones.
+
+Use their positions and dimensions as solid collision areas.
+
+Dexios must not be able to pass through them.
+
+The Collision objects should not be visible during normal gameplay.
+
+### Hazards
+
+This layer contains fourteen rectangular dangerous zones, primarily over the water.
+
+These are **fall zones, not solid walls**.
+
+Dexios must be able to jump across them.
+
+Do not use solid Arcade colliders for these rectangles.
+
+### Platforms
+
+This layer contains four rectangular safe landing areas.
+
+These represent surfaces on which Dexios may safely land even when they overlap a water hazard.
+
+The physical platform objects are invisible collision/landing definitions.
+
+If separate visual platform artwork has not been supplied, do not invent asset filenames. Keep a development-only debug overlay available to inspect platform positions and report that visible stone sprites still need to be added.
+
+### Events
+
+This layer contains the spawn point and six combat encounter markers.
+
+Use their existing names, coordinates, and object metadata.
+
+### Decoration
+
+This layer contains four olive-tree tile objects.
+
+Load their images and render them at the positions and display dimensions stored in Tiled.
+
+Do not interpret these large image objects as ordinary 64 × 64 ground tiles.
+
+### Foreground
+
+Load this layer if it contains objects.
+
+It is currently empty but should be supported for future visual elements drawn in front of Dexios.
+
+---
+
+## 5. OVERWORLD CAMERA
+
+Use the existing game resolution:
+
+**1920 × 1080**
+
+Set the overworld camera to:
+
+**ZOOM = 2.0**
+
+Use this exact initial zoom.
+
+The visible world area will therefore be approximately 960 × 540 world pixels.
+
+### Camera behavior
+
+- Follow Dexios.
+- Smoothly interpolate the camera movement.
+- Keep Dexios near the central area of the viewport when possible.
+- Respect the map bounds.
+- Do not show empty space beyond the world edges.
+- Keep camera motion comfortable and stable.
+- Preserve the correct rendering scale of high-resolution artwork.
+
+Suggested camera initialization:
+
+```javascript
+camera.setBounds(0, 0, 1920, 1280);
+camera.setZoom(2);
+camera.startFollow(dexios, true, 0.08, 0.08);
+```
+
+Adapt this to the project's actual camera architecture.
+
+Do not make the camera follow Dexios's temporary visual jumping offset. Follow his world-ground position so the camera does not bounce vertically every time he jumps.
+
+### Important scaling check
+
+The Tiled tree objects currently use large display dimensions.
+
+At 2× camera zoom, those trees may occupy a substantial part of the screen.
+
+Preserve the authored map dimensions initially, check actual gameplay readability, and keep art scaling configurable.
+
+Do not silently rescale or reposition all trees in a way that breaks their collision alignment.
+
+---
+
+## 6. DEXIOS OVERWORLD ASSETS
+
+Use the supplied final Dexios overworld artwork.
+
+### Idle sprites
+
+- `dexios_idle_up`
+- `dexios_idle_down`
+- `dexios_idle_left`
+- `dexios_idle_right`
+
+### Walking animations
+
+- `dexios_walking_up`
+- `dexios_walking_down`
+- `dexios_walking_left`
+- `dexios_walking_right`
+
+### Jumping animations
+
+- `dexios_jumping_up`
+- `dexios_jumping_down`
+- `dexios_jumping_right`
+
+The supplied asset set currently identifies these three directional jumping sheets.
+
+For leftward jumps, reuse the most appropriate available artwork with horizontal mirroring if necessary, until a dedicated left-jump sheet is provided.
+
+### Spritesheet handling
+
+**IMPORTANT: The walking and jumping assets are animated spritesheets, not single-frame images.**
+
+Inspect the real PNG dimensions and layout.
+
+Determine:
+
+- Number of columns.
+- Number of rows.
+- Individual frame width.
+- Individual frame height.
+- Actual frame count.
+- Correct frame ordering.
+
+Do not assume a frame size merely from the filename.
+
+The supplied artwork may have frames arranged across multiple rows.
+
+Register each sheet using Phaser's spritesheet loader with correct frame dimensions, then create its animation using the actual valid frame indices.
+
+Do not display the whole spritesheet as a single character image.
+
+Do not accidentally crop frames or allow adjacent animation frames to appear inside the same sprite.
+
+### Visual consistency
+
+All Dexios animations must maintain:
+
+- The same character scale.
+- Consistent body proportions.
+- Correct feet alignment.
+- Consistent ground anchoring.
+- Matching outfit orientation.
+- No noticeable jumps in position when changing animation.
+- No incorrect one-frame flashes from another direction.
+
+Preserve his original black-and-gold clothing and purple cloak.
+
+Do not recreate or recolor the character.
+
+---
+
+## 7. MOVEMENT WITH WASD
+
+Implement free movement in eight directions.
+
+### Controls
+
+- W: up.
+- S: down.
+- A: left.
+- D: right.
+- W + A: upper-left.
+- W + D: upper-right.
+- S + A: lower-left.
+- S + D: lower-right.
+
+### Movement behavior
+
+- Movement must be continuous and smooth.
+- Use delta-time or physics-based movement.
+- Normalize diagonal movement so it is not faster than horizontal movement.
+- Prevent Dexios from leaving the world bounds.
+- Resolve movement against the Collision objects.
+- Do not move the camera independently of the character.
+
+Choose a reasonable initial overworld walking speed and make it configurable.
+
+### Directional animation
+
+When moving upward, play:
+
+`dexios_walking_up`
+
+When moving downward:
+
+`dexios_walking_down`
+
+When moving left:
+
+`dexios_walking_left`
+
+When moving right:
+
+`dexios_walking_right`
+
+For diagonal movement, use the corresponding horizontal animation, consistent with the previously established overworld animation plan.
+
+Examples:
+
+- W + A → walking_left.
+- W + D → walking_right.
+- S + A → walking_left.
+- S + D → walking_right.
+
+While walking diagonally, Dexios must still move in both world axes.
+
+### Idle behavior
+
+When all movement input stops:
+
+1. Stop the current walking animation.
+2. Preserve the last facing direction.
+3. Display the appropriate `dexios_idle_*` sprite.
+
+Do not always reset Dexios to facing downward.
+
+Animations must not restart from frame zero every update tick.
+
+---
+
+## 8. PLAYER PHYSICS AND COLLISION
+
+Use a consistent collision model for top-down exploration.
+
+Prefer Phaser Arcade Physics if compatible with the existing project.
+
+### Collision body
+
+The collision body should cover Dexios's feet and a small area around them, not his entire illustrated body.
+
+This allows the upper part of his sprite to overlap foliage without producing unnatural collisions.
+
+Use:
+
+- A physical ground position.
+- A separate visual sprite or child sprite for animations.
+- A compact ground-level collision body.
+
+Keep collision dimensions and offsets configurable.
+
+### Obstacles
+
+Convert the rectangles in the Tiled `Collision` layer into invisible Phaser physics obstacles or equivalent collision checks.
+
+Dexios must slide naturally along obstacles rather than passing through them or becoming stuck.
+
+### Trees
+
+The four olive trees are decorative objects.
+
+Their solid trunk regions are defined by the existing Collision rectangles.
+
+Do not generate additional full-image collision bodies from the entire tree canopy.
+
+Do not block Dexios from walking behind foliage merely because the image is large.
+
+---
+
+## 9. DEPTH SORTING FOR TREES
+
+Implement believable top-down depth sorting.
+
+The tree sprites must use the actual `Decoration` tile objects from Tiled.
+
+Respect Tiled's image-object positioning conventions, including bottom-left alignment where applicable.
+
+### Depth behavior
+
+Use the relevant ground/contact Y coordinate to determine drawing order.
+
+When Dexios stands behind a tree, the tree's foliage may appear in front of him.
+
+When Dexios walks in front of the tree's trunk, Dexios should appear above the appropriate parts of the tree.
+
+Avoid placing every tree permanently above Dexios.
+
+Avoid placing every tree permanently behind Dexios.
+
+Use dynamic Y-based depth sorting or a compatible foreground/backdrop solution.
+
+Preserve the four current tree positions and their existing artwork.
+
+---
+
+## 10. JUMPING WITH SPACE
+
+Implement Dexios's overworld jump.
+
+This is a traversal mechanic, independent from the defensive Space action used during Chapter 1 battles.
+
+### Input
+
+Press:
+
+**SPACE**
+
+to jump.
+
+### Jump behavior
+
+1. Dexios begins a jump animation corresponding to his current movement direction.
+2. His visual body rises above the ground.
+3. His ground shadow remains on the world surface.
+4. He can continue moving horizontally during the jump.
+5. His visual height follows a smooth jump arc.
+6. He descends and lands.
+7. The appropriate walking or idle animation resumes.
+
+### Technical requirement
+
+Separate:
+
+- Dexios's world-ground position.
+- His visual jump height.
+- His shadow position.
+
+The camera should follow the world-ground position.
+
+Do not change his logical Y coordinate merely to simulate visual elevation.
+
+### Jump physics
+
+Use a configurable jump duration and height.
+
+The jump must be long enough to cross the intended gaps between the riverbank and the marked platforms.
+
+Check the real Tiled platform coordinates and tune movement speed and jump duration against those distances.
+
+Do not assume a default jump distance that makes the authored platforms impossible to reach.
+
+### Restrictions
+
+- No double jump.
+- No automatic repeated jumps when Space is held.
+- No jumping while already falling.
+- No jumping during combat transition.
+- Ignore movement and jump controls during scene changes.
+
+Use the supplied jumping sprite animations, not a static idle sprite floating up and down.
+
+---
+
+## 11. WATER HAZARDS AND FALLING
+
+The Tiled `Hazards` layer contains dangerous areas.
+
+These areas are not physical walls.
+
+### Walking into a hazard
+
+If Dexios walks into a hazard without jumping or standing on a valid safe platform:
+
+1. Trigger a falling state.
+2. Stop normal movement input.
+3. Play a brief visual falling effect.
+4. Deduct **5 HP**.
+5. Return Dexios to his most recent safe ground position.
+6. Restore idle control after the recovery.
+
+### Jumping across a hazard
+
+While Dexios is airborne, he may pass over hazard rectangles.
+
+Do not trigger an immediate fall merely because his ground shadow temporarily overlaps a hazard during an active jump.
+
+At landing:
+
+- If he lands on safe terrain, complete the jump normally.
+- If he lands on a valid platform, complete the jump normally.
+- If he lands in a hazard without platform protection, trigger the fall.
+
+### Platform priority
+
+When a `Platforms` rectangle overlaps a `Hazards` rectangle, the platform counts as safe for landing.
+
+A platform overrides the hazard only within that platform's actual bounds.
+
+### Safe position
+
+Track the last valid stable position on safe land.
+
+Do not update the safe checkpoint while Dexios is airborne, falling, inside a hazard, or inside a collision obstacle.
+
+On falling, restore him to that safe position.
+
+### Hazard HP
+
+Create a minimal overworld HP state:
+
+- Maximum: 65.
+- Starting value: 65.
+- Falling penalty: 5.
+
+Use a compact Chapter 1-style HP indicator.
+
+The overworld HP cannot become negative.
+
+If it reaches zero, provide a clear overworld defeat/restart behavior rather than allowing an unplayable state.
+
+### Battle-stat compatibility
+
+For this initial exploration implementation, preserve the existing combat scenes' established starting HP and Mana behavior.
+
+Track overworld falling damage separately rather than silently changing all seven combat scenes to use persistent HP.
+
+Do not introduce potion crafting or healing yet.
+
+Persistent health shared between overworld and battles can be integrated later with the healing system.
+
+---
+
+## 12. ENEMY OVERWORLD ASSETS
+
+Use these exact supplied assets:
+
+- `boar_overworld`
+- `wolf_overworld`
+- `rageboar_overworld`
+
+These are visible overworld representations of the enemies.
+
+They are not replacements for existing combat sprites.
+
+Use their existing high-resolution anime artwork.
+
+### Enemy types
+
+`boar_overworld` represents the normal Wild Boar.
+
+`wolf_overworld` represents the Wolf.
+
+`rageboar_overworld` represents the Furious Boar.
+
+Create the enemies at appropriate scale for the overworld, matching the terrain and Dexios.
+
+Do not make the enemy sprites as large as their combat-scene versions.
+
+Do not use the existing boss battle sprites as overworld substitutes.
+
+### Enemy behavior
+
+For this first version, enemies may remain stationary or use very subtle idle behavior.
+
+Do not implement complex patrol AI yet.
+
+The main purpose of these overworld enemies is to visibly represent the encounters and allow the player to initiate their respective battles.
+
+---
+
+## 13. USE THE EXISTING TILED COMBAT MARKERS
+
+The current `Events` object layer contains exactly six encounter markers.
+
+Use their actual names and positions.
+
+| Marker | Approximate world position | Encounter |
+|---|---|---|
+| `combat_01` | (410, 686) | Combat 1 |
+| `combat_02` | (418, 314) | Combat 2 |
+| `combat_03` | (1146, 210) | Combat 3 |
+| `combat_04` | (1570, 208) | Combat 4 |
+| `combat_05` | (1594, 694) | Combat 5 |
+| `combat_06` | (1612, 1184) | Combat 6 |
+
+Read the coordinates from the exported JSON, rather than hardcoding these approximate values if the Tiled map has been updated.
+
+### Enemy placement
+
+At each encounter marker, create a visible enemy group.
+
+**Combat 1**
+
+One normal Wild Boar.
+
+Use:
+
+`boar_overworld`
+
+**Combat 2**
+
+Two normal Wild Boars standing near each other.
+
+Use two instances of:
+
+`boar_overworld`
+
+**Combat 3**
+
+One Wolf.
+
+Use:
+
+`wolf_overworld`
+
+**Combat 4**
+
+Two Wolves.
+
+Use two instances of:
+
+`wolf_overworld`
+
+**Combat 5**
+
+Two Furious Boars.
+
+Use two instances of:
+
+`rageboar_overworld`
+
+**Combat 6**
+
+Three enemies:
+
+- One normal Wild Boar.
+- One Furious Boar.
+- One Wolf.
+
+Use one instance of each relevant overworld sprite.
+
+Each group corresponds to one complete existing combat encounter.
+
+Do not create a separate battle for every individual enemy within a group.
+
+### Group positioning
+
+Arrange multiple enemies around the corresponding Tiled marker.
+
+Use small configurable offsets.
+
+Keep them close enough to be understood as one group.
+
+Ensure every spawned enemy remains on reachable terrain and does not occupy invalid hazard or collision positions.
+
+Do not move the original encounter marker coordinates.
+
+---
+
+## 14. TRIGGERING COMBAT
+
+When Dexios physically approaches or touches an active overworld enemy group, initiate its corresponding combat.
+
+Use a small, readable trigger area around the group.
+
+The trigger must use the actual position of the visible enemy group, not a large invisible area covering the surrounding forest.
+
+### Combat trigger sequence
+
+1. Dexios approaches an enemy.
+2. The group detects contact or close overlap.
+3. Lock further overworld movement.
+4. Prevent duplicate collision triggers.
+5. Record the current exploration state.
+6. Transition into the matching existing combat scene.
+
+### Corresponding scenes
+
+Use the actual registered scene names:
+
+- `scene_ch1_combat1`
+- `scene_ch1_combat2`
+- `scene_ch1_combat3`
+- `scene_ch1_combat4`
+- `scene_ch1_combat5`
+- `scene_ch1_combat6`
+
+Do not change the scenes' battle mechanics, enemies, animations, dialogues, tutorials, or statistics.
+
+### Transition
+
+Use a brief fade or existing scene-transition convention.
+
+Do not add additional narrative dialogue.
+
+Do not start two encounters simultaneously.
+
+---
+
+## 15. PERSISTENT EXPLORE MODE STATE
+
+Create a lightweight exploration-session state.
+
+Track:
+
+- Dexios's current world position.
+- Last safe world position.
+- Facing direction.
+- Overworld HP.
+- Completed encounter IDs.
+- Currently active encounter ID.
+- Whether Explore Mode launched the current combat.
+- Whether Combat 7 was triggered through the exploration storyline.
+- Existing music/SFX preferences.
+
+Use an in-memory session state or existing project state manager.
+
+Persistent browser saving is not required yet.
+
+### Completing Combats 1–5
+
+If an encounter was entered through Explore Mode and Dexios wins:
+
+1. Preserve the existing battle victory presentation.
+2. Provide or use a context-appropriate `CONTINUE EXPLORING` action.
+3. Return to `scene_ch1_overworld`.
+4. Restore Dexios near the position where the encounter began.
+5. Mark the relevant encounter group as completed.
+6. Remove or deactivate that enemy group in the overworld.
+7. Restore movement and camera follow.
+
+Previously defeated enemy groups must not instantly respawn during the same exploration session.
+
+Do not let Dexios return directly inside an active combat trigger.
+
+### Starting encounters directly from the Combat Selector
+
+When a combat is launched directly from `scene_ch1_select`, preserve the existing combat completion and navigation behavior.
+
+Do not make direct-testing battles depend on the overworld session.
+
+Use an explicit launch context such as:
+
+`origin: 'explore'`
+
+versus:
+
+`origin: 'combat_select'`
+
+Do not rely on global assumptions about how a scene was opened.
+
+---
+
+## 16. COMBAT 6 → COMBAT 7 — AUTOMATIC STORY TRANSITION
+
+**THIS IS A REQUIRED CHANGE.**
+
+Combat 7 does not need an overworld marker for this initial implementation.
+
+The final boss is reached directly after finishing Combat 6 through Explore Mode.
+
+### Sequence
+
+When the player defeats all three enemies in Combat 6:
+
+1. Finish the final attack or counterattack animation safely.
+2. Preserve the existing Combat 6 ending dialogue.
+3. Dexios says his existing line about the battles being too easy.
+4. The existing earthquake/screen shake occurs.
+5. Dexios says his existing line about hearing a powerful beast.
+6. After the player presses Enter to dismiss that final dialogue, transition directly to Combat 7.
+7. Start `scene_ch1_combat7`.
+8. Play Combat 7's existing opening dialogue.
+9. Begin the existing two-phase Beast battle normally.
+
+### Absolutely important
+
+**Do not return to `scene_ch1_overworld` between Combat 6 and Combat 7.**
+
+Do not show the Chapter 1 combat selector between them.
+
+Do not require Dexios to find a seventh enemy on the map.
+
+Do not create a `combat_07` marker.
+
+Do not skip or modify Combat 6's existing ending dialogues or earthquake.
+
+### Context-aware handling
+
+If Combat 6 was launched from Explore Mode, completing its final dialogue must route directly to Combat 7, without an intermediate ordinary victory screen.
+
+If Combat 6 was launched directly from the Combat Selector for testing, preserve its existing standalone victory behavior.
+
+The direct Combat 7 option must also continue working normally.
+
+### Combat 7 behavior
+
+Preserve everything already implemented:
+
+- The Beast's first 80-HP phase.
+- The second 80-HP phase.
+- Savage Jump.
+- Wild Claw.
+- Beast Fire.
+- Rampant Excavation.
+- The underground-defense tutorial.
+- Dexios's existing narrative dialogue.
+- The final scripted Savage Jump.
+- The complete eight-image Chaos cinematic.
+- All W/A/D cinematic inputs.
+- The special final victory title:
+
+`… Victory?`
+
+Do not alter the cinematic.
+
+### Chapter completion
+
+After the final special victory screen, preserve its existing Retry and Return navigation.
+
+It is acceptable for the player to return to the Chapter 1 selector after completing the final boss, because the current overworld storyline ends here.
+
+Do not automatically restart the exploration.
+
+---
+
+## 17. OVERWORLD CHARACTER AND ENEMY DRAW ORDER
+
+The game should feel like a top-down Zelda-style adventure.
+
+Implement world-space depth sorting.
+
+### Dexios
+
+Sort primarily by his ground Y coordinate, not by his head or jump height.
+
+### Enemies
+
+Sort by their ground positions.
+
+### Trees
+
+Sort according to their base/trunk positions.
+
+### Ground
+
+Always stays behind the characters.
+
+### Foreground
+
+Render applicable foreground decorations according to the project's layering rules.
+
+Characters should be able to appear partially hidden by large trees where appropriate.
+
+Avoid unnatural sprite layering that makes Dexios appear to float over tree canopies or disappear behind entire trees while standing in front of their trunks.
+
+---
+
+## 18. OVERWORLD UI
+
+Keep the interface minimal.
+
+The overworld should primarily display the environment rather than a full battle HUD.
+
+Include a small HP indicator for Dexios.
+
+Optionally include a compact control hint:
+
+`WASD — MOVE`
+
+`SPACE — JUMP`
+
+`ESC — BACK`
+
+Use the Chapter 1 visual style and existing font resources.
+
+Do not add a large permanent menu.
+
+Do not display combat turn-order icons or ability panels while exploring.
+
+### Existing shortcuts
+
+Preserve the established Chapter 1 shortcut conventions where applicable:
+
+- R — Restart Explore Mode.
+- N — Toggle music.
+- M — Toggle SFX.
+- Escape — Return to `scene_ch1_select`.
+
+R must reset the overworld session and respawn Dexios at the original `dexios_spawn`.
+
+N and M must preserve the existing audio preferences.
+
+There is no newly supplied overworld music track, so do not invent or require one.
+
+Keep the overworld silent or reuse an existing explicitly appropriate ambient system if already present.
+
+Combat encounters must keep using their established `ch1_battle` music.
+
+---
+
+## 19. MAP EVENTS AND FUTURE SYSTEMS
+
+The map will eventually support:
+
+- Dittany gathering.
+- Potion crafting.
+- Healing.
+- Additional obstacles.
+- More elaborate jumping challenges.
+- Camp and rest interactions.
+- Additional storytelling.
+
+However, these systems are **not part of the current implementation**.
+
+Do not invent potion mechanics or herbs that are not represented by actual supplied assets.
+
+Do not automatically place new dittany plants at arbitrary positions.
+
+Keep the `Events` object-layer parser extensible so future Tiled objects can be added without rebuilding the overworld.
+
+---
+
+## 20. ACCESSIBILITY AND CONTROLS
+
+Movement and jumping must feel responsive.
+
+The player should have a reasonable opportunity to land on the marked platforms.
+
+Do not require extremely precise sub-frame inputs.
+
+When falling:
+
+- Clearly show the mistake.
+- Deduct exactly 5 HP.
+- Return Dexios to a valid safe position.
+- Avoid placing him back into the hazard immediately.
+
+If a platform is unreachable with the chosen initial jump speed/duration, report this during validation and tune the traversal parameters.
+
+Do not silently edit the authored Tiled map to conceal an unreachable jump.
+
+All on-screen instructions must be in English.
+
+---
+
+## 21. PHASER IMPLEMENTATION SAFETY
+
+Before writing new code, inspect:
+
+- The project scene manager.
+- Chapter 1 selector.
+- Existing Chapter 1 combat scenes.
+- Existing scene transition helpers.
+- Combat victory callbacks and results screens.
+- Combat 6's ending dialogue and earthquake logic.
+- Combat 7's introduction and ending cinematic.
+- Existing key bindings.
+- Existing audio and camera utilities.
+- The actual Tiled JSON.
+- The PNG and TSX files.
+- The real dimensions of all supplied overworld sprite assets.
+
+Use the existing Phaser version and project conventions.
+
+Do not replace the working game architecture.
+
+### Recommended separation
+
+Keep responsibilities clear:
+
+**Overworld scene**
+
+- Camera.
+- Tilemap.
+- Player movement.
+- Animation.
+- Jumping.
+- Hazards.
+- Platforms.
+- Enemy groups.
+- Encounter triggers.
+
+**Exploration state**
+
+- Position.
+- Completed encounters.
+- Health.
+- Return context.
+
+**Existing combat scenes**
+
+- All combat gameplay.
+- Tutorials.
+- Damage.
+- Mana.
+- Attack animations.
+- Narrative dialogue.
+- Results screens.
+
+Use configurable enemy-group definitions rather than writing six unrelated hardcoded collision handlers.
+
+### Cleanup
+
+On scene shutdown or restart:
+
+- Stop active movement.
+- Remove temporary input listeners.
+- Cancel active jump effects.
+- Clean up encounter trigger callbacks.
+- Remove transient camera effects.
+- Stop relevant audio if necessary.
+- Prevent duplicated sprites and overlays.
+
+Do not duplicate physics bodies when returning from combat.
+
+---
+
+## 22. REQUIRED ACCEPTANCE TESTS
+
+### Tiled map
+
+1. The exported Tiled JSON loads successfully.
+2. The map is orthogonal.
+3. World size is 1920 × 1280.
+4. The terrain tiles render correctly.
+5. The four olive trees render at the appropriate authored positions and scale.
+6. Collision, Hazards, Platforms, and Events objects are parsed correctly.
+7. External tileset metadata is resolved correctly.
+
+### Player movement
+
+8. Dexios spawns at `dexios_spawn`.
+9. WASD movement works in all eight directions.
+10. Diagonal movement speed is normalized.
+11. The four walking animations work.
+12. All available idle directions work.
+13. Walking animations do not display incorrect or cropped frames.
+14. Dexios cannot cross solid tree collisions.
+15. The camera follows Dexios smoothly.
+16. Camera zoom is exactly 2× initially.
+17. The camera stays inside world bounds.
+
+### Jumping and hazards
+
+18. Space starts the appropriate jump animation.
+19. Dexios's visual body rises while the shadow remains at ground level.
+20. He can move across hazards while airborne.
+21. He can land safely on marked Platforms.
+22. Landing in unprotected water triggers a fall.
+23. Walking directly into an unprotected hazard triggers a fall.
+24. Falling deducts exactly 5 HP.
+25. Dexios respawns at his last safe position.
+26. Jump input cannot be spammed to double-jump.
+27. Platform geometry is checked against the actual supplied map.
+28. There are no unavoidable repeated fall loops.
+
+### Enemy encounters
+
+29. `combat_01` displays one normal Wild Boar and starts Combat 1.
+30. `combat_02` displays two normal Wild Boars and starts Combat 2.
+31. `combat_03` displays one Wolf and starts Combat 3.
+32. `combat_04` displays two Wolves and starts Combat 4.
+33. `combat_05` displays two Furious Boars and starts Combat 5.
+34. `combat_06` displays one normal Wild Boar, one Furious Boar, and one Wolf, and starts Combat 6.
+35. All enemy groups are positioned on valid traversable terrain.
+36. A group launches exactly one battle when triggered.
+37. Completed groups do not respawn during the same exploration session.
+38. Winning Combats 1–5 from Explore Mode returns Dexios to the overworld.
+39. Returning from battle preserves the appropriate exploration state.
+40. Direct combat selection remains fully functional.
+
+### Combat 6 and final boss
+
+41. Winning Combat 6 from Explore Mode preserves its existing ending dialogue.
+42. The existing earthquake occurs.
+43. Dexios's final Combat 6 dialogue appears.
+44. Dismissing that dialogue starts Combat 7 directly.
+45. The player does not return to the overworld or combat selector between Combats 6 and 7.
+46. Combat 7 retains its full two-phase boss encounter.
+47. The existing final cinematic works unchanged.
+48. Its special victory title remains `… Victory?`.
+49. Combat 6 and Combat 7 are still independently selectable from the Combat Selector.
+
+### Regression checks
+
+50. The existing R/N/M/Escape shortcuts work where applicable.
+51. Combats 1–7 retain their current attacks, statistics, tutorials, timings, animations, and sounds.
+52. Chapter 29 remains completely unchanged.
+53. No duplicated keyboard events, music, sprites, cameras, or collision handlers occur.
+54. Restarting Explore Mode resets the exploration session correctly.
+55. The existing project builds successfully.
+
+After implementation, provide a concise report detailing:
+
+- Files created or modified.
+- Overworld asset registrations.
+- Detected spritesheet frame dimensions.
+- The actual map layers and object counts loaded.
+- How enemy encounter transitions are handled.
+- How Combat 6 routes to Combat 7.
+- Any missing sprite or JSON files.
+- Any unreachable platform geometry discovered.
+- Build and test results.
+
+**FINAL OBJECTIVE: Implement a fully playable top-down orthogonal Chapter 1 Explore Mode with camera zoom ×2, Dexios's directional animations, eight-direction movement, jumping, collisions, water hazards, platforms, olive trees, and six visible enemy encounter groups. Combats 1–5 return to exploration after victory; Combat 6 leads directly into Combat 7 and the existing final Chaos cinematic. Preserve direct combat selection and every existing Chapter 29 feature.**
+
+# LA DEXÍADA — CHAPTER 1: PERSISTENT EXPLORE MODE PROGRESS
+
+Implement automatic persistent progression saving for Chapter 1 Explore Mode in the existing Phaser project.
+
+**The Explore Mode and all seven Chapter 1 combats are already implemented and functioning.**
+
+The purpose of this update is to ensure that, after successfully completing an encounter through Explore Mode, that encounter is permanently marked as completed for the current exploration save, its overworld enemy group disappears, and Dexios can continue exploring without triggering the same battle again.
+
+Progress must survive scene changes, game restarts, browser refreshes, and reopening the game.
+
+## 1. CRITICAL — PRESERVE EXISTING FUNCTIONALITY
+
+Do not rebuild the overworld or combat engine.
+
+Inspect the latest working source code and the current `design.md` before modifying anything.
+
+Preserve:
+
+- Chapter 1 overworld terrain and all Tiled objects.
+- Dexios's movement and animations.
+- Camera zoom ×2 and follow behavior.
+- Jumping, platforms, hazards, and collisions.
+- Overworld enemy sprite placement.
+- All seven combat scenes.
+- Combat tutorials and narrative dialogues.
+- Current victory and defeat screens.
+- Combat 6's final dialogue and earthquake.
+- Combat 6 → Combat 7 automatic transition.
+- The Beast's two phases.
+- The eight-part ending cinematic.
+- Existing R, N, M, and Escape controls.
+
+**Chapter 29 must remain completely unchanged.**
+
+This update concerns only Chapter 1 Explore Mode progression.
+
+## 2. PERSISTENT EXPLORATION SAVE
+
+Create or extend a dedicated Chapter 1 exploration save manager.
+
+Use the browser's `localStorage` API.
+
+Suggested save key:
+
+`la_dexiada_ch1_explore_v1`
+
+The save system must store structured JSON.
+
+### Required save data
+
+```javascript
+{
+  version: 1,
+  player: {
+    x: 0,
+    y: 0,
+    safeX: 0,
+    safeY: 0,
+    facing: "down",
+    hp: 65
+  },
+  completedEncounters: [],
+  pendingBoss: false,
+  chapterCompleted: false
+}
+```
+
+This is a conceptual schema. Adapt it to the actual existing overworld state manager rather than creating redundant stores.
+
+### Completed encounter IDs
+
+Use the actual stable Tiled marker names:
+
+- `combat_01`
+- `combat_02`
+- `combat_03`
+- `combat_04`
+- `combat_05`
+- `combat_06`
+
+Do not identify completed encounters by array indices, sprite positions, or encounter order in the current scene.
+
+Use a Set internally if convenient, but serialize it as an array of strings.
+
+### Save initialization
+
+When starting Explore Mode:
+
+1. Check whether a valid exploration save exists.
+2. If it exists, load and validate it.
+3. If it does not exist, initialize a new exploration session at `dexios_spawn`.
+4. Restore the saved position, facing direction, HP, and completed encounters.
+5. Restore the correct overworld enemy groups.
+6. Enable only encounters that have not been completed.
+
+Do not reset progress simply because `scene_ch1_overworld` was created again.
+
+### Data safety
+
+- Validate parsed JSON.
+- Check the save version.
+- Reject invalid or non-finite player coordinates.
+- Clamp HP to 0–65.
+- Validate completed encounter IDs against the six known markers.
+- Reject invalid positions inside hazards, obstacles, or outside the map bounds.
+- Fall back to the last valid safe position if necessary.
+- Fall back to `dexios_spawn` if the save cannot be recovered.
+- Handle unavailable or blocked localStorage without crashing the game.
+
+If localStorage is unavailable, preserve the session in memory and report the limitation.
+
+Do not delete a valid existing save because of a temporary loading error.
+
+## 3. SAVE THE PLAYER'S EXPLORATION POSITION
+
+Dexios's location must be retained between combat scenes and when reopening Explore Mode.
+
+Save:
+
+- Current safe world position.
+- Last stable safe position.
+- Current facing direction.
+- Overworld HP.
+- Completed encounter list.
+
+### Position saving rules
+
+Use world coordinates, not screen coordinates.
+
+Never save the temporary visual Y offset used by jumping.
+
+Do not update the saved position when Dexios is:
+
+- Falling.
+- Inside a hazard.
+- Airborne over dangerous terrain.
+- Inside a collision obstacle.
+- Transitioning to combat.
+- In an invalid or unreachable position.
+
+The safest checkpoint is the last stable traversable ground position.
+
+### Autosaving position
+
+Update the in-memory position continuously during exploration.
+
+Persist it periodically using a reasonable throttled interval, and immediately when:
+
+- A combat is about to begin.
+- A combat is won.
+- The player leaves Explore Mode normally.
+- The scene transitions.
+- The player reaches a significant progression checkpoint.
+
+Avoid writing localStorage on every animation frame.
+
+When reopening Explore Mode, place Dexios at the saved safe position and restore the camera follow.
+
+Do not teleport him back to the original spawn after every completed encounter.
+
+## 4. SAVE BEFORE ENTERING COMBAT
+
+When Dexios triggers one of the six overworld enemy groups:
+
+1. Identify the encounter by its stable `combat_XX` ID.
+2. Check the exploration save.
+3. If the encounter is already completed, do nothing.
+4. If it is available, lock its trigger immediately.
+5. Store Dexios's safe return position.
+6. Save the current exploration state.
+7. Launch the existing combat scene.
+8. Pass the encounter's ID and its Explore Mode origin.
+
+Example scene-launch context:
+
+```javascript
+{
+  origin: "explore",
+  encounterId: "combat_03"
+}
+```
+
+Reuse the existing launch context implementation if one already exists.
+
+Do not add duplicate combat-trigger callbacks.
+
+**Entering a combat must not mark it as completed. Only winning does.**
+
+## 5. MARK AN ENCOUNTER COMPLETED ON VICTORY
+
+When Dexios successfully defeats an encounter launched through Explore Mode:
+
+1. Finish the current attack or counterattack safely.
+2. Run any required narrative dialogue.
+3. Confirm that the victory is final.
+4. Mark the encounter ID as completed.
+5. Save the updated exploration state.
+6. Follow the established exploration victory flow.
+
+The completion update must occur exactly once.
+
+### Required completion operation
+
+Conceptually:
+
+```javascript
+function completeExploreEncounter(encounterId) {
+  if (!isValidEncounterId(encounterId)) return;
+
+  explorationState.completedEncounters.add(encounterId);
+  saveExplorationProgress();
+}
+```
+
+Use the real project's architecture and naming conventions.
+
+Do not create a second, competing victory system.
+
+### Important
+
+An encounter must NOT be marked completed if:
+
+- Dexios loses.
+- The player restarts the fight.
+- The player leaves before winning.
+- The battle is interrupted.
+- The scene shuts down unexpectedly.
+- The player triggers the encounter but never finishes it.
+
+Completion must be tied to a real confirmed victory.
+
+## 6. REMOVE COMPLETED ENEMIES FROM THE OVERWORLD
+
+When `scene_ch1_overworld` loads, read the completed encounter IDs before spawning enemy groups.
+
+For each group:
+
+```javascript
+if (completedEncounters.has(encounterId)) {
+  // Do not create this group's sprites or trigger.
+  return;
+}
+```
+
+The behavior must remove the **entire encounter group**, not just one enemy.
+
+### Expected results
+
+**Combat 1 completed**
+
+The single Wild Boar disappears.
+
+**Combat 2 completed**
+
+Both Wild Boars disappear.
+
+**Combat 3 completed**
+
+The Wolf disappears.
+
+**Combat 4 completed**
+
+Both Wolves disappear.
+
+**Combat 5 completed**
+
+Both Furious Boars disappear.
+
+**Combat 6 completed**
+
+The Wild Boar, Furious Boar, and Wolf all disappear.
+
+### Collision and interaction cleanup
+
+Completed groups must have:
+
+- No visible overworld enemy sprites.
+- No active encounter triggers.
+- No physics overlap callbacks.
+- No remaining enemy collision bodies.
+- No hidden trigger zones capable of restarting combat.
+
+Do not simply hide the sprites while leaving the combat trigger active.
+
+The corresponding ground and path must remain traversable.
+
+Preserve all unrelated trees, terrain, obstacles, hazards, and platforms.
+
+## 7. COMBATS 1–5 — RETURN TO EXPLORATION
+
+For Combats 1–5 launched through Explore Mode:
+
+After winning:
+
+1. Show the existing appropriate victory presentation.
+2. Preserve the existing Continue Exploring flow.
+3. Save the completed encounter.
+4. Return to `scene_ch1_overworld`.
+5. Restore Dexios at his last safe position near the encounter.
+6. Restore the camera.
+7. Restore his overworld HP and facing direction.
+8. Do not spawn the defeated enemy group.
+9. Resume exploration normally.
+
+If the player returns after defeating Combat 3, for example, the Combat 3 Wolf must no longer be present.
+
+If the player leaves Explore Mode and reopens it later, that Wolf must still be absent.
+
+Previously completed encounters must remain completed even after the player wins additional battles.
+
+Do not overwrite the completed encounter list with only the most recently defeated encounter.
+
+## 8. COMBAT 6 — PRESERVE DIRECT TRANSITION TO COMBAT 7
+
+**VERY IMPORTANT: Do not break the established Combat 6 → Combat 7 story transition.**
+
+When Combat 6 is launched through Explore Mode and defeated:
+
+1. Finish the battle.
+2. Preserve Dexios's existing ending dialogue.
+3. Play the existing earthquake/screen-shake event.
+4. Preserve his final dialogue about hearing a powerful beast.
+5. After the dialogue is fully dismissed, mark `combat_06` as completed.
+6. Set `pendingBoss = true`.
+7. Save the exploration progression immediately.
+8. Transition directly to `scene_ch1_combat7`.
+
+**DO NOT RETURN TO THE OVERWORLD OR COMBAT SELECT BETWEEN COMBATS 6 AND 7.**
+
+Do not show an intermediate ordinary victory screen if the current exploration implementation already omits it.
+
+Do not skip any existing dialogue, screen shake, music behavior, or Combat 7 opening sequence.
+
+### Interrupted final-boss sequence
+
+The player must not lose access to Combat 7 because Combat 6 has been saved as completed.
+
+If the player loses, exits, or reloads before completing Combat 7:
+
+- Keep `combat_06` marked completed.
+- Keep `pendingBoss = true`.
+- Allow the player to resume the pending Beast encounter through Explore Mode.
+- Do not force them to fight Combat 6 again.
+- Do not require a nonexistent `combat_07` marker in Tiled.
+
+When reopening Explore Mode with `pendingBoss = true`, provide a clear way to continue the boss encounter, preferably using the existing scene transition flow or a simple `CONTINUE — THE BEAST` prompt.
+
+Avoid automatically entering an infinite scene-transition loop.
+
+### Direct combat testing
+
+If Combat 6 was launched directly from the Combat Selector, preserve its existing standalone victory and navigation behavior.
+
+Do not update exploration progress in that case.
+
+## 9. COMBAT 7 — CHAPTER COMPLETION
+
+When Combat 7 is entered through the exploration storyline, preserve the complete boss battle and cinematic.
+
+Do not mark the chapter completed when the first HP bar is defeated.
+
+Do not mark the chapter completed when the second HP bar first reaches zero.
+
+Combat 7 includes a scripted final attack and eight-image interactive cinematic.
+
+Only mark the chapter as completed **after the entire cinematic finishes successfully and the special `… Victory?` result is reached**.
+
+Then:
+
+1. Set `chapterCompleted = true`.
+2. Set `pendingBoss = false`.
+3. Preserve all completed encounter IDs.
+4. Save the exploration state.
+5. Preserve the existing victory presentation and navigation.
+
+Do not change the final cinematic's QTE controls, timings, dialogues, artwork, or camera effects.
+
+Do not automatically reset Chapter 1 after completing it.
+
+The user may still access each encounter directly from the Combat Selector.
+
+## 10. DIRECT COMBAT SELECT MUST REMAIN REPEATABLE
+
+This distinction is essential.
+
+**Completed encounters disappear ONLY from Explore Mode, not from the Chapter 1 Combat Selector.**
+
+When an encounter is launched from:
+
+`scene_ch1_select`
+
+with an origin such as:
+
+`origin: "combat_select"`
+
+it must:
+
+- Start normally.
+- Be fully playable.
+- Keep its existing victory/defeat presentation.
+- Remain selectable afterward.
+- Not modify the exploration save.
+- Not remove overworld enemies.
+- Not set `pendingBoss`.
+- Not set `chapterCompleted`.
+
+This also applies to Combat 6 and Combat 7.
+
+All seven standalone combat entries must remain permanently accessible for testing.
+
+Do not disable the Combat Selector buttons because their corresponding Explore Mode encounters have been completed.
+
+## 11. RESTART, ESCAPE, AND DEFEAT BEHAVIOR
+
+### Explore Mode restart — R
+
+The existing R shortcut must still restart the overworld scene.
+
+However, restarting the scene must NOT accidentally erase saved exploration progress.
+
+Reload the existing save, restore Dexios at the saved safe position, and keep completed encounters removed.
+
+Do not interpret a scene restart as starting a new game.
+
+### Escape
+
+When leaving Explore Mode with Escape:
+
+- Save valid exploration state.
+- Return to the existing Chapter 1 selector.
+- Preserve completed encounter IDs.
+- Preserve the last safe position.
+- Preserve HP.
+- Preserve audio preferences.
+
+When Explore Mode is selected again, resume the saved exploration session.
+
+### Combat defeat
+
+If Dexios loses an encounter:
+
+- Do not mark the encounter completed.
+- Do not remove its overworld group permanently.
+- Preserve all previously completed encounters.
+- Preserve exploration state before the failed encounter.
+- Follow the existing Retry/Return behavior.
+
+Do not allow a defeat to clear previous victories.
+
+### Starting a genuinely new exploration run
+
+Provide an isolated `resetExplorationProgress()` operation in the save manager for future use or developer testing.
+
+It must clear only Chapter 1 Explore Mode progress.
+
+Do not connect it to R, Escape, or ordinary scene loading.
+
+Do not automatically erase progress when the player opens Chapter 1.
+
+Do not add intrusive new confirmation windows unless a user-facing New Exploration command already exists.
+
+## 12. SAVE DATA INTEGRITY
+
+Use a single authoritative exploration state.
+
+Avoid duplicating the completed encounter list separately in:
+
+- The overworld scene.
+- The combat scene.
+- A global registry.
+- localStorage.
+
+If the current code already has an in-memory progression manager, extend it to serialize and deserialize the same state.
+
+### Required safeguards
+
+- Prevent saving the same victory multiple times.
+- Prevent duplicate transition callbacks.
+- Preserve previously completed encounters when saving a new one.
+- Prevent stale scene data from overwriting newer progression.
+- Prevent incorrectly clearing `pendingBoss`.
+- Preserve the saved safe position across scene transitions.
+- Do not serialize Phaser GameObjects, textures, cameras, or physics bodies.
+- Store only plain JSON-compatible data.
+- Handle browser storage errors safely.
+- Keep save-key and schema-version definitions centralized.
+
+Use the current project architecture and avoid unnecessary refactoring.
+
+## 13. OPTIONAL SAVE FEEDBACK
+
+If the project already has a small notification system, show a brief message when an encounter is completed:
+
+`PROGRESS SAVED`
+
+Use the Chapter 1 blue-green-and-gold visual style.
+
+This message must not interrupt combat animations or dialogues.
+
+Do not create a large new UI system just for saving.
+
+The save should work regardless of whether a notification is displayed.
+
+## 14. TEST THE COMPLETE PROGRESSION
+
+Verify these scenarios:
+
+### Encounter completion
+
+1. Start a fresh Explore Mode session.
+2. Defeat Combat 1.
+3. Return to the overworld.
+4. Verify the Wild Boar group is absent.
+5. Walk through its former location.
+6. Verify no combat triggers.
+7. Defeat Combat 2.
+8. Verify both Combat 1 and Combat 2 remain completed.
+9. Repeat through Combats 3–5.
+
+### Persistence
+
+10. Complete Combat 3.
+11. Return to the Chapter 1 selector.
+12. Enter Explore Mode again.
+13. Verify Combats 1–3 remain absent.
+14. Verify Dexios resumes near his saved position.
+15. Refresh the browser.
+16. Load Explore Mode again.
+17. Verify progress still exists.
+18. Close and reopen the game.
+19. Verify progress is retained.
+
+### Defeat and retry
+
+20. Start Combat 4 and lose.
+21. Verify Combat 4 is not marked completed.
+22. Verify previously completed encounters remain completed.
+23. Retry and win Combat 4.
+24. Verify it now disappears.
+25. Press R in the overworld and confirm completion is preserved.
+
+### Combat 6 and 7
+
+26. Win Combat 6 through Explore Mode.
+27. Verify the existing dialogue and earthquake occur.
+28. Verify `combat_06` is marked completed.
+29. Verify `pendingBoss = true`.
+30. Verify the game enters Combat 7 directly.
+31. Verify no overworld or selector appears between battles.
+32. Exit or lose Combat 7.
+33. Verify the player can resume the boss without repeating Combat 6.
+34. Complete both Beast phases.
+35. Complete the full interactive ending cinematic.
+36. Verify `… Victory?` appears.
+37. Verify `chapterCompleted = true`.
+38. Verify `pendingBoss = false`.
+
+### Direct combat selection
+
+39. Launch Combat 1 from the Combat Selector.
+40. Win it.
+41. Verify the exploration save is unchanged.
+42. Repeat Combat 1 directly as many times as desired.
+43. Verify Combat 6 and Combat 7 remain independently accessible.
+44. Verify Chapter 29 is unaffected.
+
+### Technical
+
+45. Verify no duplicate enemy sprites remain.
+46. Verify completed encounter trigger areas are completely disabled.
+47. Verify no accidental localStorage resets occur.
+48. Verify invalid save files are handled safely.
+49. Verify no duplicate victory callbacks or scene transitions occur.
+50. Run the project's existing build and report the results.
+
+## 15. FINAL IMPLEMENTATION REQUIREMENT
+
+**Make the smallest safe set of changes necessary to fix Chapter 1 Explore Mode progression.**
+
+Do not change existing enemy AI, attack damage, combat timing, animations, tilemap geometry, jumping mechanics, hazards, or unrelated UI.
+
+After implementing, report:
+
+- Files changed.
+- The save-manager location.
+- The localStorage save key.
+- How completed encounters are marked.
+- How their overworld sprites and triggers are disabled.
+- How progress is restored.
+- How Combat 6 → Combat 7 remains accessible after interruptions.
+- Test results.
+
+**FINAL GOAL:** Chapter 1 Explore Mode must remember every successfully completed encounter, automatically remove its corresponding overworld enemy group, preserve that progress between visits and browser sessions, and allow the player to continue the story without repeating defeated enemies. Direct Combat Select remains fully repeatable, Combat 6 still transitions directly to Combat 7, and Chapter 29 remains entirely unchanged.

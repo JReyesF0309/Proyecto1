@@ -418,11 +418,21 @@ const ENCOUNTERS: EncounterOption[] = [
   { title: 'COMBAT VII — THE BEAST', subtitle: 'AVAILABLE', enabled: true, sceneKey: 'scene_ch1_combat7' },
 ];
 
+const EXPLORE_OPTION: EncounterOption = {
+  title: 'EXPLORE MODE',
+  subtitle: 'ROAM BEYOND THE WALLS',
+  enabled: true,
+};
+
 export class ChapterOneSelectScene extends Phaser.Scene {
   private starting = false;
   private readonly onKeyDown = (event: KeyboardEvent): void => {
+    if (!event.repeat && event.key.toLowerCase() === 'e') {
+      this.startExploreMode();
+      return;
+    }
     if (!event.repeat && ['1', '2', '3', '4', '5', '6', '7'].includes(event.key)) {
-      this.startCombat(ENCOUNTERS[Number(event.key) - 1]);
+      this.startCombat(ENCOUNTERS[Number(event.key) - 1], 'combat_select');
     }
   };
 
@@ -455,7 +465,7 @@ export class ChapterOneSelectScene extends Phaser.Scene {
     const cardHeight = 170;
     const columns = [130, 690, 1250];
     const rows = [260, 455, 650];
-    ENCOUNTERS.forEach((encounter, index) => {
+    [EXPLORE_OPTION, ...ENCOUNTERS].forEach((encounter, index) => {
       const row = Math.floor(index / columns.length);
       const column = index % columns.length;
       createCard(
@@ -467,7 +477,9 @@ export class ChapterOneSelectScene extends Phaser.Scene {
         encounter.title,
         encounter.subtitle,
         encounter.enabled,
-        () => this.startCombat(encounter),
+        () => encounter === EXPLORE_OPTION
+          ? this.startExploreMode()
+          : this.startCombat(encounter, 'combat_select'),
         true,
         { chapterOne: true },
       );
@@ -491,17 +503,21 @@ export class ChapterOneSelectScene extends Phaser.Scene {
     });
   }
 
-  private startCombat(encounter: EncounterOption): void {
+  private startExploreMode(): void {
+    this.start('scene_ch1_overworld');
+  }
+
+  private startCombat(encounter: EncounterOption, origin: 'combat_select' | 'explore'): void {
     if (encounter.enabled && encounter.sceneKey) {
-      this.start(encounter.sceneKey);
+      this.start(encounter.sceneKey, { origin });
     }
   }
 
-  private start(sceneKey: string): void {
+  private start(sceneKey: string, data?: object): void {
     if (this.starting) {
       return;
     }
     this.starting = true;
-    this.scene.start(sceneKey);
+    this.scene.start(sceneKey, data);
   }
 }

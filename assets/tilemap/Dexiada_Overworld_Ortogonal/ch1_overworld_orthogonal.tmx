@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="30" height="20" tilewidth="64" tileheight="64" infinite="0" nextlayerid="8" nextobjectid="58">
+ <tileset firstgid="1" source="ch1_terrain_orthogonal.tsx"/>
+ <tileset firstgid="9" source="ch1_trees.tsx"/>
+ <layer id="1" name="Ground" width="30" height="20">
+  <data encoding="csv">
+2,1,1,1,2,1,1,1,2,1,1,1,2,5,6,5,6,1,1,1,2,1,1,1,2,1,1,1,2,1,
+1,1,1,2,1,1,1,2,1,1,1,2,1,6,5,6,5,1,1,2,1,1,1,2,1,1,1,2,1,1,
+1,1,2,1,1,3,3,3,3,3,3,3,3,3,8,3,8,3,8,3,8,3,8,3,8,3,2,1,1,1,
+1,2,1,1,1,8,8,3,1,3,3,3,3,8,3,8,3,8,3,8,3,8,3,8,3,8,1,1,1,2,
+7,7,7,7,7,3,3,3,2,1,1,1,2,5,6,5,6,1,1,1,2,1,1,1,8,3,1,1,2,1,
+7,7,7,7,7,3,3,2,1,1,1,2,1,6,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,6,
+1,1,2,1,1,1,3,8,7,7,7,7,7,5,6,5,6,5,6,5,6,5,6,5,6,5,4,4,6,5,
+1,2,1,1,1,3,8,3,7,7,7,7,7,6,5,6,5,6,5,6,5,6,5,6,5,6,4,4,5,6,
+2,1,1,2,2,3,3,3,2,1,1,1,1,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,
+1,1,2,2,1,1,3,2,1,1,2,1,1,6,5,6,5,6,5,6,5,6,5,6,3,3,5,6,5,6,
+1,2,2,1,1,1,3,1,1,2,2,2,1,5,6,5,6,3,3,3,3,3,3,3,3,3,3,3,3,3,
+1,2,1,1,1,3,3,3,2,3,3,3,1,6,5,6,5,2,1,1,1,2,1,1,1,2,1,1,1,2,
+2,1,1,1,2,1,8,8,2,3,3,1,2,5,6,5,6,5,6,4,4,5,6,5,6,5,6,5,6,5,
+7,7,7,7,7,1,3,3,1,3,1,2,1,6,5,6,5,6,5,6,5,6,5,4,4,6,5,6,5,6,
+7,7,2,7,7,3,3,1,1,1,1,1,1,5,6,5,6,5,6,5,6,5,6,5,6,5,6,4,4,5,
+1,2,1,1,1,8,3,3,7,7,7,7,7,6,5,6,5,6,5,6,5,6,5,6,5,6,5,6,5,6,
+2,1,1,1,2,1,3,3,7,7,7,7,7,5,6,5,6,1,1,1,2,1,1,1,2,1,1,1,2,1,
+1,1,1,2,1,1,3,2,7,7,7,7,7,6,5,6,5,1,1,2,1,1,1,2,1,1,1,2,1,1,
+1,1,2,1,1,3,3,1,1,1,2,1,1,5,6,5,6,1,2,1,1,1,2,1,1,1,2,1,1,1,
+1,2,1,1,1,2,3,1,1,2,1,1,1,6,5,6,5,2,1,1,1,2,1,1,1,2,1,1,1,2
+</data>
+ </layer>
+ <objectgroup id="2" name="Collision">
+  <object id="32" x="516" y="1016" width="316" height="132"/>
+  <object id="33" x="-2" y="828" width="322" height="138"/>
+  <object id="34" x="510" y="384" width="316" height="122"/>
+  <object id="35" x="2" y="254" width="314" height="130"/>
+ </objectgroup>
+ <objectgroup id="6" name="Hazards">
+  <object id="37" x="832.77" y="4.38475" width="248.802" height="112.208"/>
+  <object id="39" x="1084.73" y="324.044" width="580.208" height="239.956"/>
+  <object id="40" x="1090.04" y="570" width="445.23" height="66.2525"/>
+  <object id="41" x="1661.75" y="515.703" width="256.846" height="118.89"/>
+  <object id="42" x="1672.04" y="320" width="240.505" height="59.9559"/>
+  <object id="43" x="1789.11" y="388.681" width="128.164" height="122.934"/>
+  <object id="44" x="1085.41" y="762.77" width="131.186" height="257.483"/>
+  <object id="45" x="1220.38" y="834.385" width="254.846" height="179.23"/>
+  <object id="46" x="1346.09" y="771.363" width="570.846" height="60.5932"/>
+  <object id="47" x="1605.41" y="826.681" width="307.186" height="67.2746"/>
+  <object id="48" x="1857.07" y="898.385" width="57.9118" height="113.275"/>
+  <object id="49" x="1477.07" y="893.747" width="252.505" height="60.5491"/>
+  <object id="50" x="1478.73" y="954.725" width="371.186" height="56.9339"/>
+  <object id="57" x="829.66" y="255.535" width="253.876" height="1018.82"/>
+ </objectgroup>
+ <objectgroup id="7" name="Platforms">
+  <object id="52" x="1674" y="392" width="112" height="110"/>
+  <object id="53" x="1220" y="774" width="122" height="56"/>
+  <object id="54" x="1480" y="838" width="122" height="52"/>
+  <object id="55" x="1738" y="902" width="112" height="54"/>
+ </objectgroup>
+ <objectgroup id="3" name="Events">
+  <object id="2" name="dexios_spawn" type="spawn" x="418" y="1194">
+   <point/>
+  </object>
+  <object id="4" name="combat_01" type="combat" x="410" y="686">
+   <point/>
+  </object>
+  <object id="19" name="combat_02" type="combat" x="418" y="314">
+   <point/>
+  </object>
+  <object id="27" name="combat_03" type="combat" x="1146" y="210">
+   <point/>
+  </object>
+  <object id="28" name="combat_04" type="combat" x="1570" y="208">
+   <point/>
+  </object>
+  <object id="29" name="combat_05" type="combat" x="1594" y="694">
+   <point/>
+  </object>
+  <object id="30" name="combat_06" type="combat" x="1612" y="1184">
+   <point/>
+  </object>
+ </objectgroup>
+ <objectgroup id="4" name="Decoration">
+  <object id="17" gid="9" x="420.333" y="1156.33" width="512" height="512"/>
+  <object id="18" gid="9" x="-86" y="982" width="512" height="512"/>
+  <object id="21" gid="9" x="428" y="538" width="512" height="512"/>
+  <object id="22" gid="9" x="-76" y="414" width="512" height="512"/>
+ </objectgroup>
+ <objectgroup id="5" name="Foreground"/>
+</map>
